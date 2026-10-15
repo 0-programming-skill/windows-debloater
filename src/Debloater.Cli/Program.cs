@@ -5,7 +5,7 @@ using Debloater.Core.Model;
 
 namespace Debloater.Cli;
 
-internal static class Program
+internal static partial class Program
 {
     private const string Usage = """
         Debloater.Cli - testes e automação do catálogo de tweaks
@@ -15,12 +15,26 @@ internal static class Program
           Debloater.Cli status   [--category X] [--catalog DIR] [--verbose]
           Debloater.Cli apply    <id...> [--max-risk low|medium|high|critical] [--catalog DIR]
           Debloater.Cli revert   <id...> [--catalog DIR]
-          Debloater.Cli validate [--catalog DIR]
+          Debloater.Cli validate [--catalog DIR] [--reference [--admx-dir DIR] [--csp FILE] [--warnings-out FILE]]
 
-        --category X   filtra pelo início da categoria (ex.: privacidade, "Sistema/Tarefas").
-        --max-risk     risco máximo aceito por 'apply' (padrão: medium). High/Critical exigem opt-in explícito.
-        --catalog DIR  pasta do catálogo (padrão: 'catalog' ao lado do executável).
-        apply/revert exigem um prompt de administrador.
+          Debloater.Cli inventory [--kind K[,K...]] [--uncatalogued] [--json]
+          Debloater.Cli inventory snapshot <arquivo.json> [--kind K]
+          Debloater.Cli inventory diff <antigo.json> <novo.json> [--json]
+
+          Debloater.Cli admx list   [--search TEXTO] [--configured] [--admx-dir DIR] [--lang pt-BR]
+          Debloater.Cli admx show   <[Arquivo.admx:]Nome> [--admx-dir DIR]
+          Debloater.Cli admx export <arquivo.json> [--with-state] [--admx-dir DIR]
+
+          Debloater.Cli reference annotate [--write] [--force] [--admx-dir DIR] [--csp FILE]
+
+        --category X     filtra pelo início da categoria (ex.: privacidade, "Sistema/Tarefas").
+        --max-risk       risco máximo aceito por 'apply' (padrão: medium). High/Critical exigem opt-in explícito.
+        --catalog DIR    pasta do catálogo (padrão: 'catalog' ao lado do executável).
+        --kind K         services, drivers, tasks, appx, features, capabilities, autoruns.
+        --admx-dir DIR   pasta PolicyDefinitions (padrão: C:\Windows\PolicyDefinitions). Aceita o pacote
+                         de Modelos Administrativos mais recente baixado da Microsoft.
+        --csp FILE       referência da Policy CSP (padrão: reference/msdocs-policy-csp.json do repositório).
+        apply/revert exigem um prompt de administrador. Os demais comandos são somente leitura.
         """;
 
     private static async Task<int> Main(string[] args)
@@ -37,11 +51,14 @@ internal static class Program
 
             return parsed.Command switch
             {
-                "validate" => Validate(parsed),
+                "validate" => parsed.Reference ? ValidateReference(parsed) : Validate(parsed),
                 "list" => List(parsed),
                 "status" => await StatusAsync(parsed),
                 "apply" => await ApplyAsync(parsed),
                 "revert" => await RevertAsync(parsed),
+                "inventory" => await InventoryAsync(parsed),
+                "admx" => Admx(parsed),
+                "reference" => Reference(parsed),
                 _ => Fail($"Comando desconhecido '{parsed.Command}'.\n\n{Usage}"),
             };
         }
@@ -217,7 +234,7 @@ internal static class Program
         _ => risk.ToString(),
     };
 
-    private sealed class Args
+    internal sealed class Args
     {
         public string? Command { get; private set; }
         public List<string> Positional { get; } = [];
@@ -225,6 +242,19 @@ internal static class Program
         public string CatalogDir { get; private set; } = Path.Combine(AppContext.BaseDirectory, "catalog");
         public RiskLevel MaxRisk { get; private set; } = RiskLevel.Medium;
         public bool Verbose { get; private set; }
+        public List<string> Kinds { get; } = [];
+        public bool Uncatalogued { get; private set; }
+        public bool Json { get; private set; }
+        public string? Search { get; private set; }
+        public bool Configured { get; private set; }
+        public bool WithState { get; private set; }
+        public string AdmxDir { get; private set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "PolicyDefinitions");
+        public string? Lang { get; private set; }
+        public bool Reference { get; private set; }
+        public string? CspFile { get; private set; }
+        public string? WarningsOut { get; private set; }
+        public bool Write { get; private set; }
+        public bool Force { get; private set; }
 
         public static Args Parse(string[] args)
         {
@@ -237,6 +267,19 @@ internal static class Program
                     case "--category": a.Category = Next(); break;
                     case "--catalog": a.CatalogDir = Path.GetFullPath(Next()); break;
                     case "--verbose": case "-v": a.Verbose = true; break;
+                    case "--kind": a.Kinds.AddRange(Next().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)); break;
+                    case "--uncatalogued": a.Uncatalogued = true; break;
+                    case "--json": a.Json = true; break;
+                    case "--search": a.Search = Next(); break;
+                    case "--configured": a.Configured = true; break;
+                    case "--with-state": a.WithState = true; break;
+                    case "--admx-dir": a.AdmxDir = Path.GetFullPath(Next()); break;
+                    case "--lang": a.Lang = Next(); break;
+                    case "--reference": a.Reference = true; break;
+                    case "--csp": a.CspFile = Path.GetFullPath(Next()); break;
+                    case "--warnings-out": a.WarningsOut = Path.GetFullPath(Next()); break;
+                    case "--write": a.Write = true; break;
+                    case "--force": a.Force = true; break;
                     case "--max-risk":
                         var v = Next();
                         a.MaxRisk = Enum.TryParse<RiskLevel>(v, ignoreCase: true, out var r) && Enum.IsDefined(r)

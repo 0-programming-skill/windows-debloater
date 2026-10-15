@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <RootNamespace>Debloater.Core</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
