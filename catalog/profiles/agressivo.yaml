@@ -1,0 +1,7 @@
+# Perfil embutido: tudo até risco alto. Nunca inclui ajustes de risco crítico.
+name: Agressivo
+description: >
+  Tudo até risco alto, em todas as categorias (inclui remover apps, o que não é reversível pelo
+  programa). Ajustes de risco crítico nunca entram por padrão: selecione-os à mão, se quiser.
+rules:
+  maxRisk: high

@@ -27,6 +27,9 @@ public static partial class CatalogLoader
     [GeneratedRegex(@"^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)+$")]
     private static partial Regex IdPattern();
 
+    /// <summary>Subpasta do catálogo com os perfis (YAML de outro formato); não é lida como catálogo.</summary>
+    public const string ProfilesFolder = "profiles";
+
     public static CatalogLoadResult LoadDirectory(string directory)
     {
         if (!Directory.Exists(directory))
@@ -39,8 +42,10 @@ public static partial class CatalogLoader
             };
         }
 
+        var profilesDir = Path.Combine(Path.GetFullPath(directory), ProfilesFolder) + Path.DirectorySeparatorChar;
         var files = Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
             .Where(f => f.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
+            .Where(f => !Path.GetFullPath(f).StartsWith(profilesDir, StringComparison.OrdinalIgnoreCase))
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
             .ToList();
 

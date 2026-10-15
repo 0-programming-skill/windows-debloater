@@ -1,0 +1,7 @@
+# Perfil embutido: privacidade, anúncios e IA, até risco médio.
+name: Privacidade
+description: >
+  Telemetria, anúncios, sugestões, Copilot, Recall e outros recursos de IA, até risco médio.
+rules:
+  maxRisk: medium
+  categories: [Privacidade, IA]
