@@ -1,0 +1,173 @@
+# Anúncios, sugestões e conteúdo promocional.
+category: Privacidade/Anúncios e sugestões
+
+tweaks:
+  - id: privacy.ads.advertising-id
+    name: Desativar o ID de anúncio
+    description: Impede que apps usem o ID de publicidade para mostrar anúncios personalizados.
+    risk: low
+    tags: [anuncios]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo
+        name: Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo
+        name: DisabledByGroupPolicy
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.language-list
+    name: Não expor a lista de idiomas aos sites
+    description: Impede que sites acessem sua lista de idiomas para mostrar conteúdo local.
+    risk: low
+    tags: [anuncios, web]
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\International\User Profile
+        name: HttpAcceptLanguageOptOut
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.welcome-experience
+    name: Desativar a "experiência de boas-vindas" após atualizações
+    description: Não mostra a tela de novidades/boas-vindas do Windows após atualizações e ao entrar.
+    risk: low
+    tags: [anuncios, content-delivery]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-310093Enabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.tips-suggestions
+    name: Desativar dicas e sugestões do Windows
+    description: Desativa "Obter dicas e sugestões ao usar o Windows" (notificações promocionais).
+    risk: low
+    tags: [anuncios, content-delivery, notificacoes]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-338389Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SoftLandingEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.settings-suggestions
+    name: Desativar conteúdo sugerido no app Configurações
+    description: Remove as sugestões de conteúdo exibidas no app Configurações.
+    risk: low
+    tags: [anuncios, content-delivery]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-338393Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-353694Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-353696Enabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.silent-app-install
+    name: Impedir instalação silenciosa de apps sugeridos
+    description: Impede que o Windows instale automaticamente apps patrocinados (Candy Crush etc.).
+    risk: low
+    tags: [anuncios, content-delivery, bloatware]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SilentInstalledAppsEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: PreInstalledAppsEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: OemPreInstalledAppsEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.consumer-features
+    name: Desativar "Experiências do consumidor da Microsoft"
+    description: >
+      Política que impede o Windows de baixar apps e conteúdo promocional para novos usuários.
+      Oficialmente só é respeitada nas edições Enterprise/Education.
+    risk: low
+    tags: [anuncios, politica, bloatware]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent
+        name: DisableWindowsConsumerFeatures
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.lock-screen-tips
+    name: Desativar curiosidades e dicas na tela de bloqueio
+    description: Remove "fatos divertidos, dicas e truques" e anúncios da tela de bloqueio.
+    risk: low
+    tags: [anuncios, content-delivery, tela-de-bloqueio]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: RotatingLockScreenOverlayEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-338387Enabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.finish-setup-nag
+    name: Não sugerir "concluir a configuração do dispositivo"
+    description: Desativa a tela que sugere concluir a configuração (OneDrive, Microsoft 365, Game Pass...).
+    risk: low
+    tags: [anuncios]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement
+        name: ScoobeSystemSettingEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.start-recommendations
+    name: Desativar recomendações de dicas e apps no Iniciar
+    description: Desativa "Mostrar recomendações de dicas, atalhos, novos aplicativos e muito mais" no menu Iniciar.
+    risk: low
+    minBuild: 22621
+    tags: [anuncios, iniciar]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Start_IrisRecommendations
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.explorer-sync-provider
+    name: Desativar notificações do provedor de sincronização no Explorador
+    description: Remove os anúncios (OneDrive/Microsoft 365) exibidos no Explorador de Arquivos.
+    risk: low
+    tags: [anuncios, explorer]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ShowSyncProviderNotifications
+        kind: dword
+        value: 0

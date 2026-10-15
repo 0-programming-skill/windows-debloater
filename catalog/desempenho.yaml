@@ -1,0 +1,99 @@
+# Ajustes de desempenho e comportamento do sistema.
+category: Sistema/Desempenho
+
+tweaks:
+  - id: perf.game-dvr.disable
+    name: Desativar a gravação em segundo plano (Game DVR)
+    description: Desativa a captura de jogos em segundo plano da Xbox Game Bar, que consome recursos.
+    risk: low
+    tags: [jogos, desempenho]
+    breaks: Gravações e capturas da Xbox Game Bar.
+    actions:
+      - type: registry
+        path: HKCU\System\GameConfigStore
+        name: GameDVR_Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR
+        name: AllowGameDVR
+        kind: dword
+        value: 0
+
+  - id: perf.hibernation.disable
+    name: Desativar a hibernação
+    description: >
+      Executa "powercfg /hibernate off", apagando o hiberfil.sys e liberando espaço em disco
+      (proporcional à RAM).
+    risk: medium
+    tags: [energia, disco]
+    breaks: Hibernação e Inicialização Rápida deixam de funcionar.
+    actions:
+      - type: powershell
+        detect: |
+          $v = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Power' -Name HibernateEnabled -ErrorAction SilentlyContinue).HibernateEnabled
+          [bool]($v -eq 0)
+        apply: powercfg.exe /hibernate off
+        revert: powercfg.exe /hibernate on
+
+  - id: perf.fast-startup.disable
+    name: Desativar a Inicialização Rápida
+    description: >
+      Faz o desligamento ser completo (sem hibernar o kernel). Evita problemas com dual boot,
+      drivers e atualizações que exigem desligamento real.
+    risk: low
+    tags: [energia, boot]
+    breaks: A inicialização a frio pode ficar alguns segundos mais lenta.
+    actions:
+      - type: registry
+        path: HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power
+        name: HiberbootEnabled
+        kind: dword
+        value: 0
+
+  - id: perf.background-apps.deny
+    name: Impedir apps da Store de rodarem em segundo plano
+    description: Política "Permitir que aplicativos do Windows sejam executados em segundo plano" = Forçar negação.
+    risk: medium
+    tags: [desempenho, politica, bateria]
+    breaks: Notificações e sincronização em segundo plano de apps da Store (Mail, Teams, Vincular ao Celular...).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy
+        name: LetAppsRunInBackground
+        kind: dword
+        value: 2
+
+  - id: perf.mouse-acceleration.disable
+    name: Desativar a aceleração do mouse
+    description: Desativa "Aumentar precisão do ponteiro", deixando o movimento do mouse 1:1.
+    risk: low
+    tags: [mouse, jogos]
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Mouse
+        name: MouseSpeed
+        kind: string
+        value: "0"
+      - type: registry
+        path: HKCU\Control Panel\Mouse
+        name: MouseThreshold1
+        kind: string
+        value: "0"
+      - type: registry
+        path: HKCU\Control Panel\Mouse
+        name: MouseThreshold2
+        kind: string
+        value: "0"
+
+  - id: perf.delivery-optimization.http-only
+    name: Otimização de Entrega apenas via HTTP (sem P2P)
+    description: Desativa o compartilhamento de atualizações com outros PCs (P2P), baixando só dos servidores da Microsoft.
+    risk: low
+    tags: [windows-update, rede, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization
+        name: DODownloadMode
+        kind: dword
+        value: 0

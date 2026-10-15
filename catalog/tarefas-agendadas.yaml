@@ -1,0 +1,93 @@
+# Tarefas agendadas de telemetria e manutenção desnecessária.
+category: Sistema/Tarefas agendadas
+
+tweaks:
+  - id: tasks.compatibility-appraiser
+    name: Desativar o Avaliador de Compatibilidade da Microsoft
+    description: >
+      Desativa as tarefas que coletam dados de programas instalados para telemetria e avaliação de
+      compatibilidade de upgrades.
+    risk: low
+    tags: [tarefa, telemetria]
+    breaks: Verificações de compatibilidade antes de atualizações de recurso podem ficar menos precisas.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\ProgramDataUpdater
+        state: disabled
+
+  - id: tasks.ceip
+    name: Desativar tarefas do Programa de Aperfeiçoamento (CEIP)
+    description: Desativa as tarefas que consolidam e enviam dados do CEIP.
+    risk: low
+    tags: [tarefa, telemetria]
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Customer Experience Improvement Program\Consolidator
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Customer Experience Improvement Program\UsbCeip
+        state: disabled
+
+  - id: tasks.disk-diagnostic-collector
+    name: Desativar o coletor de diagnóstico de disco
+    description: Desativa a tarefa que envia informações gerais de disco e sistema para a Microsoft.
+    risk: low
+    tags: [tarefa, telemetria]
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector
+        state: disabled
+
+  - id: tasks.feedback-siuf
+    name: Desativar tarefas de feedback (SIUF)
+    description: Desativa as tarefas do cliente de feedback do Windows.
+    risk: low
+    tags: [tarefa, telemetria, feedback]
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Feedback\Siuf\DmClient
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload
+        state: disabled
+
+  - id: tasks.autochk-proxy
+    name: Desativar a tarefa Autochk Proxy
+    description: Desativa a tarefa que coleta dados SQM do Autochk.
+    risk: low
+    tags: [tarefa, telemetria]
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Autochk\Proxy
+        state: disabled
+
+  - id: tasks.maps
+    name: Desativar tarefas do app Mapas
+    description: Desativa a atualização automática de mapas e as notificações do app Mapas.
+    risk: low
+    tags: [tarefa, mapas]
+    breaks: Mapas offline não são atualizados automaticamente.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Maps\MapsUpdateTask
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Maps\MapsToastTask
+        state: disabled
+
+  - id: tasks.xbox-game-save
+    name: Desativar a tarefa de salvamento de jogos do Xbox
+    description: Desativa a tarefa de sincronização de jogos salvos do Xbox Live.
+    risk: low
+    tags: [tarefa, xbox, jogos]
+    breaks: Sincronização de jogos salvos na nuvem do Xbox.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\XblGameSave\XblGameSaveTask
+        state: disabled

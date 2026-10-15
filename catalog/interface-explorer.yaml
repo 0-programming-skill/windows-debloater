@@ -1,0 +1,128 @@
+# Explorador de Arquivos e barra de tarefas.
+category: Interface/Explorador e barra de tarefas
+
+tweaks:
+  - id: ui.explorer.show-file-extensions
+    name: Mostrar extensões de arquivo
+    description: Exibe as extensões (.exe, .pdf, .docx...) de todos os arquivos. Ajuda a identificar arquivos maliciosos.
+    risk: low
+    tags: [explorer, seguranca]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: HideFileExt
+        kind: dword
+        value: 0
+
+  - id: ui.explorer.show-hidden-files
+    name: Mostrar arquivos ocultos
+    description: Exibe arquivos e pastas ocultos no Explorador de Arquivos.
+    risk: low
+    tags: [explorer]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Hidden
+        kind: dword
+        value: 1
+
+  - id: ui.explorer.open-this-pc
+    name: Abrir o Explorador em "Este Computador"
+    description: O Explorador de Arquivos abre em "Este Computador" em vez de "Início".
+    risk: low
+    tags: [explorer]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: LaunchTo
+        kind: dword
+        value: 1
+
+  - id: ui.explorer.compact-mode
+    name: Modo compacto no Explorador
+    description: Reduz o espaçamento entre itens no Explorador de Arquivos.
+    risk: low
+    tags: [explorer]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: UseCompactMode
+        kind: dword
+        value: 1
+
+  - id: ui.explorer.classic-context-menu
+    name: Menu de contexto clássico
+    description: >
+      Restaura o menu de contexto completo do Windows 10, sem precisar de "Mostrar mais opções".
+      Requer reiniciar o Explorador (ou sair e entrar) para ter efeito.
+    risk: low
+    tags: [explorer, menu-de-contexto]
+    actions:
+      - type: registry
+        path: HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32
+        name: ""
+        kind: string
+        value: ""
+
+  - id: ui.explorer.hide-gallery
+    name: Ocultar "Galeria" do painel de navegação
+    description: Remove o item Galeria do painel lateral do Explorador de Arquivos.
+    risk: low
+    minBuild: 22621
+    tags: [explorer]
+    actions:
+      - type: registry
+        path: HKCU\Software\Classes\CLSID\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}
+        name: System.IsPinnedToNameSpaceTree
+        kind: dword
+        value: 0
+
+  - id: ui.taskbar.align-left
+    name: Alinhar a barra de tarefas à esquerda
+    description: Coloca o botão Iniciar e os ícones da barra de tarefas à esquerda, como no Windows 10.
+    risk: low
+    tags: [barra-de-tarefas]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarAl
+        kind: dword
+        value: 0
+
+  - id: ui.taskbar.hide-task-view
+    name: Ocultar o botão Visão de Tarefas
+    description: Remove o botão Visão de Tarefas da barra de tarefas (Win+Tab continua funcionando).
+    risk: low
+    tags: [barra-de-tarefas]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ShowTaskViewButton
+        kind: dword
+        value: 0
+
+  - id: ui.taskbar.disable-widgets
+    name: Desativar Widgets (Notícias e interesses)
+    description: Desativa o painel de Widgets e remove o botão da barra de tarefas, por política.
+    risk: low
+    tags: [barra-de-tarefas, widgets, politica, anuncios]
+    breaks: O painel de Widgets (Win+W) deixa de funcionar.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Dsh
+        name: AllowNewsAndInterests
+        kind: dword
+        value: 0
+
+  - id: ui.taskbar.end-task
+    name: Habilitar "Finalizar tarefa" no menu da barra de tarefas
+    description: Adiciona a opção "Finalizar tarefa" ao clicar com o botão direito num app na barra de tarefas.
+    risk: low
+    minBuild: 22631
+    tags: [barra-de-tarefas]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings
+        name: TaskbarEndTask
+        kind: dword
+        value: 1

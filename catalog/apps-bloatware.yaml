@@ -1,0 +1,174 @@
+# Apps pré-instalados. Remoção para todos os usuários + desprovisionamento.
+# Não são reversíveis pelo engine; "storeId" permite reinstalar via winget (msstore).
+category: Apps/Bloatware
+
+tweaks:
+  - id: apps.remove.bing-news
+    name: Remover Microsoft Notícias
+    description: Remove o app Notícias (Microsoft.BingNews).
+    risk: low
+    reversible: false
+    tags: [appx, bloatware]
+    actions:
+      - type: appx
+        name: Microsoft.BingNews
+        state: removed
+        storeId: 9WZDNCRFHVFW
+
+  - id: apps.remove.bing-weather
+    name: Remover Clima (MSN Weather)
+    description: Remove o app Clima (Microsoft.BingWeather).
+    risk: low
+    reversible: false
+    tags: [appx, bloatware]
+    breaks: O widget de clima pode deixar de abrir o app.
+    actions:
+      - type: appx
+        name: Microsoft.BingWeather
+        state: removed
+        storeId: 9WZDNCRFJ3Q2
+
+  - id: apps.remove.bing-search
+    name: Remover o app Bing Search
+    description: Remove o pacote Microsoft Bing (Microsoft.BingSearch), instalado em builds recentes.
+    risk: low
+    reversible: false
+    tags: [appx, bloatware, bing]
+    actions:
+      - type: appx
+        name: Microsoft.BingSearch
+        state: removed
+
+  - id: apps.remove.clipchamp
+    name: Remover Clipchamp
+    description: Remove o editor de vídeo Clipchamp.
+    risk: low
+    reversible: false
+    tags: [appx, bloatware]
+    actions:
+      - type: appx
+        name: Clipchamp.Clipchamp
+        state: removed
+        storeId: 9P1J8S7CCWWT
+
+  - id: apps.remove.get-help
+    name: Remover Obter Ajuda
+    description: Remove o app Obter Ajuda (Microsoft.GetHelp).
+    risk: low
+    reversible: false
+    tags: [appx, bloatware]
+    breaks: Alguns solucionadores de problemas abrem o Obter Ajuda e deixarão de funcionar.
+    actions:
+      - type: appx
+        name: Microsoft.GetHelp
+        state: removed
+
+  - id: apps.remove.tips
+    name: Remover Dicas
+    description: Remove o app Dicas / Introdução (Microsoft.Getstarted).
+    risk: low
+    reversible: false
+    tags: [appx, bloatware]
+    actions:
+      - type: appx
+        name: Microsoft.Getstarted
+        state: removed
+
+  - id: apps.remove.solitaire
+    name: Remover Microsoft Solitaire Collection
+    description: Remove o pacote de jogos de paciência (com anúncios).
+    risk: low
+    reversible: false
+    tags: [appx, bloatware, jogos]
+    actions:
+      - type: appx
+        name: Microsoft.MicrosoftSolitaireCollection
+        state: removed
+        storeId: 9WZDNCRFHWD2
+
+  - id: apps.remove.teams-consumer
+    name: Remover Microsoft Teams (pessoal)
+    description: Remove o Teams pessoal pré-instalado (pacote MSTeams; MicrosoftTeams nas versões antigas).
+    risk: low
+    reversible: false
+    tags: [appx, bloatware]
+    breaks: Teams pessoal. O Teams corporativo instalado separadamente não é afetado se tiver outro nome de pacote.
+    actions:
+      - type: appx
+        name: MSTeams
+        state: removed
+      - type: appx
+        name: MicrosoftTeams
+        state: removed
+
+  - id: apps.remove.office-hub
+    name: Remover o app Microsoft 365 (Office)
+    description: Remove o hub "Microsoft 365 (Office)" pré-instalado. Não remove o Office instalado.
+    risk: low
+    reversible: false
+    tags: [appx, bloatware, anuncios]
+    actions:
+      - type: appx
+        name: Microsoft.MicrosoftOfficeHub
+        state: removed
+
+  - id: apps.remove.feedback-hub
+    name: Remover Hub de Feedback
+    description: Remove o Hub de Feedback (Microsoft.WindowsFeedbackHub).
+    risk: low
+    reversible: false
+    tags: [appx, bloatware, feedback]
+    breaks: Programa Windows Insider usa o Hub de Feedback.
+    actions:
+      - type: appx
+        name: Microsoft.WindowsFeedbackHub
+        state: removed
+        storeId: 9NBLGGH4R32N
+
+  - id: apps.remove.power-automate
+    name: Remover Power Automate Desktop
+    description: Remove o Power Automate pré-instalado.
+    risk: low
+    reversible: false
+    tags: [appx, bloatware]
+    actions:
+      - type: appx
+        name: Microsoft.PowerAutomateDesktop
+        state: removed
+        storeId: 9NFTCH6J7FHV
+
+  - id: apps.remove.todo
+    name: Remover Microsoft To Do
+    description: Remove o app Microsoft To Do.
+    risk: low
+    reversible: false
+    tags: [appx, bloatware]
+    actions:
+      - type: appx
+        name: Microsoft.Todos
+        state: removed
+        storeId: 9NBLGGH5R558
+
+  - id: apps.remove.windows-maps
+    name: Remover Mapas do Windows
+    description: Remove o app Mapas (Microsoft.WindowsMaps), descontinuado pela Microsoft.
+    risk: low
+    reversible: false
+    tags: [appx, bloatware, mapas]
+    actions:
+      - type: appx
+        name: Microsoft.WindowsMaps
+        state: removed
+
+  - id: apps.remove.phone-link
+    name: Remover Vincular ao Celular
+    description: Remove o app Vincular ao Celular (Microsoft.YourPhone).
+    risk: medium
+    reversible: false
+    tags: [appx]
+    breaks: Integração com o celular (notificações, SMS, fotos) e recursos que dependem dele.
+    actions:
+      - type: appx
+        name: Microsoft.YourPhone
+        state: removed
+        storeId: 9NMPJ99VJBWV

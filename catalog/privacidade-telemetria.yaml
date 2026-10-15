@@ -1,0 +1,197 @@
+# Telemetria e coleta de dados de diagnóstico.
+category: Privacidade/Telemetria
+
+tweaks:
+  - id: privacy.telemetry.allow-telemetry
+    name: Reduzir dados de diagnóstico ao mínimo
+    description: >
+      Define a política "Permitir Dados de Diagnóstico" para o nível mínimo. O valor 0 (Segurança)
+      só é respeitado nas edições Enterprise/Education/Server; no Home e no Pro o Windows trata como
+      1 (Somente dados obrigatórios).
+    risk: low
+    tags: [telemetria, politica]
+    breaks: Programa Windows Insider exige dados opcionais.
+    references:
+      - https://learn.microsoft.com/windows/privacy/configure-windows-diagnostic-data-in-your-organization
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: AllowTelemetry
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.diagtrack-service
+    name: Desativar o serviço de telemetria (DiagTrack)
+    description: >
+      Desativa o serviço "Experiências do Usuário Conectado e Telemetria" (DiagTrack), que envia os
+      dados de diagnóstico para a Microsoft.
+    risk: medium
+    tags: [telemetria, servico]
+    breaks: >
+      Windows Insider e algumas ferramentas de diagnóstico/solução de problemas param de funcionar.
+      Alguns jogos/apps da Store reportam erros de licenciamento em casos raros.
+    actions:
+      - type: service
+        name: DiagTrack
+        startup: disabled
+
+  - id: privacy.telemetry.dmwappushservice
+    name: Desativar o serviço de roteamento de mensagens WAP push
+    description: >
+      Desativa o dmwappushservice, usado para roteamento de mensagens WAP push e por gerenciamento de
+      dispositivos (MDM). Em PCs domésticos não é necessário.
+    risk: medium
+    tags: [telemetria, servico]
+    breaks: Inscrição e sincronização com MDM/Intune em PCs corporativos.
+    actions:
+      - type: service
+        name: dmwappushservice
+        startup: disabled
+
+  - id: privacy.telemetry.feedback-requests
+    name: Nunca pedir feedback
+    description: Impede que o Windows peça avaliações e feedback (frequência de feedback = Nunca).
+    risk: low
+    tags: [telemetria, feedback]
+    actions:
+      - type: registry
+        path: HKCU\SOFTWARE\Microsoft\Siuf\Rules
+        name: NumberOfSIUFInPeriod
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: DoNotShowFeedbackNotifications
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.tailored-experiences
+    name: Desativar experiências personalizadas com dados de diagnóstico
+    description: >
+      Impede que a Microsoft use seus dados de diagnóstico para mostrar dicas, anúncios e
+      recomendações personalizadas.
+    risk: low
+    tags: [telemetria, anuncios]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy
+        name: TailoredExperiencesWithDiagnosticDataEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\CloudContent
+        name: DisableTailoredExperiencesWithDiagnosticData
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.inking-typing
+    name: Desativar coleta de escrita à tinta e digitação
+    description: >
+      Desativa "Personalização de escrita à tinta e digitação" e o envio de dados de digitação para
+      melhorar o reconhecimento. O dicionário de usuário local deixa de ser alimentado.
+    risk: low
+    tags: [telemetria, digitacao]
+    breaks: Sugestões de texto e reconhecimento de caligrafia ficam menos personalizados.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Input\TIPC
+        name: Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\InputPersonalization
+        name: RestrictImplicitInkCollection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKCU\Software\Microsoft\InputPersonalization
+        name: RestrictImplicitTextCollection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKCU\Software\Microsoft\InputPersonalization\TrainedDataStore
+        name: HarvestContacts
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.activity-history
+    name: Desativar histórico de atividades
+    description: Impede que o Windows registre e envie o histórico de atividades (apps, arquivos, sites).
+    risk: low
+    tags: [telemetria, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: EnableActivityFeed
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: PublishUserActivities
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: UploadUserActivities
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.app-launch-tracking
+    name: Não rastrear inicialização de apps
+    description: >
+      Desativa "Permitir que o Windows melhore o Iniciar e os resultados de pesquisa rastreando a
+      inicialização de aplicativos".
+    risk: low
+    tags: [telemetria, iniciar]
+    breaks: A lista "Mais usados" do menu Iniciar deixa de ser preenchida.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Start_TrackProgs
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.error-reporting
+    name: Desativar o Relatório de Erros do Windows
+    description: Impede o envio de relatórios de falhas (WER) para a Microsoft.
+    risk: medium
+    tags: [telemetria, politica]
+    breaks: A Microsoft deixa de receber dumps de falhas, e soluções sugeridas automaticamente não aparecem.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting
+        name: Disabled
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.ceip
+    name: Desativar o Programa de Aperfeiçoamento da Experiência do Usuário
+    description: Desativa o CEIP (SQM) por política.
+    risk: low
+    tags: [telemetria, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\SQMClient\Windows
+        name: CEIPEnable
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.app-compat-telemetry
+    name: Desativar telemetria de compatibilidade de aplicativos
+    description: >
+      Desativa o Application Impact Telemetry (AIT) e o Inventory Collector, que coletam dados sobre
+      os programas instalados.
+    risk: low
+    tags: [telemetria, politica]
+    breaks: O Assistente de Compatibilidade de Programas deixa de receber dados de inventário.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat
+        name: AITEnable
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat
+        name: DisableInventory
+        kind: dword
+        value: 1

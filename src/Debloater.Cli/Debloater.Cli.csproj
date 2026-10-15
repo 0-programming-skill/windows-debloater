@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Debloater.Cli</AssemblyName>
+    <RootNamespace>Debloater.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Debloater.Core\Debloater.Core.csproj" />
+  </ItemGroup>
+
+  <!-- O catálogo é copiado para a saída: <exe>\catalog\**\*.yaml -->
+  <ItemGroup>
+    <None Include="..\..\catalog\**\*.yaml" LinkBase="catalog" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

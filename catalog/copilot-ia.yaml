@@ -1,0 +1,96 @@
+# Copilot, Recall e recursos de IA.
+category: IA/Copilot e Recall
+
+tweaks:
+  - id: ai.copilot.turn-off-policy
+    name: Desativar o Windows Copilot (política)
+    description: >
+      Aplica a política "Desativar o Windows Copilot" para o usuário atual e para a máquina. Em builds
+      recentes, onde o Copilot é um app da Store, a política tem efeito limitado; combine com a
+      remoção do app (ai.copilot.remove-app).
+    risk: low
+    tags: [copilot, ia, politica]
+    actions:
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot
+        name: TurnOffWindowsCopilot
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot
+        name: TurnOffWindowsCopilot
+        kind: dword
+        value: 1
+
+  - id: ai.copilot.hide-taskbar-button
+    name: Ocultar o botão do Copilot na barra de tarefas
+    description: Remove o botão do Copilot da barra de tarefas.
+    risk: low
+    tags: [copilot, ia, barra-de-tarefas]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ShowCopilotButton
+        kind: dword
+        value: 0
+
+  - id: ai.copilot.remove-app
+    name: Remover o app Microsoft Copilot
+    description: Desinstala o app Copilot para todos os usuários e impede sua reinstalação em novas contas.
+    risk: low
+    reversible: false
+    tags: [copilot, ia, appx]
+    actions:
+      - type: appx
+        name: Microsoft.Copilot
+        state: removed
+        storeId: 9NHT9RB2F4HD
+
+  - id: ai.recall.disable-snapshots
+    name: Desativar snapshots do Recall
+    description: >
+      Política "Desativar o salvamento de instantâneos para o Windows" (DisableAIDataAnalysis): o
+      Recall deixa de capturar a tela. Relevante apenas em PCs Copilot+.
+    risk: low
+    minBuild: 26100
+    tags: [recall, ia, politica, privacidade]
+    references:
+      - https://learn.microsoft.com/windows/client-management/mdm/policy-csp-windowsai
+    actions:
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\WindowsAI
+        name: DisableAIDataAnalysis
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI
+        name: DisableAIDataAnalysis
+        kind: dword
+        value: 1
+
+  - id: ai.recall.disable-feature
+    name: Desativar o recurso opcional Recall
+    description: Desativa o componente opcional "Recall" do Windows. Só existe em PCs Copilot+.
+    risk: medium
+    minBuild: 26100
+    tags: [recall, ia, recurso-opcional]
+    breaks: Recall e funções que dependem dele. Requer reinicialização.
+    actions:
+      - type: optionalFeature
+        name: Recall
+        state: disabled
+
+  - id: ai.click-to-do.disable
+    name: Desativar o Clique para Fazer (Click to Do)
+    description: Desativa por política o "Clique para Fazer", que analisa o conteúdo da tela com IA.
+    risk: low
+    minBuild: 26100
+    tags: [ia, politica]
+    references:
+      - https://learn.microsoft.com/windows/client-management/mdm/policy-csp-windowsai
+    actions:
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\WindowsAI
+        name: DisableClickToDo
+        kind: dword
+        value: 1
