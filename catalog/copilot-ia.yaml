@@ -5,9 +5,10 @@ tweaks:
   - id: ai.copilot.turn-off-policy
     name: Desativar o Windows Copilot (política)
     description: >
-      Aplica a política "Desativar o Windows Copilot" para o usuário atual e para a máquina. Em builds
-      recentes, onde o Copilot é um app da Store, a política tem efeito limitado; combine com a
-      remoção do app (ai.copilot.remove-app).
+      Aplica a política "Desativar o Windows Copilot" para o usuário atual (a política ADMX é só de
+      Usuário, em HKCU). Efeito limitado nos builds atuais: o Copilot virou um app da Store e a
+      política da CSP está marcada como obsoleta. O caminho efetivo é remover o app
+      (ai.copilot.remove-app); esta política serve só para o Copilot antigo integrado ao Windows.
     risk: low
     confidence: official
     sources:
@@ -17,11 +18,6 @@ tweaks:
     actions:
       - type: registry
         path: HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot
-        name: TurnOffWindowsCopilot
-        kind: dword
-        value: 1
-      - type: registry
-        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot
         name: TurnOffWindowsCopilot
         kind: dword
         value: 1
