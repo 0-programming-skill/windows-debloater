@@ -27,6 +27,10 @@ internal static partial class Program
 
           Debloater.Cli reference annotate [--write] [--force] [--admx-dir DIR] [--csp FILE]
 
+          Debloater.Cli selftest [--id ID]... [--category X] [--max-risk R] [--include-irreversible]
+                                 [--json RELATORIO.json] [--backup-dir DIR] [--restore-point] [--verbose]
+                                 [--i-know-this-is-not-a-vm]
+
         --category X     filtra pelo início da categoria (ex.: privacidade, "Sistema/Tarefas").
         --max-risk       risco máximo aceito por 'apply' (padrão: medium). High/Critical exigem opt-in explícito.
         --catalog DIR    pasta do catálogo (padrão: 'catalog' ao lado do executável).
@@ -35,6 +39,16 @@ internal static partial class Program
                          de Modelos Administrativos mais recente baixado da Microsoft.
         --csp FILE       referência da Policy CSP (padrão: reference/msdocs-policy-csp.json do repositório).
         apply/revert exigem um prompt de administrador. Os demais comandos são somente leitura.
+
+        selftest         SÓ PARA VM DESCARTÁVEL: para cada tweak, lê o estado, aplica, confere (Applied),
+                         re-aplica (o backup original deve ficar intacto), reverte e confere que cada ação
+                         voltou ao valor de antes. Recusa rodar fora de um convidado Hyper-V, a menos que
+                         se passe --i-know-this-is-not-a-vm. Requer administrador. Padrão: todos os tweaks,
+                         todos os riscos; irreversíveis (appx) só com --include-irreversible.
+        --id ID          tweak a testar (repetível ou separado por vírgulas).
+        --json ARQ       (selftest) grava o relatório JSON, atualizado a cada tweak.
+        --backup-dir DIR (selftest) pasta dos backups (padrão: %ProgramData%\Debloater\backups).
+        --restore-point  (selftest) cria um ponto de restauração antes e registra o resultado.
         """;
 
     private static async Task<int> Main(string[] args)
@@ -59,6 +73,7 @@ internal static partial class Program
                 "inventory" => await InventoryAsync(parsed),
                 "admx" => Admx(parsed),
                 "reference" => Reference(parsed),
+                "selftest" => await SelfTestAsync(parsed),
                 _ => Fail($"Comando desconhecido '{parsed.Command}'.\n\n{Usage}"),
             };
         }
@@ -255,6 +270,13 @@ internal static partial class Program
         public string? WarningsOut { get; private set; }
         public bool Write { get; private set; }
         public bool Force { get; private set; }
+        public bool MaxRiskSet { get; private set; }
+        public List<string> Ids { get; } = [];
+        public bool IncludeIrreversible { get; private set; }
+        public string? JsonOut { get; private set; }
+        public string? BackupDir { get; private set; }
+        public bool RestorePoint { get; private set; }
+        public bool NotAVmOverride { get; private set; }
 
         public static Args Parse(string[] args)
         {
@@ -269,7 +291,16 @@ internal static partial class Program
                     case "--verbose": case "-v": a.Verbose = true; break;
                     case "--kind": a.Kinds.AddRange(Next().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)); break;
                     case "--uncatalogued": a.Uncatalogued = true; break;
-                    case "--json": a.Json = true; break;
+                    case "--json":
+                        // No selftest, --json recebe o caminho do relatório; nos demais é uma chave.
+                        if (a.Command == "selftest") a.JsonOut = Path.GetFullPath(Next());
+                        else a.Json = true;
+                        break;
+                    case "--id": a.Ids.AddRange(Next().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)); break;
+                    case "--include-irreversible": a.IncludeIrreversible = true; break;
+                    case "--backup-dir": a.BackupDir = Path.GetFullPath(Next()); break;
+                    case "--restore-point": a.RestorePoint = true; break;
+                    case "--i-know-this-is-not-a-vm": a.NotAVmOverride = true; break;
                     case "--search": a.Search = Next(); break;
                     case "--configured": a.Configured = true; break;
                     case "--with-state": a.WithState = true; break;
@@ -285,6 +316,7 @@ internal static partial class Program
                         a.MaxRisk = Enum.TryParse<RiskLevel>(v, ignoreCase: true, out var r) && Enum.IsDefined(r)
                             ? r
                             : throw new ArgumentException($"--max-risk inválido '{v}' (low|medium|high|critical).");
+                        a.MaxRiskSet = true;
                         break;
                     default:
                         if (args[i].StartsWith("--")) throw new ArgumentException($"Opção desconhecida '{args[i]}'.");
