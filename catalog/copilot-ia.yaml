@@ -9,6 +9,10 @@ tweaks:
       recentes, onde o Copilot é um app da Store, a política tem efeito limitado; combine com a
       remoção do app (ai.copilot.remove-app).
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/TurnOffWindowsCopilot" }
+      - { kind: admx, ref: "WindowsCopilot.admx:TurnOffWindowsCopilot" }
     tags: [copilot, ia, politica]
     actions:
       - type: registry
@@ -26,6 +30,7 @@ tweaks:
     name: Ocultar o botão do Copilot na barra de tarefas
     description: Remove o botão do Copilot da barra de tarefas.
     risk: low
+    confidence: community
     tags: [copilot, ia, barra-de-tarefas]
     actions:
       - type: registry
@@ -38,6 +43,7 @@ tweaks:
     name: Remover o app Microsoft Copilot
     description: Desinstala o app Copilot para todos os usuários e impede sua reinstalação em novas contas.
     risk: low
+    confidence: community
     reversible: false
     tags: [copilot, ia, appx]
     actions:
@@ -52,6 +58,10 @@ tweaks:
       Política "Desativar o salvamento de instantâneos para o Windows" (DisableAIDataAnalysis): o
       Recall deixa de capturar a tela. Relevante apenas em PCs Copilot+.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/DisableAIDataAnalysis" }
+      - { kind: admx, ref: "WindowsCopilot.admx:DisableAIDataAnalysis" }
     minBuild: 26100
     tags: [recall, ia, politica, privacidade]
     references:
@@ -72,6 +82,7 @@ tweaks:
     name: Desativar o recurso opcional Recall
     description: Desativa o componente opcional "Recall" do Windows. Só existe em PCs Copilot+.
     risk: medium
+    confidence: community
     minBuild: 26100
     tags: [recall, ia, recurso-opcional]
     breaks: Recall e funções que dependem dele. Requer reinicialização.
@@ -84,6 +95,10 @@ tweaks:
     name: Desativar o Clique para Fazer (Click to Do)
     description: Desativa por política o "Clique para Fazer", que analisa o conteúdo da tela com IA.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/DisableClickToDo" }
+      - { kind: admx, ref: "WindowsCopilot.admx:DisableClickToDo" }
     minBuild: 26100
     tags: [ia, politica]
     references:

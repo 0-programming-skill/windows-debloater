@@ -6,6 +6,10 @@ tweaks:
     name: Desativar a gravação em segundo plano (Game DVR)
     description: Desativa a captura de jogos em segundo plano da Xbox Game Bar, que consome recursos.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ApplicationManagement/AllowGameDVR" }
+      - { kind: admx, ref: "GameDVR.admx:AllowGameDVR" }
     tags: [jogos, desempenho]
     breaks: Gravações e capturas da Xbox Game Bar.
     actions:
@@ -26,6 +30,7 @@ tweaks:
       Executa "powercfg /hibernate off", apagando o hiberfil.sys e liberando espaço em disco
       (proporcional à RAM).
     risk: medium
+    confidence: community
     tags: [energia, disco]
     breaks: Hibernação e Inicialização Rápida deixam de funcionar.
     actions:
@@ -42,6 +47,7 @@ tweaks:
       Faz o desligamento ser completo (sem hibernar o kernel). Evita problemas com dual boot,
       drivers e atualizações que exigem desligamento real.
     risk: low
+    confidence: community
     tags: [energia, boot]
     breaks: A inicialização a frio pode ficar alguns segundos mais lenta.
     actions:
@@ -55,6 +61,10 @@ tweaks:
     name: Impedir apps da Store de rodarem em segundo plano
     description: Política "Permitir que aplicativos do Windows sejam executados em segundo plano" = Forçar negação.
     risk: medium
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Privacy/LetAppsRunInBackground" }
+      - { kind: admx, ref: "AppPrivacy.admx:LetAppsRunInBackground" }
     tags: [desempenho, politica, bateria]
     breaks: Notificações e sincronização em segundo plano de apps da Store (Mail, Teams, Vincular ao Celular...).
     actions:
@@ -68,6 +78,7 @@ tweaks:
     name: Desativar a aceleração do mouse
     description: Desativa "Aumentar precisão do ponteiro", deixando o movimento do mouse 1:1.
     risk: low
+    confidence: community
     tags: [mouse, jogos]
     actions:
       - type: registry
@@ -90,6 +101,10 @@ tweaks:
     name: Otimização de Entrega apenas via HTTP (sem P2P)
     description: Desativa o compartilhamento de atualizações com outros PCs (P2P), baixando só dos servidores da Microsoft.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - DeliveryOptimization/DODownloadMode" }
+      - { kind: admx, ref: "DeliveryOptimization.admx:DownloadMode" }
     tags: [windows-update, rede, politica]
     actions:
       - type: registry

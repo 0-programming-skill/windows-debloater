@@ -7,6 +7,7 @@ tweaks:
     name: Remover Microsoft Notícias
     description: Remove o app Notícias (Microsoft.BingNews).
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware]
     actions:
@@ -19,6 +20,7 @@ tweaks:
     name: Remover Clima (MSN Weather)
     description: Remove o app Clima (Microsoft.BingWeather).
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware]
     breaks: O widget de clima pode deixar de abrir o app.
@@ -32,6 +34,7 @@ tweaks:
     name: Remover o app Bing Search
     description: Remove o pacote Microsoft Bing (Microsoft.BingSearch), instalado em builds recentes.
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware, bing]
     actions:
@@ -43,6 +46,7 @@ tweaks:
     name: Remover Clipchamp
     description: Remove o editor de vídeo Clipchamp.
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware]
     actions:
@@ -55,6 +59,7 @@ tweaks:
     name: Remover Obter Ajuda
     description: Remove o app Obter Ajuda (Microsoft.GetHelp).
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware]
     breaks: Alguns solucionadores de problemas abrem o Obter Ajuda e deixarão de funcionar.
@@ -67,6 +72,7 @@ tweaks:
     name: Remover Dicas
     description: Remove o app Dicas / Introdução (Microsoft.Getstarted).
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware]
     actions:
@@ -78,6 +84,7 @@ tweaks:
     name: Remover Microsoft Solitaire Collection
     description: Remove o pacote de jogos de paciência (com anúncios).
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware, jogos]
     actions:
@@ -90,6 +97,7 @@ tweaks:
     name: Remover Microsoft Teams (pessoal)
     description: Remove o Teams pessoal pré-instalado (pacote MSTeams; MicrosoftTeams nas versões antigas).
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware]
     breaks: Teams pessoal. O Teams corporativo instalado separadamente não é afetado se tiver outro nome de pacote.
@@ -105,6 +113,7 @@ tweaks:
     name: Remover o app Microsoft 365 (Office)
     description: Remove o hub "Microsoft 365 (Office)" pré-instalado. Não remove o Office instalado.
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware, anuncios]
     actions:
@@ -116,6 +125,7 @@ tweaks:
     name: Remover Hub de Feedback
     description: Remove o Hub de Feedback (Microsoft.WindowsFeedbackHub).
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware, feedback]
     breaks: Programa Windows Insider usa o Hub de Feedback.
@@ -129,6 +139,7 @@ tweaks:
     name: Remover Power Automate Desktop
     description: Remove o Power Automate pré-instalado.
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware]
     actions:
@@ -141,6 +152,7 @@ tweaks:
     name: Remover Microsoft To Do
     description: Remove o app Microsoft To Do.
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware]
     actions:
@@ -153,6 +165,7 @@ tweaks:
     name: Remover Mapas do Windows
     description: Remove o app Mapas (Microsoft.WindowsMaps), descontinuado pela Microsoft.
     risk: low
+    confidence: community
     reversible: false
     tags: [appx, bloatware, mapas]
     actions:
@@ -164,6 +177,7 @@ tweaks:
     name: Remover Vincular ao Celular
     description: Remove o app Vincular ao Celular (Microsoft.YourPhone).
     risk: medium
+    confidence: community
     reversible: false
     tags: [appx]
     breaks: Integração com o celular (notificações, SMS, fotos) e recursos que dependem dele.

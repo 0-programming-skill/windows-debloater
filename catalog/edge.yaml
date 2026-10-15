@@ -6,6 +6,7 @@ tweaks:
     name: Desativar o "Aumento de inicialização" do Edge
     description: Impede que o Edge fique pré-carregado em segundo plano ao iniciar o Windows.
     risk: low
+    confidence: community
     tags: [edge, desempenho, politica]
     references:
       - https://learn.microsoft.com/deployedge/microsoft-edge-policies#startupboostenabled
@@ -20,6 +21,7 @@ tweaks:
     name: Não manter o Edge em segundo plano
     description: Impede que o Edge continue rodando em segundo plano depois de fechado.
     risk: low
+    confidence: community
     tags: [edge, desempenho, politica]
     breaks: Notificações de sites e extensões em segundo plano com o Edge fechado.
     references:
@@ -35,6 +37,7 @@ tweaks:
     name: Pular a experiência de primeira execução do Edge
     description: Não exibe o assistente de primeira execução do Edge.
     risk: low
+    confidence: community
     tags: [edge, politica]
     actions:
       - type: registry
@@ -47,6 +50,7 @@ tweaks:
     name: Não usar o histórico de navegação para personalizar anúncios
     description: Desativa o envio do histórico de navegação para personalização de anúncios, notícias e serviços.
     risk: low
+    confidence: community
     tags: [edge, privacidade, politica]
     actions:
       - type: registry
@@ -59,6 +63,7 @@ tweaks:
     name: Desativar compras no Microsoft Edge
     description: Desativa o assistente de compras (cupons, comparação de preços).
     risk: low
+    confidence: community
     tags: [edge, anuncios, politica]
     actions:
       - type: registry
@@ -71,6 +76,7 @@ tweaks:
     name: Não enviar dados de diagnóstico do Edge
     description: Define a política DiagnosticData do Edge como 0 (desativado).
     risk: low
+    confidence: community
     tags: [edge, telemetria, politica]
     actions:
       - type: registry
@@ -83,6 +89,7 @@ tweaks:
     name: Desativar a barra lateral do Edge (Copilot)
     description: Desativa a barra lateral do Edge, incluindo o Copilot integrado.
     risk: low
+    confidence: community
     tags: [edge, ia, copilot, politica]
     actions:
       - type: registry

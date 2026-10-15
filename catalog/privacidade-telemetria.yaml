@@ -9,6 +9,10 @@ tweaks:
       só é respeitado nas edições Enterprise/Education/Server; no Home e no Pro o Windows trata como
       1 (Somente dados obrigatórios).
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - System/AllowTelemetry" }
+      - { kind: admx, ref: "DataCollection.admx:AllowTelemetry" }
     tags: [telemetria, politica]
     breaks: Programa Windows Insider exige dados opcionais.
     references:
@@ -26,6 +30,7 @@ tweaks:
       Desativa o serviço "Experiências do Usuário Conectado e Telemetria" (DiagTrack), que envia os
       dados de diagnóstico para a Microsoft.
     risk: medium
+    confidence: community
     tags: [telemetria, servico]
     breaks: >
       Windows Insider e algumas ferramentas de diagnóstico/solução de problemas param de funcionar.
@@ -41,6 +46,7 @@ tweaks:
       Desativa o dmwappushservice, usado para roteamento de mensagens WAP push e por gerenciamento de
       dispositivos (MDM). Em PCs domésticos não é necessário.
     risk: medium
+    confidence: community
     tags: [telemetria, servico]
     breaks: Inscrição e sincronização com MDM/Intune em PCs corporativos.
     actions:
@@ -52,6 +58,10 @@ tweaks:
     name: Nunca pedir feedback
     description: Impede que o Windows peça avaliações e feedback (frequência de feedback = Nunca).
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/DoNotShowFeedbackNotifications" }
+      - { kind: admx, ref: "FeedbackNotifications.admx:DoNotShowFeedbackNotifications" }
     tags: [telemetria, feedback]
     actions:
       - type: registry
@@ -71,6 +81,10 @@ tweaks:
       Impede que a Microsoft use seus dados de diagnóstico para mostrar dicas, anúncios e
       recomendações personalizadas.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowTailoredExperiencesWithDiagnosticData" }
+      - { kind: admx, ref: "CloudContent.admx:DisableTailoredExperiencesWithDiagnosticData" }
     tags: [telemetria, anuncios]
     actions:
       - type: registry
@@ -90,6 +104,7 @@ tweaks:
       Desativa "Personalização de escrita à tinta e digitação" e o envio de dados de digitação para
       melhorar o reconhecimento. O dicionário de usuário local deixa de ser alimentado.
     risk: low
+    confidence: community
     tags: [telemetria, digitacao]
     breaks: Sugestões de texto e reconhecimento de caligrafia ficam menos personalizados.
     actions:
@@ -118,6 +133,14 @@ tweaks:
     name: Desativar histórico de atividades
     description: Impede que o Windows registre e envie o histórico de atividades (apps, arquivos, sites).
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Privacy/EnableActivityFeed" }
+      - { kind: msdocs, ref: "Policy CSP - Privacy/PublishUserActivities" }
+      - { kind: msdocs, ref: "Policy CSP - Privacy/UploadUserActivities" }
+      - { kind: admx, ref: "OSPolicy.admx:EnableActivityFeed" }
+      - { kind: admx, ref: "OSPolicy.admx:PublishUserActivities" }
+      - { kind: admx, ref: "OSPolicy.admx:UploadUserActivities" }
     tags: [telemetria, politica]
     actions:
       - type: registry
@@ -142,6 +165,7 @@ tweaks:
       Desativa "Permitir que o Windows melhore o Iniciar e os resultados de pesquisa rastreando a
       inicialização de aplicativos".
     risk: low
+    confidence: community
     tags: [telemetria, iniciar]
     breaks: A lista "Mais usados" do menu Iniciar deixa de ser preenchida.
     actions:
@@ -155,6 +179,10 @@ tweaks:
     name: Desativar o Relatório de Erros do Windows
     description: Impede o envio de relatórios de falhas (WER) para a Microsoft.
     risk: medium
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ErrorReporting/DisableWindowsErrorReporting" }
+      - { kind: admx, ref: "ErrorReporting.admx:WerDisable_2" }
     tags: [telemetria, politica]
     breaks: A Microsoft deixa de receber dumps de falhas, e soluções sugeridas automaticamente não aparecem.
     actions:
@@ -168,6 +196,10 @@ tweaks:
     name: Desativar o Programa de Aperfeiçoamento da Experiência do Usuário
     description: Desativa o CEIP (SQM) por política.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_ICM/CEIPEnable" }
+      - { kind: admx, ref: "ICM.admx:CEIPEnable" }
     tags: [telemetria, politica]
     actions:
       - type: registry
@@ -182,6 +214,12 @@ tweaks:
       Desativa o Application Impact Telemetry (AIT) e o Inventory Collector, que coletam dados sobre
       os programas instalados.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_AppCompat/AppCompatTurnOffApplicationImpactTelemetry" }
+      - { kind: msdocs, ref: "Policy CSP - ADMX_AppCompat/AppCompatTurnOffProgramInventory" }
+      - { kind: admx, ref: "AppCompat.admx:AppCompatTurnOffApplicationImpactTelemetry" }
+      - { kind: admx, ref: "AppCompat.admx:AppCompatTurnOffProgramInventory" }
     tags: [telemetria, politica]
     breaks: O Assistente de Compatibilidade de Programas deixa de receber dados de inventário.
     actions:

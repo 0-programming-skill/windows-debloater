@@ -8,6 +8,7 @@ tweaks:
       Desativa as tarefas que coletam dados de programas instalados para telemetria e avaliação de
       compatibilidade de upgrades.
     risk: low
+    confidence: community
     tags: [tarefa, telemetria]
     breaks: Verificações de compatibilidade antes de atualizações de recurso podem ficar menos precisas.
     actions:
@@ -25,6 +26,7 @@ tweaks:
     name: Desativar tarefas do Programa de Aperfeiçoamento (CEIP)
     description: Desativa as tarefas que consolidam e enviam dados do CEIP.
     risk: low
+    confidence: community
     tags: [tarefa, telemetria]
     actions:
       - type: scheduledTask
@@ -38,6 +40,7 @@ tweaks:
     name: Desativar o coletor de diagnóstico de disco
     description: Desativa a tarefa que envia informações gerais de disco e sistema para a Microsoft.
     risk: low
+    confidence: community
     tags: [tarefa, telemetria]
     actions:
       - type: scheduledTask
@@ -48,6 +51,7 @@ tweaks:
     name: Desativar tarefas de feedback (SIUF)
     description: Desativa as tarefas do cliente de feedback do Windows.
     risk: low
+    confidence: community
     tags: [tarefa, telemetria, feedback]
     actions:
       - type: scheduledTask
@@ -61,6 +65,7 @@ tweaks:
     name: Desativar a tarefa Autochk Proxy
     description: Desativa a tarefa que coleta dados SQM do Autochk.
     risk: low
+    confidence: community
     tags: [tarefa, telemetria]
     actions:
       - type: scheduledTask
@@ -71,6 +76,7 @@ tweaks:
     name: Desativar tarefas do app Mapas
     description: Desativa a atualização automática de mapas e as notificações do app Mapas.
     risk: low
+    confidence: community
     tags: [tarefa, mapas]
     breaks: Mapas offline não são atualizados automaticamente.
     actions:
@@ -85,6 +91,7 @@ tweaks:
     name: Desativar a tarefa de salvamento de jogos do Xbox
     description: Desativa a tarefa de sincronização de jogos salvos do Xbox Live.
     risk: low
+    confidence: community
     tags: [tarefa, xbox, jogos]
     breaks: Sincronização de jogos salvos na nuvem do Xbox.
     actions:

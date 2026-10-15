@@ -11,6 +11,40 @@ public enum RiskLevel
     Critical = 3,
 }
 
+/// <summary>
+/// Quão bem documentado está o mecanismo do tweak (opcional no YAML).
+/// official: documentado pela Microsoft (Policy CSP em learn.microsoft.com);
+/// admx: corresponde a uma política de um modelo administrativo (ADMX) oficial;
+/// community: conhecido pela comunidade (ferramentas consolidadas), sem documentação oficial;
+/// questionable: há indícios de que não funciona como descrito (valor fora do previsto, edição...).
+/// </summary>
+public enum Confidence
+{
+    Official,
+    Admx,
+    Community,
+    Questionable,
+}
+
+/// <summary>Fonte que sustenta um tweak (ex.: { kind: msdocs, ref: "Policy CSP - System/AllowTelemetry" }).</summary>
+public sealed class SourceRef
+{
+    public const string MsDocs = "msdocs";
+    public const string AdmxKind = "admx";
+    public const string Url = "url";
+    public const string CommunityKind = "community";
+
+    public static IReadOnlyList<string> KnownKinds { get; } = [MsDocs, AdmxKind, Url, CommunityKind];
+
+    /// <summary>msdocs | admx | url | community.</summary>
+    public string Kind { get; set; } = "";
+
+    /// <summary>msdocs: "Policy CSP - Área/Nome"; admx: "Arquivo.admx:Política"; url/community: endereço ou descrição.</summary>
+    public string Ref { get; set; } = "";
+
+    public override string ToString() => $"{Kind}:{Ref}";
+}
+
 /// <summary>Um tweak do catálogo. É apenas DADO, carregado de YAML, sem lógica.</summary>
 public sealed class Tweak
 {
@@ -27,6 +61,12 @@ public sealed class Tweak
     public string Category { get; set; } = "";
 
     public RiskLevel Risk { get; set; } = RiskLevel.Low;
+
+    /// <summary>Nível de confiança (opcional). Ver <see cref="Model.Confidence"/>.</summary>
+    public Confidence? Confidence { get; set; }
+
+    /// <summary>Fontes que sustentam o tweak (opcional).</summary>
+    public List<SourceRef> Sources { get; set; } = [];
 
     /// <summary>Build mínimo do Windows (inclusive).</summary>
     public int? MinBuild { get; set; }

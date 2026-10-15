@@ -6,6 +6,10 @@ tweaks:
     name: Desativar resultados da web (Bing) na pesquisa do Iniciar
     description: Faz a pesquisa do menu Iniciar procurar apenas no PC, sem sugestões e resultados do Bing.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_WindowsExplorer/DisableSearchBoxSuggestions" }
+      - { kind: admx, ref: "WindowsExplorer.admx:DisableSearchBoxSuggestions" }
     tags: [pesquisa, bing, politica]
     breaks: Resultados e sugestões da web na pesquisa do Windows.
     actions:
@@ -24,6 +28,7 @@ tweaks:
     name: Desativar destaques da pesquisa
     description: Remove as ilustrações e conteúdos em destaque (datas comemorativas, tendências) da caixa de pesquisa.
     risk: low
+    confidence: community
     tags: [pesquisa]
     actions:
       - type: registry
@@ -36,6 +41,7 @@ tweaks:
     name: Não pesquisar conteúdo das contas na nuvem
     description: Desativa a pesquisa de conteúdo da conta Microsoft e da conta corporativa/escolar.
     risk: low
+    confidence: community
     tags: [pesquisa, nuvem]
     actions:
       - type: registry
@@ -53,6 +59,7 @@ tweaks:
     name: Pesquisa da barra de tarefas apenas como ícone
     description: Troca a caixa de pesquisa da barra de tarefas por um ícone, economizando espaço.
     risk: low
+    confidence: community
     tags: [pesquisa, barra-de-tarefas]
     actions:
       - type: registry
@@ -65,6 +72,7 @@ tweaks:
     name: Não mostrar arquivos recentes no Iniciar e listas de atalhos
     description: Desativa "Mostrar itens abertos recentemente no Iniciar, nas Listas de Atalhos e no Explorador de Arquivos".
     risk: low
+    confidence: community
     tags: [iniciar, privacidade]
     breaks: Listas de atalhos (jump lists) e a seção Recomendados ficam sem arquivos recentes.
     actions:
@@ -78,6 +86,7 @@ tweaks:
     name: Layout do Iniciar com mais itens fixados
     description: Usa o layout "Mais fixos", reduzindo a seção Recomendados.
     risk: low
+    confidence: community
     minBuild: 22621
     tags: [iniciar]
     actions:

@@ -3,6 +3,9 @@
     <Project Path="src/Debloater.Cli/Debloater.Cli.csproj" />
     <Project Path="src/Debloater.Core/Debloater.Core.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Debloater.RefGen/Debloater.RefGen.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Debloater.Core.Tests/Debloater.Core.Tests.csproj" />
   </Folder>

@@ -6,6 +6,7 @@ tweaks:
     name: Desativar o SMB 1.0
     description: Desativa o protocolo SMB1, obsoleto e inseguro (WannaCry). Já vem desativado em instalações novas.
     risk: low
+    confidence: community
     tags: [recurso-opcional, seguranca, rede]
     breaks: Acesso a NAS e impressoras de rede muito antigos que só falam SMB1.
     actions:
@@ -19,6 +20,7 @@ tweaks:
       Desativa o PowerShell 2.0, usado em ataques de downgrade para contornar o registro de scripts.
       Foi removido do Windows 11 a partir de 2025; nesses sistemas o tweak não se aplica.
     risk: low
+    confidence: community
     tags: [recurso-opcional, seguranca]
     breaks: Scripts muito antigos que exigem "powershell -version 2".
     actions:
@@ -30,6 +32,7 @@ tweaks:
     name: Desativar o cliente de Pastas de Trabalho
     description: Desativa o cliente "Work Folders", usado apenas com servidores corporativos.
     risk: low
+    confidence: community
     tags: [recurso-opcional]
     breaks: Sincronização com Pastas de Trabalho corporativas.
     actions:
@@ -41,6 +44,7 @@ tweaks:
     name: Desativar o Windows Media Player legado
     description: Desativa o Windows Media Player clássico (recurso "MediaPlayback"). O novo Media Player não é afetado.
     risk: low
+    confidence: community
     tags: [recurso-opcional]
     breaks: Apps que embutem o controle do Windows Media Player clássico.
     actions:

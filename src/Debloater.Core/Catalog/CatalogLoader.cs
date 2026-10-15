@@ -128,6 +128,14 @@ public static partial class CatalogLoader
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
                 errors.Add($"referência não é uma URL http(s): '{url}'.");
         }
+        if (tweak.Confidence is { } conf && !Enum.IsDefined(conf)) errors.Add($"confidence inválido '{conf}'.");
+        foreach (var source in tweak.Sources)
+        {
+            if (!SourceRef.KnownKinds.Contains(source.Kind))
+                errors.Add($"fonte com kind inválido '{source.Kind}' (esperado: {string.Join(" | ", SourceRef.KnownKinds)}).");
+            if (string.IsNullOrWhiteSpace(source.Ref))
+                errors.Add("fonte sem 'ref'.");
+        }
         if (tweak.Actions.Count == 0) errors.Add("tweak sem ações.");
 
         for (int i = 0; i < tweak.Actions.Count; i++)

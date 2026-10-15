@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Debloater.RefGen</AssemblyName>
+    <RootNamespace>Debloater.RefGen</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Debloater.Core\Debloater.Core.csproj" />
+  </ItemGroup>
+
+</Project>

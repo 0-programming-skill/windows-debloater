@@ -10,9 +10,10 @@
     <ProjectReference Include="..\Debloater.Core\Debloater.Core.csproj" />
   </ItemGroup>
 
-  <!-- O catálogo é copiado para a saída: <exe>\catalog\**\*.yaml -->
+  <!-- O catálogo e as referências são copiados para a saída: <exe>\catalog\**\*.yaml, <exe>\reference\*.json -->
   <ItemGroup>
     <None Include="..\..\catalog\**\*.yaml" LinkBase="catalog" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\reference\*.json" LinkBase="reference" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

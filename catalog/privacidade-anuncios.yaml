@@ -6,6 +6,10 @@ tweaks:
     name: Desativar o ID de anúncio
     description: Impede que apps usem o ID de publicidade para mostrar anúncios personalizados.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Privacy/DisableAdvertisingId" }
+      - { kind: admx, ref: "UserProfiles.admx:DisableAdvertisingId" }
     tags: [anuncios]
     actions:
       - type: registry
@@ -23,6 +27,7 @@ tweaks:
     name: Não expor a lista de idiomas aos sites
     description: Impede que sites acessem sua lista de idiomas para mostrar conteúdo local.
     risk: low
+    confidence: community
     tags: [anuncios, web]
     actions:
       - type: registry
@@ -35,6 +40,7 @@ tweaks:
     name: Desativar a "experiência de boas-vindas" após atualizações
     description: Não mostra a tela de novidades/boas-vindas do Windows após atualizações e ao entrar.
     risk: low
+    confidence: community
     tags: [anuncios, content-delivery]
     actions:
       - type: registry
@@ -47,6 +53,7 @@ tweaks:
     name: Desativar dicas e sugestões do Windows
     description: Desativa "Obter dicas e sugestões ao usar o Windows" (notificações promocionais).
     risk: low
+    confidence: community
     tags: [anuncios, content-delivery, notificacoes]
     actions:
       - type: registry
@@ -64,6 +71,7 @@ tweaks:
     name: Desativar conteúdo sugerido no app Configurações
     description: Remove as sugestões de conteúdo exibidas no app Configurações.
     risk: low
+    confidence: community
     tags: [anuncios, content-delivery]
     actions:
       - type: registry
@@ -86,6 +94,7 @@ tweaks:
     name: Impedir instalação silenciosa de apps sugeridos
     description: Impede que o Windows instale automaticamente apps patrocinados (Candy Crush etc.).
     risk: low
+    confidence: community
     tags: [anuncios, content-delivery, bloatware]
     actions:
       - type: registry
@@ -110,6 +119,10 @@ tweaks:
       Política que impede o Windows de baixar apps e conteúdo promocional para novos usuários.
       Oficialmente só é respeitada nas edições Enterprise/Education.
     risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowWindowsConsumerFeatures" }
+      - { kind: admx, ref: "CloudContent.admx:DisableWindowsConsumerFeatures" }
     tags: [anuncios, politica, bloatware]
     actions:
       - type: registry
@@ -122,6 +135,7 @@ tweaks:
     name: Desativar curiosidades e dicas na tela de bloqueio
     description: Remove "fatos divertidos, dicas e truques" e anúncios da tela de bloqueio.
     risk: low
+    confidence: community
     tags: [anuncios, content-delivery, tela-de-bloqueio]
     actions:
       - type: registry
@@ -139,6 +153,7 @@ tweaks:
     name: Não sugerir "concluir a configuração do dispositivo"
     description: Desativa a tela que sugere concluir a configuração (OneDrive, Microsoft 365, Game Pass...).
     risk: low
+    confidence: community
     tags: [anuncios]
     actions:
       - type: registry
@@ -151,6 +166,7 @@ tweaks:
     name: Desativar recomendações de dicas e apps no Iniciar
     description: Desativa "Mostrar recomendações de dicas, atalhos, novos aplicativos e muito mais" no menu Iniciar.
     risk: low
+    confidence: community
     minBuild: 22621
     tags: [anuncios, iniciar]
     actions:
@@ -164,6 +180,7 @@ tweaks:
     name: Desativar notificações do provedor de sincronização no Explorador
     description: Remove os anúncios (OneDrive/Microsoft 365) exibidos no Explorador de Arquivos.
     risk: low
+    confidence: community
     tags: [anuncios, explorer]
     actions:
       - type: registry
