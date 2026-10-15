@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build Debloater.slnx -c Release
+
+      - name: Testes
+        run: dotnet test Debloater.slnx -c Release --no-build
+
+      - name: Valida o catálogo
+        run: dotnet run --project src/Debloater.Cli -c Release --no-build -- validate
+
+      # Avisos de referência não falham o CI; ficam no log para revisão.
+      - name: Valida contra as referências (ADMX do runner + Policy CSP)
+        run: dotnet run --project src/Debloater.Cli -c Release --no-build -- validate --reference

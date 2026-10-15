@@ -23,6 +23,7 @@ internal static partial class Program
 
         Uso:
           Debloater.RefGen [--out reference/msdocs-policy-csp.json] [--cache DIR] [--from-cache DIR] [--parallel 6]
+        Debloater.RefGen compare <antigo.json> <novo.json> [--markdown saida.md]
 
         --out DIR/arquivo  destino do JSON (padrão: reference/msdocs-policy-csp.json na raiz do repositório)
         --cache DIR        também grava o Markdown baixado em DIR (útil para depurar o parser)
@@ -35,6 +36,9 @@ internal static partial class Program
     private static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
+        if (args.Length >= 1 && args[0] == "compare")
+            return Compare(args);
+
         string? outFile = null, cacheDir = null, fromCache = null;
         int parallel = 6;
         for (int i = 0; i < args.Length; i++)
@@ -84,6 +88,60 @@ internal static partial class Program
         Console.WriteLine($"  com notas de edição: {reference.Policies.Count(p => p.EditionNotes is not null)}");
         if (empty.Count > 0) Console.WriteLine($"  páginas sem políticas reconhecidas ({empty.Count}): {string.Join(", ", empty)}");
         return 0;
+    }
+
+    /// <summary>
+    /// compare: diferenças por política entre duas referências (adicionadas, removidas, alteradas e
+    /// quais campos mudaram). Escreve Markdown (para o corpo da issue do CI) e devolve 0 se igual, 1 se mudou.
+    /// </summary>
+    private static int Compare(string[] args)
+    {
+        if (args.Length < 3)
+        {
+            Console.Error.WriteLine(Usage);
+            return 2;
+        }
+        string? markdownOut = null;
+        for (int i = 3; i < args.Length; i++)
+            if (args[i] == "--markdown" && i + 1 < args.Length) markdownOut = Path.GetFullPath(args[++i]);
+
+        var oldRef = CspMarkdownParser.Load(args[1]);
+        var newRef = CspMarkdownParser.Load(args[2]);
+        static string Key(CspPolicy p) => $"{p.Area}/{p.Name}";
+        var oldMap = oldRef.Policies.GroupBy(Key).ToDictionary(g => g.Key, g => g.First());
+        var newMap = newRef.Policies.GroupBy(Key).ToDictionary(g => g.Key, g => g.First());
+
+        var added = newMap.Keys.Except(oldMap.Keys).Order(StringComparer.Ordinal).ToList();
+        var removed = oldMap.Keys.Except(newMap.Keys).Order(StringComparer.Ordinal).ToList();
+        var changed = new List<(string Key, List<string> Fields)>();
+        foreach (var key in newMap.Keys.Intersect(oldMap.Keys).Order(StringComparer.Ordinal))
+        {
+            var a = JsonSerializer.SerializeToNode(oldMap[key], CspMarkdownParser.JsonOptions)!.AsObject();
+            var b = JsonSerializer.SerializeToNode(newMap[key], CspMarkdownParser.JsonOptions)!.AsObject();
+            var fields = a.Select(p => p.Key).Union(b.Select(p => p.Key))
+                .Where(f => a[f]?.ToJsonString() != b[f]?.ToJsonString())
+                .Order(StringComparer.Ordinal).ToList();
+            if (fields.Count > 0) changed.Add((key, fields));
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"Políticas: {oldRef.Policies.Count} → {newRef.Policies.Count} | adicionadas {added.Count} | removidas {removed.Count} | alteradas {changed.Count}");
+        void Section(string title, IEnumerable<string> items)
+        {
+            var list = items.ToList();
+            if (list.Count == 0) return;
+            sb.AppendLine().AppendLine($"### {title} ({list.Count})").AppendLine();
+            foreach (var item in list.Take(300)) sb.AppendLine($"- {item}");
+            if (list.Count > 300) sb.AppendLine($"- … e mais {list.Count - 300}");
+        }
+        Section("Adicionadas", added.Select(k => $"`{k}`"));
+        Section("Removidas", removed.Select(k => $"`{k}`"));
+        Section("Alteradas", changed.Select(c => $"`{c.Key}`: {string.Join(", ", c.Fields)}"));
+
+        var text = sb.ToString();
+        Console.WriteLine(text);
+        if (markdownOut is not null) File.WriteAllText(markdownOut, text, new UTF8Encoding(false));
+        return added.Count + removed.Count + changed.Count == 0 ? 0 : 1;
     }
 
     private static string? FindRepoRoot()
