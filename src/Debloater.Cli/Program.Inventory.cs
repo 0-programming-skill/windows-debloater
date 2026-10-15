@@ -118,7 +118,7 @@ internal static partial class Program
             }
         }
         var counts = diff.Entries.GroupBy(e => e.Change).Select(g => $"{g.Key}: {g.Count()}");
-        Console.WriteLine($"\nTotal {diff.Entries.Count} | {string.Join(" | ", counts)}");
+        Console.WriteLine(diff.Entries.Count == 0 ? "\nNenhuma diferença." : $"\nTotal {diff.Entries.Count} | {string.Join(" | ", counts)}");
         return 0;
     }
 }
