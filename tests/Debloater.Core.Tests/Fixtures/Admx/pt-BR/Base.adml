@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName /><description />
+  <resources>
+    <stringTable>
+      <string id="SUPPORTED_Win11">No mínimo Windows 11</string>
+      <string id="Components">Componentes do Windows</string>
+      <string id="Privacy">Privacidade</string>
+    </stringTable>
+  </resources>
+</policyDefinitionResources>

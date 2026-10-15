@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName /><description />
+  <resources>
+    <stringTable>
+      <string id="SampleCat">Sample
+        Category</string>
+      <string id="Telemetry">Allow diagnostic data</string>
+      <string id="Telemetry_Explain">Explains telemetry.</string>
+      <string id="Level0">Off</string>
+      <string id="Level1">Required</string>
+      <string id="Level3">Optional</string>
+      <string id="DisableThing">Disable the thing</string>
+      <string id="DisableThing_Explain">Thing.</string>
+      <string id="ListOnly">List only policy</string>
+      <string id="ListOnly_Explain">Lists.</string>
+      <string id="Elements">Elements policy</string>
+      <string id="Elements_Explain">Elements.</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="Telemetry">
+        <dropdownList refId="TelemetryLevel" noSort="true">Level:</dropdownList>
+      </presentation>
+      <presentation id="Elements">
+        <decimalTextBox refId="Timeout" defaultValue="30">Timeout (s)</decimalTextBox>
+        <textBox refId="Server"><label>Server name</label></textBox>
+        <checkBox refId="Flag">Turn on flag</checkBox>
+        <listBox refId="Hosts">Hosts</listBox>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

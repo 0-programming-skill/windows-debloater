@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0">
+  <resources>
+    <stringTable>
+      <string id="Camera">Allow camera</string>
+    </stringTable>
+  </resources>
+</policyDefinitionResources>

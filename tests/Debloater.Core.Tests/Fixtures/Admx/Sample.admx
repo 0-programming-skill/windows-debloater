@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitions revision="1.0" schemaVersion="1.0"
+  xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <policyNamespaces>
+    <target prefix="sample" namespace="Test.Policies.Sample" />
+    <using prefix="b" namespace="Test.Policies.Base" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <categories>
+    <category name="SampleCat" displayName="$(string.SampleCat)">
+      <parentCategory ref="b:Privacy" />
+    </category>
+  </categories>
+  <policies>
+    <!-- enum com valores numéricos, classe Both -->
+    <policy name="Telemetry" class="Both" displayName="$(string.Telemetry)" explainText="$(string.Telemetry_Explain)"
+            presentation="$(presentation.Telemetry)" key="Software\Policies\Test\Data">
+      <parentCategory ref="SampleCat" />
+      <supportedOn ref="b:SUPPORTED_Win11" />
+      <elements>
+        <enum id="TelemetryLevel" valueName="Level" required="true">
+          <item displayName="$(string.Level0)"><value><decimal value="0" /></value></item>
+          <item displayName="$(string.Level1)"><value><decimal value="1" /></value></item>
+          <item displayName="$(string.Level3)">
+            <value><decimal value="3" /></value>
+            <valueList><item key="Software\Policies\Test\Extra" valueName="Full"><value><string>yes</string></value></item></valueList>
+          </item>
+        </enum>
+      </elements>
+    </policy>
+
+    <!-- valueName com enabledValue/disabledValue explícitos -->
+    <policy name="DisableThing" class="Machine" displayName="$(string.DisableThing)" explainText="$(string.DisableThing_Explain)"
+            key="Software\Policies\Test\Thing" valueName="DisableThing">
+      <parentCategory ref="SampleCat" />
+      <supportedOn ref="b:SUPPORTED_Win11" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+
+    <!-- somente enabledList/disabledList -->
+    <policy name="ListOnly" class="User" displayName="$(string.ListOnly)" explainText="$(string.ListOnly_Explain)"
+            key="Software\Policies\Test\Lists">
+      <parentCategory ref="SampleCat" />
+      <enabledList defaultKey="Software\Policies\Test\Lists">
+        <item valueName="A"><value><decimal value="1" /></value></item>
+        <item key="Software\Policies\Test\Lists\Sub" valueName="B"><value><string>on</string></value></item>
+      </enabledList>
+      <disabledList>
+        <item valueName="A"><value><decimal value="0" /></value></item>
+        <item key="Software\Policies\Test\Lists\Sub" valueName="B"><value><delete /></value></item>
+      </disabledList>
+    </policy>
+
+    <!-- elementos variados -->
+    <policy name="Elements" class="Machine" displayName="$(string.Elements)" explainText="$(string.Elements_Explain)"
+            presentation="$(presentation.Elements)" key="Software\Policies\Test\Elements">
+      <parentCategory ref="SampleCat" />
+      <elements>
+        <decimal id="Timeout" valueName="Timeout" minValue="5" maxValue="600" required="true" />
+        <decimal id="NoRange" valueName="NoRange" />
+        <longDecimal id="Big" valueName="Big" maxValue="100000000000" />
+        <boolean id="Flag" valueName="Flag">
+          <trueValue><string>enabled</string></trueValue>
+          <falseValue><delete /></falseValue>
+        </boolean>
+        <text id="Server" valueName="Server" maxLength="255" expandable="true" />
+        <multiText id="Lines" valueName="Lines" />
+        <list id="Hosts" key="Software\Policies\Test\Elements\Hosts" valuePrefix="Host" additive="true" />
+      </elements>
+    </policy>
+  </policies>
+</policyDefinitions>

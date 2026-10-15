@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitions revision="1.0" schemaVersion="1.0">
+  <policyNamespaces>
+    <target prefix="nons" namespace="Test.Policies.NoNamespace" />
+    <using prefix="base" namespace="Test.Policies.Base" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <policies>
+    <policy name="Camera" class="Machine" displayName="$(string.Camera)" explainText="$(string.Missing_Explain)"
+            key="Software\Policies\Test\Camera" valueName="AllowCamera">
+      <parentCategory ref="base:Components" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+  </policies>
+</policyDefinitions>

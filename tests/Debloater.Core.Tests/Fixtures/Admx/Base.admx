@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" revision="1.0" schemaVersion="1.0"
+  xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <policyNamespaces>
+    <target prefix="base" namespace="Test.Policies.Base" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <supportedOn>
+    <definitions>
+      <definition name="SUPPORTED_Win11" displayName="$(string.SUPPORTED_Win11)" />
+    </definitions>
+  </supportedOn>
+  <categories>
+    <category name="Components" displayName="$(string.Components)" />
+    <category name="Privacy" displayName="$(string.Privacy)">
+      <parentCategory ref="Components" />
+    </category>
+  </categories>
+</policyDefinitions>
