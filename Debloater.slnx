@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Debloater.App/Debloater.App.csproj">
+      <Platform Solution="*|Any CPU" Project="x64" />
+    </Project>
     <Project Path="src/Debloater.Cli/Debloater.Cli.csproj" />
     <Project Path="src/Debloater.Core/Debloater.Core.csproj" />
   </Folder>

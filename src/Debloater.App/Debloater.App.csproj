@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Debloater</AssemblyName>
+    <RootNamespace>Debloater.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- "dotnet build" da solução usa AnyCPU: o app é x64 por padrão (use -p:Platform=ARM64 para ARM). -->
+    <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <PlatformTarget>$(Platform)</PlatformTarget>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' And '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <Product>Windows Debloater</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Debloater.Core\Debloater.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Catálogo, perfis e referências copiados para a saída, como na CLI. -->
+  <ItemGroup>
+    <None Include="..\..\catalog\**\*.yaml" LinkBase="catalog" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\reference\*.json" LinkBase="reference" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

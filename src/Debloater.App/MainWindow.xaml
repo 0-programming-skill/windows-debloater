@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Debloater.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Windows Debloater">
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Barra de título própria (conteúdo estendido sobre a barra do sistema). -->
+        <Grid x:Name="AppTitleBar" Height="48" Padding="16,0,140,0">
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE90F;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                <TextBlock Text="Windows Debloater" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <Border x:Name="ModeBadge" CornerRadius="4" Padding="6,1,6,2" VerticalAlignment="Center"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                    <TextBlock x:Name="ModeText" Style="{StaticResource CaptionTextBlockStyle}" />
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <NavigationView x:Name="Nav" Grid.Row="1"
+                        IsBackButtonVisible="Collapsed"
+                        IsSettingsVisible="True"
+                        IsPaneToggleButtonVisible="True"
+                        PaneDisplayMode="Left"
+                        OpenPaneLength="280"
+                        ItemInvoked="Nav_ItemInvoked">
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Visão geral" Tag="overview">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="TweaksItem" Content="Ajustes" Tag="tweaks" SelectsOnInvoked="True">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="ApplyItem" Content="Aplicar/revisar" Tag="apply">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE73E;" /></NavigationViewItem.Icon>
+                    <NavigationViewItem.InfoBadge>
+                        <InfoBadge x:Name="PendingBadge" Visibility="Collapsed" />
+                    </NavigationViewItem.InfoBadge>
+                </NavigationViewItem>
+                <NavigationViewItemSeparator />
+                <NavigationViewItem Content="Políticas (ADMX)" Tag="policies">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Inventário" Tag="inventory">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE7B8;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Perfis" Tag="profiles">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE77B;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Margin="24,8,24,0" Spacing="8">
+                    <InfoBar x:Name="ReadOnlyBar" Severity="Warning" IsClosable="False"
+                             Title="Modo somente leitura — reinicie como administrador para aplicar"
+                             Message="O estado de cada ajuste é lido normalmente; aplicar e reverter exigem privilégios de administrador.">
+                        <InfoBar.ActionButton>
+                            <Button Click="Elevate_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE7EF;" FontSize="14" />
+                                    <TextBlock Text="Reiniciar como administrador" />
+                                </StackPanel>
+                            </Button>
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+                    <InfoBar x:Name="ErrorBar" Severity="Error" IsOpen="False" />
+                    <InfoBar x:Name="CatalogBar" Severity="Warning" IsOpen="False" Title="Catálogo com erros" />
+                </StackPanel>
+                <Frame x:Name="ContentFrame" Grid.Row="1" />
+            </Grid>
+        </NavigationView>
+    </Grid>
+</Window>
