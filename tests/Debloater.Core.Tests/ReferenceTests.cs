@@ -298,7 +298,8 @@ public class ReferenceValidatorTests
 
 public class CatalogAnnotatorTests
 {
-    private const string Yaml = """
+    // Normalizado para LF: o checkout no Windows (autocrlf) pode trazer CRLF no literal.
+    private static readonly string Yaml = """
         # Comentário do arquivo.
         category: A/B
 
@@ -327,7 +328,7 @@ public class CatalogAnnotatorTests
               - type: service
                 name: X
                 startup: disabled
-        """;
+        """.ReplaceLineEndings("\n");
 
     private static readonly Dictionary<string, CatalogAnnotator.Annotation> Annotations = new()
     {
