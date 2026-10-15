@@ -18,3 +18,8 @@ artifacts/
 TestResults/
 *.trx
 coverage*.xml
+
+# VM de teste (tools/vm): credencial DPAPI da VM e relatórios do selftest
+.vmcred.xml
+*.vmcred.xml
+tests/vm-reports/
