@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Debloater.Core.Catalog;
@@ -184,7 +184,7 @@ internal static partial class Program
         runner.TweakCompleted += r =>
         {
             Console.WriteLine($"{r.Verdict} ({r.Revert?.DurationMs ?? 0} ms){(r.Reason is null ? "" : $" - {r.Reason}")}{(r.RebootPending ? " [reinicialização pendente]" : "")}");
-            PrintDetails(a, r);
+            PrintDetails(a, r, revertOnly: true);
         };
         await runner.RevertAppliedAsync(report.Results, byId);
         report.Phase = SelfTestPhase.Revert;
@@ -195,9 +195,10 @@ internal static partial class Program
         return report.HasFailures || report.HasPersistenceFailures ? 1 : 0;
     }
 
-    private static void PrintDetails(Args a, TweakSelfTestResult r)
+    /// <param name="revertOnly">Fase revert: os avisos de aplicar já foram mostrados na fase apply-only.</param>
+    private static void PrintDetails(Args a, TweakSelfTestResult r, bool revertOnly = false)
     {
-        foreach (var step in new[] { r.Apply, r.Revert })
+        foreach (var step in revertOnly ? [r.Revert] : new[] { r.Apply, r.Revert })
             foreach (var note in step?.Notes ?? []) Console.WriteLine($"      aviso: {note}");
         if (!a.Verbose) return;
         foreach (var act in r.Actions)
