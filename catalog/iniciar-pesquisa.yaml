@@ -95,3 +95,66 @@ tweaks:
         name: Start_Layout
         kind: dword
         value: 1
+
+  - id: ui.search.disable-store-suggestions
+    name: Não sugerir apps da Microsoft Store na pesquisa
+    description: >
+      Desliga a configuração por usuário "IsStoreSuggestionsEnabled" da pesquisa do Windows (a mesma
+      família de IsMSACloudSearchEnabled), que mostra apps da Store como sugestões. Achado por
+      engenharia reversa no 26300: o windowsudk.shellcommon.dll lê e grava o valor em
+      HKCU\...\SearchSettings; sem o valor, o padrão é ligado. Quando a Store está bloqueada por política
+      (RemoveWindowsStore, só em edições que aceitam essa política), a opção fica somente leitura.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: re, ref: "docs/re/26300/search-store-web-suggestions.md" }
+    minBuild: 26300
+    tags: [pesquisa, store, sugestoes, anuncios]
+    breaks: A pesquisa deixa de sugerir apps da Store; a Store continua funcionando normalmente.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings
+        name: IsStoreSuggestionsEnabled
+        kind: dword
+        value: 0
+
+  - id: ui.search.disable-web-suggestions
+    name: Não mostrar sugestões da web na pesquisa
+    description: >
+      Desliga a configuração por usuário "IsWebSuggestionsEnabled" da pesquisa do Windows (sugestões da
+      web enquanto se digita). Achado por engenharia reversa no 26300 (windowsudk.shellcommon.dll,
+      HKCU\...\SearchSettings; sem o valor, o padrão é ligado). Complementa
+      ui.search.disable-web-search, que usa a política e o BingSearchEnabled.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: re, ref: "docs/re/26300/search-store-web-suggestions.md" }
+    minBuild: 26300
+    tags: [pesquisa, bing, sugestoes]
+    breaks: Sugestões da web na caixa de pesquisa.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings
+        name: IsWebSuggestionsEnabled
+        kind: dword
+        value: 0
+
+  - id: ui.start.hide-suggested-files
+    name: Não mostrar arquivos sugeridos no Iniciar
+    description: >
+      Desliga "Mostrar arquivos sugeridos" da seção Recomendados do Iniciar (Configurações >
+      Personalização > Iniciar). Achado por engenharia reversa no 26300: o windowsudk.shellcommon.dll
+      lê HKCU\...\CurrentVersion\Start\ShowSuggestedFiles; sem o valor, segue a opção de itens recentes.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: re, ref: "docs/re/26300/start-show-suggested-files.md" }
+    minBuild: 26300
+    tags: [iniciar, recomendados, sugestoes]
+    breaks: Arquivos sugeridos deixam de aparecer em Recomendados.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Start
+        name: ShowSuggestedFiles
+        kind: dword
+        value: 0

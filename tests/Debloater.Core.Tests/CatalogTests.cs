@@ -36,6 +36,26 @@ public class CatalogTests
             Assert.Contains(known, types);
     }
 
+    [Fact]
+    public void RealCatalog_ReverseEngineeringSourcesPointToExistingDocs()
+    {
+        // A raiz do repositório é onde está a pasta docs/re (subindo a partir da saída dos testes).
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "docs", "re"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+
+        var refs = CatalogLoader.LoadDirectory(CatalogDir).Tweaks
+            .SelectMany(t => t.Sources.Where(s => s.Kind == SourceRef.ReKind).Select(s => (t.Id, s.Ref)))
+            .ToList();
+        Assert.NotEmpty(refs);
+        foreach (var (id, reference) in refs)
+        {
+            Assert.StartsWith("docs/re/", reference);
+            Assert.True(File.Exists(Path.Combine(dir!.FullName, reference.Replace('/', Path.DirectorySeparatorChar))),
+                $"{id}: fonte re '{reference}' não existe no repositório.");
+        }
+    }
+
     private static CatalogLoadResult LoadSingle(string yaml, string file = "teste.yaml") =>
         CatalogLoader.Load([(file, () => yaml)]);
 

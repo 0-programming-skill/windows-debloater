@@ -131,7 +131,11 @@ tweaks:
 
   - id: privacy.telemetry.activity-history
     name: Desativar histórico de atividades
-    description: Impede que o Windows registre e envie o histórico de atividades (apps, arquivos, sites).
+    description: >
+      Impede que o Windows registre e envie o histórico de atividades (apps, arquivos, sites). No 26300
+      as três políticas continuam lidas: PublishUserActivities e UploadUserActivities pelo serviço de
+      plataforma de dispositivos conectados (cdp.dll) e pelo Windows.CloudStore.dll, EnableActivityFeed
+      pelos dois também (o aviso de "possivelmente obsoleto" do diff 26200→26300 era falso positivo).
     risk: low
     confidence: official
     sources:
@@ -141,6 +145,7 @@ tweaks:
       - { kind: admx, ref: "OSPolicy.admx:EnableActivityFeed" }
       - { kind: admx, ref: "OSPolicy.admx:PublishUserActivities" }
       - { kind: admx, ref: "OSPolicy.admx:UploadUserActivities" }
+      - { kind: re, ref: "docs/re/26300/activity-history-publish-user-activities.md" }
     tags: [telemetria, politica]
     actions:
       - type: registry

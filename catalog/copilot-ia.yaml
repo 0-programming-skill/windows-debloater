@@ -105,3 +105,31 @@ tweaks:
         name: DisableClickToDo
         kind: dword
         value: 1
+
+  - id: ai.agents.disable-connectors
+    name: Desativar os conectores de agentes de IA (MCP)
+    description: >
+      Política "Configurar Conectores de Agente" = Forçar Desabilitação (CAM_AI.admx, nova no 26300). O
+      Gerenciador de Acesso à Funcionalidade (CapabilityAccessManager.dll, serviço camsvc) consulta
+      WindowsAI/ConfigureAgentConnectors pelo PolicyManager ao decidir o consentimento entre um host MCP
+      (agente) e um servidor MCP (conector): com 2, nega sem perguntar. A documentação da Policy CSP cita
+      só Enterprise/Education, mas no 26300 Pro o PolicyManager devolve o valor da política de grupo
+      normalmente (conferido na VM).
+    category: IA/Agentes
+    risk: low
+    confidence: admx
+    sources:
+      - { kind: admx, ref: "CAM_AI.admx:ConfigureAgentConnectors" }
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/ConfigureAgentConnectors" }
+      - { kind: re, ref: "docs/re/26300/cam-ai-configure-agent-connectors.md" }
+    minBuild: 26300
+    tags: [ia, agentes, mcp, politica]
+    breaks: Agentes de IA do Windows (e apps que usam o registro de agentes) não conseguem usar conectores MCP.
+    references:
+      - https://learn.microsoft.com/windows/client-management/mdm/policy-csp-windowsai
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI
+        name: ConfigureAgentConnectors
+        kind: dword
+        value: 2
