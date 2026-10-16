@@ -27,6 +27,9 @@ internal static partial class Program
 
           Debloater.Cli reference annotate [--write] [--force] [--admx-dir DIR] [--csp FILE]
 
+          Debloater.Cli fingerprint create <saida.json.gz> [--root C:\] [--binaries default|all|none]
+          Debloater.Cli fingerprint diff <antigo.json.gz> <novo.json.gz> [--md R.md] [--json R.json] [--top 100]
+
           Debloater.Cli selftest [--id ID]... [--category X] [--max-risk R] [--include-irreversible]
                                  [--json RELATORIO.json] [--backup-dir DIR] [--restore-point] [--verbose]
                                  [--phase full|apply-only|verify|revert] [--state ESTADO.json] [--label ROTULO]
@@ -39,6 +42,14 @@ internal static partial class Program
         --admx-dir DIR   pasta PolicyDefinitions (padrão: C:\Windows\PolicyDefinitions). Aceita o pacote
                          de Modelos Administrativos mais recente baixado da Microsoft.
         --csp FILE       referência da Policy CSP (padrão: reference/msdocs-policy-csp.json do repositório).
+        fingerprint      impressão digital de uma instalação (inventário, ADMX, cadeias de registro/políticas nos
+                         binários) e diff entre builds, com candidatos a tweak novo. Somente leitura.
+        --root DIR       (fingerprint create) raiz da instalação (padrão: C:\). Outra pasta = imagem montada
+                         (offline: só as partes baseadas em arquivos).
+        --binaries M     (fingerprint create) default = lista curada de binários relevantes; all = todo PE das
+                         raízes; none = sem varredura de binários.
+        --md / --json    (fingerprint diff) grava o relatório Markdown / JSON (com a lista "candidates").
+        --top N          (fingerprint diff) candidatos na tabela do Markdown (padrão: 100).
         apply/revert exigem um prompt de administrador. Os demais comandos são somente leitura.
 
         selftest         SÓ PARA VM DESCARTÁVEL: para cada tweak, lê o estado, aplica, confere (Applied),
@@ -81,6 +92,7 @@ internal static partial class Program
                 "admx" => Admx(parsed),
                 "reference" => Reference(parsed),
                 "selftest" => await SelfTestAsync(parsed),
+                "fingerprint" => await FingerprintAsync(parsed),
                 _ => Fail($"Comando desconhecido '{parsed.Command}'.\n\n{Usage}"),
             };
         }
@@ -288,6 +300,10 @@ internal static partial class Program
         public string Phase { get; private set; } = "full";
         public string? StateFile { get; private set; }
         public string? Label { get; private set; }
+        public string? Root { get; private set; }
+        public string BinaryMode { get; private set; } = "default";
+        public string? MdOut { get; private set; }
+        public int Top { get; private set; } = 100;
 
         public static Args Parse(string[] args)
         {
@@ -304,7 +320,7 @@ internal static partial class Program
                     case "--uncatalogued": a.Uncatalogued = true; break;
                     case "--json":
                         // No selftest, --json recebe o caminho do relatório; nos demais é uma chave.
-                        if (a.Command == "selftest") a.JsonOut = Path.GetFullPath(Next());
+                        if (a.Command is "selftest" or "fingerprint") a.JsonOut = Path.GetFullPath(Next());
                         else a.Json = true;
                         break;
                     case "--id": a.Ids.AddRange(Next().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)); break;
@@ -315,6 +331,13 @@ internal static partial class Program
                     case "--phase": a.Phase = Next().ToLowerInvariant(); break;
                     case "--state": a.StateFile = Path.GetFullPath(Next()); break;
                     case "--label": a.Label = Next(); break;
+                    case "--root": a.Root = Path.GetFullPath(Next()); break;
+                    case "--binaries": a.BinaryMode = Next().ToLowerInvariant(); break;
+                    case "--md": a.MdOut = Path.GetFullPath(Next()); break;
+                    case "--top":
+                        var top = Next();
+                        a.Top = int.TryParse(top, out var t) && t > 0 ? t : throw new ArgumentException($"--top inválido '{top}'.");
+                        break;
                     case "--search": a.Search = Next(); break;
                     case "--configured": a.Configured = true; break;
                     case "--with-state": a.WithState = true; break;

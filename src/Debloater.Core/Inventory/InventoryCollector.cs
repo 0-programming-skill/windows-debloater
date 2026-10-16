@@ -95,6 +95,14 @@ public sealed partial class InventoryCollector
             item.Properties["type"] = $"0x{type:X}";
             if (key.GetValue("ImagePath", null, RegistryValueOptions.DoNotExpandEnvironmentNames) is string image)
                 item.Properties["imagePath"] = image;
+            // DLL de serviços hospedados no svchost (informativo: não entra no diff; usado pelo fingerprint).
+            try
+            {
+                using var parameters = key.OpenSubKey("Parameters");
+                if (parameters?.GetValue("ServiceDll", null, RegistryValueOptions.DoNotExpandEnvironmentNames) is string dll)
+                    (item.Info ??= new(StringComparer.Ordinal))["serviceDll"] = dll;
+            }
+            catch (System.Security.SecurityException) { }
             section.Items.Add(item);
         }
         return section;
