@@ -384,4 +384,13 @@ public class CatalogAnnotatorTests
         var result = CatalogLoader.Load([("a.yaml", () => bad)]);
         Assert.Contains(result.Errors, e => e.Message.Contains("kind inválido"));
     }
+
+    [Fact]
+    public void Loader_AcceptsReverseEngineeringSourceKind()
+    {
+        var yaml = Yaml.Replace("    risk: low\n", "    risk: low\n    confidence: community\n    sources:\n      - { kind: re, ref: \"docs/re/26300/x.md\" }\n");
+        var result = CatalogLoader.Load([("a.yaml", () => yaml)]);
+        Assert.True(result.IsValid, string.Join("\n", result.Errors));
+        Assert.Contains(result.Tweaks, t => t.Sources.Any(s => s.Kind == SourceRef.ReKind && s.Ref == "docs/re/26300/x.md"));
+    }
 }

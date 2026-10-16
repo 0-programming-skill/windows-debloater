@@ -34,12 +34,16 @@ public sealed class SourceRef
     public const string Url = "url";
     public const string CommunityKind = "community";
 
-    public static IReadOnlyList<string> KnownKinds { get; } = [MsDocs, AdmxKind, Url, CommunityKind];
+    /// <summary>Engenharia reversa: ref = caminho do achado no repositório (ex.: docs/re/26300/x.md).</summary>
+    public const string ReKind = "re";
 
-    /// <summary>msdocs | admx | url | community.</summary>
+    public static IReadOnlyList<string> KnownKinds { get; } = [MsDocs, AdmxKind, Url, CommunityKind, ReKind];
+
+    /// <summary>msdocs | admx | url | community | re.</summary>
     public string Kind { get; set; } = "";
 
-    /// <summary>msdocs: "Policy CSP - Área/Nome"; admx: "Arquivo.admx:Política"; url/community: endereço ou descrição.</summary>
+    /// <summary>msdocs: "Policy CSP - Área/Nome"; admx: "Arquivo.admx:Política"; url/community: endereço ou descrição;
+    /// re: caminho do documento de engenharia reversa no repositório (docs/re/...).</summary>
     public string Ref { get; set; } = "";
 
     public override string ToString() => $"{Kind}:{Ref}";
