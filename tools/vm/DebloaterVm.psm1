@@ -547,6 +547,116 @@ function Remove-DebloaterSetupMedia {
     if ($wasRunning) { Start-VM -Name $VMName }
 }
 
+function Get-DebloaterGuestBootTime {
+    <# .SYNOPSIS Data/hora do último boot do convidado (Win32_OperatingSystem.LastBootUpTime). #>
+    param([Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session)
+    Invoke-Command -Session $Session -ScriptBlock { (Get-CimInstance Win32_OperatingSystem).LastBootUpTime }
+}
+
+function Restart-DebloaterVmGuest {
+    <#
+    .SYNOPSIS
+        Reinicia o Windows do convidado de forma limpa (shutdown /r de dentro da VM, não um reset do
+        Hyper-V, para o registro ser gravado como numa reinicialização normal) e devolve uma sessão
+        PowerShell Direct nova, aberta só depois que o boot novo aconteceu (LastBootUpTime mudou).
+    #>
+    param(
+        [Parameter(Mandatory)][string]$VMName,
+        [Parameter(Mandatory)][pscredential]$Credential,
+        [Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session,
+        [int]$TimeoutMinutes = 10
+    )
+    $before = Get-DebloaterGuestBootTime -Session $Session
+    # Start-Process devolve logo; a sessão cai quando o Windows desliga.
+    Invoke-Command -Session $Session -ScriptBlock { Start-Process -FilePath shutdown.exe -ArgumentList '/r', '/t', '3', '/f' -WindowStyle Hidden }
+    Remove-PSSession $Session -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 20
+    $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
+    while ($true) {
+        $remaining = [math]::Max(1, [int][math]::Ceiling(($deadline - (Get-Date)).TotalMinutes))
+        $s = Wait-DebloaterVmSession -VMName $VMName -Credential $Credential -TimeoutMinutes $remaining -IntervalSeconds 10 -Activity 'Aguardando a VM reiniciar'
+        try {
+            $now = Get-DebloaterGuestBootTime -Session $s
+            if ($now -gt $before) { return $s }
+        }
+        catch {
+            Write-Verbose "Sessão ainda instável: $($_.Exception.Message)"
+        }
+        Remove-PSSession $s -ErrorAction SilentlyContinue
+        if ((Get-Date) -gt $deadline) { throw "A VM '$VMName' não reiniciou em $TimeoutMinutes min." }
+        Start-Sleep -Seconds 10
+    }
+}
+
+function Set-DebloaterGuestAutoLogon {
+    <#
+    .SYNOPSIS
+        Liga o logon automático da conta de teste no convidado (Winlogon AutoAdminLogon/DefaultPassword),
+        para que, depois de reiniciar, haja uma sessão interativa com o Explorer rodando (ele pode
+        reescrever valores de HKCU). A senha fica no registro da VM só até o checkpoint ser restaurado.
+    #>
+    param(
+        [Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session,
+        [Parameter(Mandatory)][pscredential]$Credential
+    )
+    $user = $Credential.UserName
+    if ($user.Contains('\')) { $user = $user.Split('\')[-1] }
+    $password = $Credential.GetNetworkCredential().Password
+    Invoke-Command -Session $Session -ScriptBlock {
+        param($u, $p)
+        $k = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
+        Set-ItemProperty -Path $k -Name AutoAdminLogon -Value '1' -Type String
+        Set-ItemProperty -Path $k -Name DefaultUserName -Value $u -Type String
+        Set-ItemProperty -Path $k -Name DefaultDomainName -Value $env:COMPUTERNAME -Type String
+        Set-ItemProperty -Path $k -Name DefaultPassword -Value $p -Type String
+        Remove-ItemProperty -Path $k -Name AutoLogonCount -ErrorAction SilentlyContinue
+    } -ArgumentList $user, $password
+}
+
+function Wait-DebloaterGuestDesktop {
+    <# .SYNOPSIS Espera o Explorer da sessão interativa aparecer (logon automático). Devolve $true se apareceu. #>
+    param(
+        [Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session,
+        [int]$TimeoutSeconds = 180
+    )
+    Invoke-Command -Session $Session -ScriptBlock {
+        param($t)
+        $deadline = (Get-Date).AddSeconds($t)
+        while ((Get-Date) -lt $deadline) {
+            if (Get-Process -Name explorer -IncludeUserName -ErrorAction SilentlyContinue | Where-Object { $_.SessionId -gt 0 }) { return $true }
+            Start-Sleep -Seconds 5
+        }
+        return $false
+    } -ArgumentList $TimeoutSeconds
+}
+
+function Invoke-DebloaterGuestMaintenance {
+    <#
+    .SYNOPSIS
+        Dispara, de dentro do convidado, o que costuma desfazer ajustes: atualização de política
+        (gpupdate /force), busca do Windows Update (UsoClient StartScan e a tarefa "Schedule Scan") e a
+        remediação do WaaSMedic. Tudo best-effort: devolve uma linha por gatilho com o resultado.
+    #>
+    param([Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session)
+    Invoke-Command -Session $Session -ScriptBlock {
+        function Try-Step([string]$Name, [scriptblock]$Body) {
+            try { $r = & $Body 2>&1 | Out-String; "{0}: ok {1}" -f $Name, (($r -replace '\s+', ' ').Trim()) }
+            catch { "{0}: falhou ({1})" -f $Name, $_.Exception.Message }
+        }
+        Try-Step 'gpupdate /force' { gpupdate.exe /force /wait:120 | Select-Object -Last 2 }
+        Try-Step 'UsoClient StartScan' { Start-Process -FilePath UsoClient.exe -ArgumentList 'StartScan' -Wait -WindowStyle Hidden; 'disparado' }
+        foreach ($t in @('\Microsoft\Windows\UpdateOrchestrator\Schedule Scan', '\Microsoft\Windows\WaaSMedic\PerformRemediation')) {
+            Try-Step "tarefa $t" {
+                $path = $t.Substring(0, $t.LastIndexOf('\') + 1); $name = $t.Substring($t.LastIndexOf('\') + 1)
+                $task = Get-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop
+                Start-ScheduledTask -InputObject $task -ErrorAction Stop
+                'iniciada'
+            }
+        }
+        Try-Step 'serviço WaaSMedicSvc' { Start-Service -Name WaaSMedicSvc -ErrorAction Stop; (Get-Service WaaSMedicSvc).Status }
+    }
+}
+
 function Get-DebloaterDotNet {
     <# .SYNOPSIS Caminho do dotnet.exe (C:\Program Files\dotnet ou o do PATH). #>
     $candidates = @(
