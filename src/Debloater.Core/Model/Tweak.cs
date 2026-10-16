@@ -84,6 +84,12 @@ public sealed class Tweak
     /// <summary>Se o engine consegue desfazer o tweak a partir do backup.</summary>
     public bool Reversible { get; set; } = true;
 
+    /// <summary>
+    /// Condição opcional para o tweak fazer sentido neste sistema (ex.: o hardware suporta hibernação).
+    /// Se for falsa, o tweak é NotApplicable e não é aplicado.
+    /// </summary>
+    public Precondition? Precondition { get; set; }
+
     public List<ActionSpec> Actions { get; set; } = [];
 
     /// <summary>Arquivo YAML de origem (preenchido pelo loader).</summary>
@@ -94,6 +100,19 @@ public sealed class Tweak
         (MinBuild is null || build >= MinBuild) && (MaxBuild is null || build <= MaxBuild);
 
     public override string ToString() => $"{Id} ({Name})";
+}
+
+/// <summary>
+/// Pré-condição de um tweak: um script PowerShell que imprime True (o tweak se aplica a este sistema)
+/// ou False (não se aplica) na última linha. Só leitura: não pode alterar o sistema.
+/// </summary>
+public sealed class Precondition
+{
+    /// <summary>Script que imprime True ou False.</summary>
+    public string? Powershell { get; set; }
+
+    /// <summary>Por que o tweak não se aplica quando o script retorna False (pt-BR, mostrado ao usuário).</summary>
+    public string? Reason { get; set; }
 }
 
 /// <summary>Formato de um arquivo de catálogo: categoria padrão + lista de tweaks.</summary>

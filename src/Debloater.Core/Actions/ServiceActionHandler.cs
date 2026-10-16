@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Security;
 using System.ServiceProcess;
 using Debloater.Core.Engine;
@@ -94,7 +94,7 @@ public sealed class ServiceActionHandler : IActionHandler
         if (!exists) return; // NotApplicable: nada a fazer.
         var (start, delayed) = ToStartValues(spec.Startup!);
         Write(spec.Name!, start, delayed);
-        if (start == 4) await TryStopAsync(spec.Name!, ct).ConfigureAwait(false);
+        if (start == 4) await TryStopAsync(spec.Name!, ctx, ct).ConfigureAwait(false);
     }
 
     public Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default)
@@ -119,19 +119,47 @@ public sealed class ServiceActionHandler : IActionHandler
         else if (key.GetValue("DelayedAutostart") is not null) key.SetValue("DelayedAutostart", 0, RegistryValueKind.DWord);
     }
 
-    private static async Task TryStopAsync(string name, CancellationToken ct)
+    /// <summary>Quanto esperar o serviço parar ao desativá-lo. O que importa é o tipo de inicialização.</summary>
+    public static TimeSpan StopTimeout { get; set; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// Tenta parar o serviço, esperando no máximo <see cref="StopTimeout"/> no total. ServiceController.Stop()
+    /// pode bloquear (o SCM espera o serviço responder ao controle, e os dependentes são parados um a um),
+    /// por isso a chamada inteira roda em segundo plano e a espera é limitada. Se não parar a tempo,
+    /// registra um aviso: a inicialização já foi alterada e o serviço não volta a iniciar depois de reiniciar.
+    /// </summary>
+    private static async Task TryStopAsync(string name, ScanContext ctx, CancellationToken ct)
     {
-        try
+        var stop = Task.Run(() =>
         {
             using var sc = new ServiceController(name);
-            if (sc.Status is ServiceControllerStatus.Stopped or ServiceControllerStatus.StopPending) return;
-            if (!sc.CanStop) return;
-            sc.Stop();
-            await Task.Run(() => sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(15)), ct).ConfigureAwait(false);
+            if (sc.Status is ServiceControllerStatus.Stopped) return true;
+            if (sc.Status is not ServiceControllerStatus.StopPending)
+            {
+                if (!sc.CanStop) return false;
+                sc.Stop();
+            }
+            sc.WaitForStatus(ServiceControllerStatus.Stopped, StopTimeout);
+            return true;
+        }, CancellationToken.None);
+
+        string? problem;
+        try
+        {
+            var finished = await Task.WhenAny(stop, Task.Delay(StopTimeout, ct)).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            problem = finished != stop
+                ? $"não parou em {StopTimeout.TotalSeconds:0} s"
+                : await stop.ConfigureAwait(false) ? null : "não aceita o comando de parar agora";
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ServiceProcess.TimeoutException or System.ComponentModel.Win32Exception)
         {
-            // Best-effort: a inicialização já foi alterada; o serviço para no próximo boot.
+            problem = ex is System.ServiceProcess.TimeoutException ? $"não parou em {StopTimeout.TotalSeconds:0} s" : ex.Message;
         }
+        // Não deixa exceção sem observação na tarefa abandonada.
+        _ = stop.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+
+        if (problem is not null)
+            ctx.AddNote($"serviço {name} desativado, mas ainda em execução ({problem}); ele para ao reiniciar o Windows.");
     }
 }

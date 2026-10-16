@@ -33,6 +33,17 @@ tweaks:
     confidence: community
     tags: [energia, disco]
     breaks: Hibernação e Inicialização Rápida deixam de funcionar.
+    precondition:
+      # Aplicável se a hibernação já está desligada (para poder religar) ou se o sistema a suporta.
+      # IsPwrHibernateAllowed é falso em VMs Hyper-V e firmwares sem S4: ali "powercfg /h on" falha.
+      powershell: |
+        $v = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Power' -Name HibernateEnabled -ErrorAction SilentlyContinue).HibernateEnabled
+        if ($v -eq 0) { $true; return }
+        # P/Invoke sem Add-Type (sem compilar C#, bem mais rápido). Retorna BOOLEAN (1 byte).
+        $tb = [AppDomain]::CurrentDomain.DefineDynamicAssembly((New-Object Reflection.AssemblyName 'DebloaterPower'), 'Run').DefineDynamicModule('m').DefineType('PowrProf', 'Public, Class')
+        $null = $tb.DefinePInvokeMethod('IsPwrHibernateAllowed', 'powrprof.dll', 'Public, Static, PinvokeImpl', 'Standard', [byte], [Type[]]@(), 'Winapi', 'Auto')
+        ($tb.CreateType())::IsPwrHibernateAllowed() -ne 0
+      reason: o sistema não suporta hibernação (firmware sem S4 ou VM), então não haveria como religá-la.
     actions:
       - type: powershell
         detect: |

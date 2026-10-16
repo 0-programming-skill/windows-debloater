@@ -1,4 +1,4 @@
-using Debloater.Core.Catalog;
+﻿using Debloater.Core.Catalog;
 using Debloater.Core.Model;
 
 namespace Debloater.Core.Tests;
@@ -140,5 +140,33 @@ public class CatalogTests
         var error = Assert.Single(result.Errors);
         Assert.Equal("typo.yaml", error.File);
         Assert.Contains("linha 4", error.Message);
+    }
+
+    [Fact]
+    public void Precondition_RequiresScriptAndReason()
+    {
+        const string Template = """
+            category: A
+            tweaks:
+              - id: test.pre
+                name: P
+                description: d
+                precondition:
+                  PRE
+                actions:
+                  - type: registry
+                    path: HKCU\Software\X
+                    name: V
+                    kind: dword
+                    value: 1
+            """;
+        var ok = LoadSingle(Template.Replace("PRE", "{ powershell: '$true', reason: sem suporte }"));
+        Assert.True(ok.IsValid, string.Join('\n', ok.Errors));
+        Assert.Equal("sem suporte", ok.Tweaks[0].Precondition!.Reason);
+
+        var noScript = LoadSingle(Template.Replace("PRE", "{ reason: sem suporte }"));
+        Assert.Contains(noScript.Errors, e => e.Message.Contains("'powershell'"));
+        var noReason = LoadSingle(Template.Replace("PRE", "{ powershell: '$true' }"));
+        Assert.Contains(noReason.Errors, e => e.Message.Contains("'reason'"));
     }
 }

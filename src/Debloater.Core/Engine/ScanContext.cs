@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Debloater.Core.Platform;
 
 namespace Debloater.Core.Engine;
@@ -11,6 +11,7 @@ namespace Debloater.Core.Engine;
 public sealed class ScanContext : IDisposable
 {
     private readonly ConcurrentDictionary<string, Lazy<Task<object>>> _cache = new();
+    private readonly ConcurrentQueue<string> _notes = new();
 
     public ScanContext(SystemInfo system) => System = system;
 
@@ -25,6 +26,12 @@ public sealed class ScanContext : IDisposable
 
     /// <summary>Descarta um valor em cache (ex.: após aplicar algo que o altera).</summary>
     public void Invalidate(string key) => _cache.TryRemove(key, out _);
+
+    /// <summary>Avisos registrados pelos handlers durante a operação (não são erros).</summary>
+    public IReadOnlyCollection<string> Notes => _notes;
+
+    /// <summary>Registra um aviso para o resultado da operação (ex.: "reinicie para o serviço parar").</summary>
+    public void AddNote(string note) => _notes.Enqueue(note);
 
     public void Dispose() => _cache.Clear();
 }

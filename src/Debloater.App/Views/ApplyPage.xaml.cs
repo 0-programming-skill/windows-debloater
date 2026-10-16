@@ -1,4 +1,4 @@
-using Debloater.App.Helpers;
+﻿using Debloater.App.Helpers;
 using Debloater.App.Services;
 using Debloater.App.ViewModels;
 using Debloater.Core.Engine;
@@ -254,10 +254,12 @@ public sealed partial class ApplyPage : Page
                 }
 
                 foreach (var err in result.Errors) log.Write("  erro: " + err);
+                foreach (var note in result.Notes) log.Write("  aviso: " + note);
                 log.Write($"  {(result.Success ? "OK" : "FALHA")}: {result.Message}");
                 if (result.StatusAfter is { } after && _app.Find(change.Tweak.Id) is { } vm) vm.Status = after;
                 if (result.Success) ok++; else failed++;
-                AddResult(result.Success ? "" : "", change.Tweak.Name, result.Message + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : ""));
+                AddResult(result.Success ? "" : "", change.Tweak.Name, result.Message + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : "")
+                    + (result.Notes.Count > 0 ? " Aviso: " + string.Join(" ", result.Notes) : ""));
                 RunProgress.Value = ++done;
             }
             log.Write($"Concluído: {ok} com sucesso, {failed} com falha, {changes.Count - done} não executado(s).");

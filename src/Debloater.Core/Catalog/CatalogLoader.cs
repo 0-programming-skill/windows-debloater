@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Debloater.Core.Actions;
 using Debloater.Core.Model;
 using YamlDotNet.Core;
@@ -140,6 +140,11 @@ public static partial class CatalogLoader
                 errors.Add($"fonte com kind inválido '{source.Kind}' (esperado: {string.Join(" | ", SourceRef.KnownKinds)}).");
             if (string.IsNullOrWhiteSpace(source.Ref))
                 errors.Add("fonte sem 'ref'.");
+        }
+        if (tweak.Precondition is { } pre)
+        {
+            if (string.IsNullOrWhiteSpace(pre.Powershell)) errors.Add("'precondition' exige o campo 'powershell' (script que imprime True/False).");
+            if (string.IsNullOrWhiteSpace(pre.Reason)) errors.Add("'precondition' exige o campo 'reason' (por que o tweak não se aplica quando é False).");
         }
         if (tweak.Actions.Count == 0) errors.Add("tweak sem ações.");
 

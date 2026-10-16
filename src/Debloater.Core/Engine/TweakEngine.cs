@@ -1,4 +1,4 @@
-using Debloater.Core.Actions;
+﻿using Debloater.Core.Actions;
 using Debloater.Core.Model;
 using Debloater.Core.Platform;
 
@@ -17,6 +17,9 @@ public sealed class TweakEngineOptions
 
     /// <summary>Quantos tweaks detectar em paralelo numa varredura completa.</summary>
     public int MaxParallelism { get; init; } = 8;
+
+    /// <summary>Avalia a pré-condição de um tweak. Padrão: roda o script PowerShell. Substituível em testes.</summary>
+    public Func<Precondition, CancellationToken, Task<PreconditionResult>> PreconditionEvaluator { get; init; } = Engine.PreconditionEvaluator.EvaluateAsync;
 }
 
 /// <summary>O processo precisa estar elevado (administrador).</summary>
@@ -31,7 +34,12 @@ public sealed class RiskNotAllowedException(Tweak tweak, RiskLevel allowed) :
     public RiskLevel Allowed { get; } = allowed;
 }
 
-public sealed record OperationResult(string TweakId, bool Success, string Message, IReadOnlyList<string> Errors, TweakStatus? StatusAfter = null);
+/// <summary>Resultado de aplicar/reverter.</summary>
+public sealed record OperationResult(string TweakId, bool Success, string Message, IReadOnlyList<string> Errors, TweakStatus? StatusAfter = null)
+{
+    /// <summary>Avisos que não são erros (ex.: "o serviço só vai parar depois de reiniciar").</summary>
+    public IReadOnlyList<string> Notes { get; init; } = [];
+}
 
 /// <summary>
 /// Orquestra detecção, aplicação e reversão de tweaks. Toda a lógica específica de tipo fica nos
@@ -64,6 +72,13 @@ public sealed class TweakEngine
         {
             return new TweakStatus(tweak, TweakState.NotApplicable, [],
                 $"build {System.Build} fora do intervalo {tweak.MinBuild?.ToString() ?? "*"}..{tweak.MaxBuild?.ToString() ?? "*"}");
+        }
+
+        if (tweak.Precondition is not null)
+        {
+            var pre = await EvaluatePreconditionAsync(tweak, ctx, ct).ConfigureAwait(false);
+            if (pre.Met == false) return new TweakStatus(tweak, TweakState.NotApplicable, [], pre.Detail);
+            if (pre.Met is null) return new TweakStatus(tweak, TweakState.Error, [], pre.Detail);
         }
 
         var results = new List<ActionStatus>(tweak.Actions.Count);
@@ -110,6 +125,11 @@ public sealed class TweakEngine
             return new OperationResult(tweak.Id, false, $"Não se aplica ao build {System.Build}.", []);
 
         using var ctx = CreateContext();
+        if (tweak.Precondition is not null)
+        {
+            var pre = await EvaluatePreconditionAsync(tweak, ctx, ct).ConfigureAwait(false);
+            if (pre.Met != true) return new OperationResult(tweak.Id, false, $"Não se aplica a este sistema: {pre.Detail}", []);
+        }
 
         // 1) Backup (antes de qualquer alteração).
         var backup = Backups.Load(tweak.Id) ?? new TweakBackup
@@ -151,7 +171,7 @@ public sealed class TweakEngine
         bool ok = errors.Count == 0;
         var message = ok ? $"Aplicado. Estado: {after.State}." : $"Aplicado com {errors.Count} erro(s). Estado: {after.State}.";
         if (!tweak.Reversible) message += " Atenção: este tweak não é reversível pelo programa.";
-        return new OperationResult(tweak.Id, ok, message, errors, after);
+        return new OperationResult(tweak.Id, ok, message, errors, after) { Notes = [.. ctx.Notes] };
     }
 
     // ---------------- revert ----------------
@@ -197,9 +217,13 @@ public sealed class TweakEngine
         if (errors.Count == 0) Backups.Delete(tweak.Id);
         var after = await GetStatusAsync(tweak, null, ct).ConfigureAwait(false);
         return errors.Count == 0
-            ? new OperationResult(tweak.Id, true, $"Revertido. Estado: {after.State}.", errors, after)
-            : new OperationResult(tweak.Id, false, $"Revertido parcialmente ({errors.Count} erro(s)); backup mantido. Estado: {after.State}.", errors, after);
+            ? new OperationResult(tweak.Id, true, $"Revertido. Estado: {after.State}.", errors, after) { Notes = [.. ctx.Notes] }
+            : new OperationResult(tweak.Id, false, $"Revertido parcialmente ({errors.Count} erro(s)); backup mantido. Estado: {after.State}.", errors, after) { Notes = [.. ctx.Notes] };
     }
+
+    /// <summary>Avalia a pré-condição uma vez por contexto (varredura).</summary>
+    private Task<PreconditionResult> EvaluatePreconditionAsync(Tweak tweak, ScanContext ctx, CancellationToken ct) =>
+        ctx.GetOrAddAsync("precondition:" + tweak.Id, () => _options.PreconditionEvaluator(tweak.Precondition!, ct));
 
     private static ActionBackup? FindBackup(TweakBackup backup, ActionSpec action) =>
         backup.Actions.FirstOrDefault(b =>
