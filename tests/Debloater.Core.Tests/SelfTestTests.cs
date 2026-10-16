@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Debloater.Core.Engine;
 using Debloater.Core.Model;
 using Debloater.Core.Platform;
@@ -507,5 +507,193 @@ public sealed class SelfTestTests
         {
             if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
         }
+    }
+
+    // ---------- persistência ----------
+
+    [Fact]
+    public void Evaluator_ApplyOnly_IgnoresMissingRevert()
+    {
+        var r = Facts(f => { f.Revert = null; f.Backup.DeletedAfterRevert = null; f.Actions[0].AfterRevert = null; });
+        Assert.Equal(SelfTestVerdict.Pass, SelfTestEvaluator.Evaluate(r, applyOnly: true).Verdict);
+        Assert.Equal(SelfTestVerdict.RevertFailed, SelfTestEvaluator.Evaluate(r).Verdict);
+
+        var rewritten = Facts(f => { f.Revert = null; f.Backup.KeptOnReapply = false; });
+        Assert.Equal(SelfTestVerdict.BackupProblem, SelfTestEvaluator.Evaluate(rewritten, applyOnly: true).Verdict);
+        var notApplied = Facts(f => f.StateAfterApply = TweakState.Partial);
+        Assert.Equal(SelfTestVerdict.NotAppliedAfterApply, SelfTestEvaluator.Evaluate(notApplied, applyOnly: true).Verdict);
+    }
+
+    private static TweakStatus StatusOf(Tweak tweak, params (ActionState State, string Detail)[] actions) =>
+        new(tweak, StatusAggregator.Aggregate(actions.Select(a => a.State)),
+            tweak.Actions.Zip(actions, (spec, a) => new ActionStatus(spec, a.State, a.Detail)).ToList());
+
+    private static TweakSelfTestResult AppliedFacts(Tweak tweak, params ActionState[] afterApply)
+    {
+        var r = new TweakSelfTestResult { Id = tweak.Id, Verdict = SelfTestVerdict.Pass, StateAfterApply = TweakState.Applied };
+        for (int i = 0; i < tweak.Actions.Count; i++)
+        {
+            r.Actions.Add(new ActionSelfTest
+            {
+                Type = tweak.Actions[i].Type,
+                Target = tweak.Actions[i].Target,
+                AfterApply = new ActionSnapshot { State = afterApply[i], Detail = afterApply[i] == ActionState.Desired ? "desejado" : "n/a" },
+            });
+        }
+        return r;
+    }
+
+    [Fact]
+    public void Persistence_AllStillDesired_IsPersisted()
+    {
+        var tweak = MakeTweak();
+        var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.Desired);
+        var check = SelfTestEvaluator.RecordPersistence(r,
+            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.Desired, "b"), (ActionState.Desired, "c")), "apos-reinicio-1", DateTime.UtcNow);
+
+        Assert.Equal(PersistenceVerdict.Persisted, check.Verdict);
+        Assert.Empty(check.RevertedActions);
+        Assert.Equal(PersistenceVerdict.Persisted, r.PersistenceVerdict);
+        Assert.Null(r.RevertedAfter);
+        Assert.All(r.Actions, a => Assert.Equal("apos-reinicio-1", Assert.Single(a.Checks).Label));
+    }
+
+    [Fact]
+    public void Persistence_SomeActionsUndone_IsPartiallyReverted_AndNamesThem()
+    {
+        var tweak = MakeTweak();
+        var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.Desired);
+        var check = SelfTestEvaluator.RecordPersistence(r,
+            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.NotDesired, "atual: automatic"), (ActionState.Desired, "c")), "apos-espera", DateTime.UtcNow);
+
+        Assert.Equal(PersistenceVerdict.PartiallyReverted, check.Verdict);
+        var reverted = Assert.Single(check.RevertedActions);
+        Assert.StartsWith("service:DiagTrack", reverted);
+        Assert.Contains("atual: automatic", reverted);
+        Assert.Equal("apos-espera", r.RevertedAfter);
+    }
+
+    [Fact]
+    public void Persistence_AllUndone_IsRevertedByWindows_IgnoringNotApplicableActions()
+    {
+        var tweak = MakeTweak();
+        // A terceira ação não existia (NotApplicable) ao aplicar: não conta.
+        var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.NotApplicable);
+        var check = SelfTestEvaluator.RecordPersistence(r,
+            StatusOf(tweak, (ActionState.NotDesired, "ausente"), (ActionState.NotDesired, "atual: manual"), (ActionState.NotApplicable, "n/a")), "x", DateTime.UtcNow);
+
+        Assert.Equal(PersistenceVerdict.RevertedByWindows, check.Verdict);
+        Assert.Equal(2, check.RevertedActions.Count);
+    }
+
+    [Fact]
+    public void Persistence_UnreadableStatus_CountsAsNotPersisted_AndFirstRevertLabelSticks()
+    {
+        var tweak = MakeTweak();
+        var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.Desired);
+        SelfTestEvaluator.RecordPersistence(r, new TweakStatus(tweak, TweakState.Error, [], "erro ao ler"), "um", DateTime.UtcNow);
+        Assert.Equal(PersistenceVerdict.RevertedByWindows, r.PersistenceVerdict);
+        Assert.Contains("erro ao ler", r.Persistence[0].RevertedActions[0]);
+
+        // Depois volta a ficar tudo certo: o veredito atual é o da última conferência; RevertedAfter guarda a primeira falha.
+        SelfTestEvaluator.RecordPersistence(r,
+            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.Desired, "b"), (ActionState.Desired, "c")), "dois", DateTime.UtcNow);
+        Assert.Equal(PersistenceVerdict.Persisted, r.PersistenceVerdict);
+        Assert.Equal("um", r.RevertedAfter);
+        Assert.Equal(["um", "dois"], r.Persistence.Select(c => c.Label));
+    }
+
+    [Fact]
+    public async Task PersistencePhases_ApplyOnly_Verify_Revert()
+    {
+        var host = HostWithOriginals();
+        host.World[@"HKCU\X\B"] = "0";
+        var tweak = MakeTweak();
+        var other = MakeTweak("test.other", RiskLevel.Low, true,
+            new ActionSpec { Type = ActionSpec.Registry, Path = @"HKCU\X", Name = "B", Kind = "dword", Value = "1" });
+        var byId = new Dictionary<string, Tweak> { [tweak.Id] = tweak, [other.Id] = other };
+        var original = new Dictionary<string, string>(host.World);
+
+        // apply-only: aplica e re-aplica, sem reverter.
+        var applyRunner = new SelfTestRunner(host, new SelfTestOptions { ApplyOnly = true });
+        var results = await applyRunner.RunAsync([tweak, other]);
+        Assert.All(results, r => Assert.Equal(SelfTestVerdict.Pass, r.Verdict));
+        Assert.All(results, r => Assert.Null(r.Revert));
+        Assert.Equal(["apply:test.tweak", "reapply:test.tweak", "apply:test.other", "reapply:test.other"], host.Calls);
+        Assert.Equal("1", host.World[@"HKCU\X\B"]);
+
+        var runner = new SelfTestRunner(host);
+        await runner.VerifyAsync(results, byId, "apos-reinicio-1");
+        Assert.All(results, r => Assert.Equal(PersistenceVerdict.Persisted, r.PersistenceVerdict));
+
+        // "O Windows" desfaz o serviço do primeiro tweak e o único valor do segundo.
+        host.World["DiagTrack"] = "automatic";
+        host.World[@"HKCU\X\B"] = "0";
+        await runner.VerifyAsync(results, byId, "apos-espera");
+        Assert.Equal(PersistenceVerdict.PartiallyReverted, results[0].PersistenceVerdict);
+        Assert.Equal("apos-espera", results[0].RevertedAfter);
+        Assert.Equal(PersistenceVerdict.RevertedByWindows, results[1].PersistenceVerdict);
+        Assert.Equal(2, results[0].Actions[1].Checks.Count);
+
+        // revert: volta tudo ao original e o ciclo completo passa.
+        await runner.RevertAppliedAsync(results, byId);
+        Assert.All(results, r => Assert.Equal(SelfTestVerdict.Pass, r.Verdict));
+        Assert.All(results, r => Assert.True(r.Backup.DeletedAfterRevert));
+        Assert.Equal(original, host.World);
+        Assert.Equal(2, results[0].Persistence.Count);
+    }
+
+    [Fact]
+    public async Task PersistencePhases_SkippedAndFailedTweaksAreNotVerifiedOrReverted()
+    {
+        var host = HostWithOriginals();
+        host.ApplyIgnores.Add("DiagTrack"); // aplicar não muda o serviço: NotAppliedAfterApply
+        var tweak = MakeTweak();
+        var irreversible = MakeTweak("test.appx", RiskLevel.Low, false,
+            new ActionSpec { Type = ActionSpec.Appx, Name = "Pkg", State = "removed" });
+        var byId = new Dictionary<string, Tweak> { [tweak.Id] = tweak, [irreversible.Id] = irreversible };
+
+        var results = await new SelfTestRunner(host, new SelfTestOptions { ApplyOnly = true }).RunAsync([tweak, irreversible]);
+        Assert.Equal(SelfTestVerdict.NotAppliedAfterApply, results[0].Verdict);
+        Assert.Equal(SelfTestVerdict.Skipped, results[1].Verdict);
+
+        var runner = new SelfTestRunner(host);
+        await runner.VerifyAsync(results, byId, "v");
+        Assert.All(results, r => Assert.Null(r.PersistenceVerdict));
+
+        host.Calls.Clear();
+        await runner.RevertAppliedAsync(results, byId);
+        // O que falhou ao aplicar ainda é revertido (limpeza: há backup); o pulado não.
+        Assert.Equal(["revert:test.tweak"], host.Calls);
+        Assert.Equal(SelfTestVerdict.NotAppliedAfterApply, results[0].Verdict);
+    }
+
+    [Fact]
+    public void Report_PersistenceState_RoundTripsThroughJson()
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+        };
+        var tweak = MakeTweak();
+        var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.Desired);
+        r.Backup.WrittenOnApply = true;
+        SelfTestEvaluator.RecordPersistence(r,
+            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.NotDesired, "b"), (ActionState.Desired, "c")), "apos-reinicio-1", DateTime.UtcNow);
+        var report = new SelfTestReport { Phase = SelfTestPhase.Verify, BackupDirectory = @"C:\b", Results = [r] };
+        report.PhaseLog.Add("ApplyOnly x");
+
+        var back = JsonSerializer.Deserialize<SelfTestReport>(JsonSerializer.Serialize(report, options), options)!;
+
+        Assert.Equal(SelfTestPhase.Verify, back.Phase);
+        Assert.Equal(@"C:\b", back.BackupDirectory);
+        var br = Assert.Single(back.Results);
+        Assert.Equal(PersistenceVerdict.PartiallyReverted, br.PersistenceVerdict);
+        Assert.Equal("apos-reinicio-1", br.RevertedAfter);
+        Assert.Equal("b", br.Actions[1].Checks[0].Snapshot.Detail);
+        Assert.Equal(ActionState.Desired, br.Actions[0].AfterApply!.State);
+        Assert.True(back.HasPersistenceFailures);
+        Assert.Equal(1, back.PersistenceSummary[PersistenceVerdict.PartiallyReverted]);
     }
 }

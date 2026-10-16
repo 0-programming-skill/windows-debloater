@@ -1,4 +1,4 @@
-using Debloater.Core.Model;
+﻿using Debloater.Core.Model;
 
 namespace Debloater.Core.SelfTest;
 
@@ -22,6 +22,49 @@ public enum SelfTestVerdict
     Skipped,
 }
 
+/// <summary>
+/// Veredito do teste de persistência: depois de aplicar, reiniciar e esperar, o Windows manteve o tweak?
+/// </summary>
+public enum PersistenceVerdict
+{
+    /// <summary>Todas as ações que ficaram no estado desejado ao aplicar continuam nele.</summary>
+    Persisted,
+    /// <summary>O Windows desfez todas as ações (o tweak voltou a NotApplied).</summary>
+    RevertedByWindows,
+    /// <summary>O Windows desfez parte das ações.</summary>
+    PartiallyReverted,
+}
+
+/// <summary>Fase do selftest. Full = ciclo completo; as outras dividem o ciclo para o teste de persistência.</summary>
+public enum SelfTestPhase
+{
+    Full,
+    /// <summary>Só lê o estado antes, aplica, confere e re-aplica. Grava o arquivo de estado.</summary>
+    ApplyOnly,
+    /// <summary>Relê o estado dos tweaks aplicados e compara com o lido logo depois de aplicar.</summary>
+    Verify,
+    /// <summary>Reverte os tweaks aplicados e compara com o estado de antes de aplicar.</summary>
+    Revert,
+}
+
+/// <summary>Uma conferência de persistência (ex.: "apos-reinicio-1"), por tweak.</summary>
+public sealed class PersistenceCheck
+{
+    public string Label { get; set; } = "";
+    public DateTime TimeUtc { get; set; }
+    public TweakState? State { get; set; }
+    public PersistenceVerdict Verdict { get; set; }
+    /// <summary>Ações que estavam no estado desejado depois de aplicar e não estão mais (tipo:alvo: antes → agora).</summary>
+    public List<string> RevertedActions { get; set; } = [];
+}
+
+/// <summary>Estado de uma ação numa conferência de persistência.</summary>
+public sealed class LabeledSnapshot
+{
+    public string Label { get; set; } = "";
+    public ActionSnapshot Snapshot { get; set; } = new();
+}
+
 /// <summary>Opções do selftest.</summary>
 public sealed class SelfTestOptions
 {
@@ -33,6 +76,9 @@ public sealed class SelfTestOptions
 
     /// <summary>Re-aplicar depois de aplicar, para conferir que o backup original é preservado.</summary>
     public bool CheckReapply { get; init; } = true;
+
+    /// <summary>Fase apply-only (teste de persistência): para depois de aplicar, sem reverter.</summary>
+    public bool ApplyOnly { get; init; }
 }
 
 /// <summary>Estado detectado de uma ação num momento do teste.</summary>
@@ -59,6 +105,9 @@ public sealed class ActionSelfTest
     public ActionSnapshot? AfterApply { get; set; }
     public ActionSnapshot? AfterRevert { get; set; }
 
+    /// <summary>Estado em cada conferência de persistência (fase verify), na ordem.</summary>
+    public List<LabeledSnapshot> Checks { get; set; } = [];
+
     /// <summary>Valor depois de reverter igual ao de antes? null quando não houve reversão.</summary>
     public bool? Restored { get; set; }
 }
@@ -69,6 +118,8 @@ public sealed class StepResult
     public bool Success { get; set; }
     public string? Message { get; set; }
     public List<string> Errors { get; set; } = [];
+    /// <summary>Avisos que não são erros (ex.: serviço que só para depois de reiniciar).</summary>
+    public List<string> Notes { get; set; } = [];
     /// <summary>Exceção lançada pela etapa (tipo: mensagem), se houve.</summary>
     public string? Exception { get; set; }
     public long DurationMs { get; set; }
@@ -120,6 +171,15 @@ public sealed class TweakSelfTestResult
     public StepResult? Revert { get; set; }
     public BackupCheck Backup { get; set; } = new();
 
+    /// <summary>Conferências de persistência (fase verify), na ordem em que foram feitas.</summary>
+    public List<PersistenceCheck> Persistence { get; set; } = [];
+
+    /// <summary>Veredito da última conferência de persistência (null = não conferido).</summary>
+    public PersistenceVerdict? PersistenceVerdict { get; set; }
+
+    /// <summary>Rótulo da primeira conferência em que o Windows desfez alguma ação (ex.: "apos-reinicio-1").</summary>
+    public string? RevertedAfter { get; set; }
+
     public List<string> RebootPendingBefore { get; set; } = [];
     public List<string> RebootPendingAfterApply { get; set; } = [];
     public List<string> RebootPendingAfterRevert { get; set; } = [];
@@ -147,6 +207,10 @@ public sealed class SelfTestReport
 {
     public DateTime StartedUtc { get; set; }
     public DateTime? FinishedUtc { get; set; }
+    /// <summary>Última fase executada sobre este relatório (o arquivo de estado do teste de persistência é o próprio relatório).</summary>
+    public SelfTestPhase Phase { get; set; }
+    /// <summary>Fases executadas, com data (ex.: "ApplyOnly 2026-10-16T12:00:00Z", "Verify apos-reinicio-1 ...").</summary>
+    public List<string> PhaseLog { get; set; } = [];
     public string Machine { get; set; } = Environment.MachineName;
     public string Windows { get; set; } = "";
     public string VmCheck { get; set; } = "";
@@ -160,6 +224,13 @@ public sealed class SelfTestReport
     public Dictionary<SelfTestVerdict, int> Summary =>
         Results.GroupBy(r => r.Verdict).OrderBy(g => g.Key).ToDictionary(g => g.Key, g => g.Count());
 
+    public Dictionary<PersistenceVerdict, int> PersistenceSummary =>
+        Results.Where(r => r.PersistenceVerdict is not null).GroupBy(r => r.PersistenceVerdict!.Value)
+            .OrderBy(g => g.Key).ToDictionary(g => g.Key, g => g.Count());
+
     /// <summary>Algum tweak testado falhou (qualquer veredito que não seja Pass ou Skipped).</summary>
     public bool HasFailures => Results.Any(r => r.Verdict is not (SelfTestVerdict.Pass or SelfTestVerdict.Skipped));
+
+    /// <summary>O Windows desfez algum tweak (total ou parcialmente) numa conferência de persistência.</summary>
+    public bool HasPersistenceFailures => Results.Any(r => r.PersistenceVerdict is not (null or SelfTest.PersistenceVerdict.Persisted));
 }

@@ -29,6 +29,7 @@ internal static partial class Program
 
           Debloater.Cli selftest [--id ID]... [--category X] [--max-risk R] [--include-irreversible]
                                  [--json RELATORIO.json] [--backup-dir DIR] [--restore-point] [--verbose]
+                                 [--phase full|apply-only|verify|revert] [--state ESTADO.json] [--label ROTULO]
                                  [--i-know-this-is-not-a-vm]
 
         --category X     filtra pelo início da categoria (ex.: privacidade, "Sistema/Tarefas").
@@ -49,6 +50,12 @@ internal static partial class Program
         --json ARQ       (selftest) grava o relatório JSON, atualizado a cada tweak.
         --backup-dir DIR (selftest) pasta dos backups (padrão: %ProgramData%\Debloater\backups).
         --restore-point  (selftest) cria um ponto de restauração antes e registra o resultado.
+        --phase P        (selftest) teste de persistência em fases: apply-only aplica e grava o arquivo de
+                         estado; verify relê o estado e diz quais tweaks o Windows desfez (repetível, com
+                         --label, ex. depois de reiniciar e depois de esperar); revert reverte e compara com
+                         o estado original. Padrão: full (ciclo completo de uma vez).
+        --state ARQ      (selftest) arquivo de estado das fases (padrão: %ProgramData%\Debloater\selftest-state.json).
+        --label TEXTO    (selftest --phase verify) rótulo da conferência (padrão: verify-<n>).
         """;
 
     private static async Task<int> Main(string[] args)
@@ -201,6 +208,7 @@ internal static partial class Program
     {
         Console.WriteLine($"{(r.Success ? "ok" : "x ")} {r.TweakId}: {r.Message}");
         foreach (var e in r.Errors) Console.WriteLine($"    {e}");
+        foreach (var n in r.Notes) Console.WriteLine($"    aviso: {n}");
     }
 
     private static List<Tweak>? LoadOrFail(Args a)
@@ -277,6 +285,9 @@ internal static partial class Program
         public string? BackupDir { get; private set; }
         public bool RestorePoint { get; private set; }
         public bool NotAVmOverride { get; private set; }
+        public string Phase { get; private set; } = "full";
+        public string? StateFile { get; private set; }
+        public string? Label { get; private set; }
 
         public static Args Parse(string[] args)
         {
@@ -301,6 +312,9 @@ internal static partial class Program
                     case "--backup-dir": a.BackupDir = Path.GetFullPath(Next()); break;
                     case "--restore-point": a.RestorePoint = true; break;
                     case "--i-know-this-is-not-a-vm": a.NotAVmOverride = true; break;
+                    case "--phase": a.Phase = Next().ToLowerInvariant(); break;
+                    case "--state": a.StateFile = Path.GetFullPath(Next()); break;
+                    case "--label": a.Label = Next(); break;
                     case "--search": a.Search = Next(); break;
                     case "--configured": a.Configured = true; break;
                     case "--with-state": a.WithState = true; break;

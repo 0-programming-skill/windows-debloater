@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Debloater.Core.Engine;
 using Debloater.Core.Model;
 
@@ -61,15 +61,71 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
                 r.Apply = new StepResult { Success = false, Exception = Describe(ex) };
         }
 
-        if (r.Verdict != SelfTestVerdict.Skipped)
-        {
-            SelfTestEvaluator.CompareActions(r);
-            (r.Verdict, r.Reason) = SelfTestEvaluator.Evaluate(r);
-            if (r.Verdict == SelfTestVerdict.NotRestored && r.RebootPending && r.ActionTypes.Contains(ActionSpec.OptionalFeature))
-                r.Notes.Add("há reinicialização pendente: o estado do recurso opcional pode só se acertar depois de reiniciar.");
-        }
+        if (r.Verdict != SelfTestVerdict.Skipped) Judge(r, _options.ApplyOnly);
         r.DurationMs = total.ElapsedMilliseconds;
         return r;
+    }
+
+    private static void Judge(TweakSelfTestResult r, bool applyOnly)
+    {
+        SelfTestEvaluator.CompareActions(r);
+        (r.Verdict, r.Reason) = SelfTestEvaluator.Evaluate(r, applyOnly);
+        if (r.Verdict == SelfTestVerdict.NotRestored && r.RebootPending && r.ActionTypes.Contains(ActionSpec.OptionalFeature))
+            r.Notes.Add("há reinicialização pendente: o estado do recurso opcional pode só se acertar depois de reiniciar.");
+    }
+
+    /// <summary>
+    /// Fase verify do teste de persistência: relê o estado de cada tweak aplicado com sucesso na fase
+    /// apply-only e registra, com o rótulo, se o Windows o manteve (ver <see cref="SelfTestEvaluator.RecordPersistence"/>).
+    /// </summary>
+    public async Task VerifyAsync(IReadOnlyList<TweakSelfTestResult> results, IReadOnlyDictionary<string, Tweak> tweaks, string label,
+        Action<TweakSelfTestResult, PersistenceCheck>? onChecked = null, CancellationToken ct = default)
+    {
+        foreach (var r in results)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (r.Verdict != SelfTestVerdict.Pass || r.StateAfterApply != TweakState.Applied) continue;
+            if (!tweaks.TryGetValue(r.Id, out var tweak))
+            {
+                r.Notes.Add($"{label}: tweak não existe mais no catálogo; não conferido.");
+                continue;
+            }
+            var status = await host.GetStatusAsync(tweak, ct).ConfigureAwait(false);
+            var check = SelfTestEvaluator.RecordPersistence(r, status, label, DateTime.UtcNow);
+            onChecked?.Invoke(r, check);
+        }
+    }
+
+    /// <summary>
+    /// Fase revert do teste de persistência: reverte cada tweak reversível aplicado na fase apply-only,
+    /// relê o estado, compara ação a ação com o estado de antes e recalcula o veredito do ciclo completo.
+    /// </summary>
+    public async Task RevertAppliedAsync(IReadOnlyList<TweakSelfTestResult> results, IReadOnlyDictionary<string, Tweak> tweaks,
+        CancellationToken ct = default)
+    {
+        foreach (var r in results)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (r.Verdict == SelfTestVerdict.Skipped || !r.Reversible || r.Apply is null) continue;
+            if (!tweaks.TryGetValue(r.Id, out var tweak))
+            {
+                r.Notes.Add("revert: tweak não existe mais no catálogo; não revertido.");
+                continue;
+            }
+            var sw = Stopwatch.StartNew();
+            TweakStarting?.Invoke(tweak);
+            try
+            {
+                await RevertStepsAsync(tweak, r, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                r.Notes.Add($"exceção inesperada ao reverter: {Describe(ex)}");
+            }
+            Judge(r, applyOnly: false);
+            r.DurationMs += sw.ElapsedMilliseconds;
+            TweakCompleted?.Invoke(r);
+        }
     }
 
     private async Task RunStepsAsync(Tweak tweak, TweakSelfTestResult r, CancellationToken ct)
@@ -131,12 +187,18 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
             if (!r.Reapply.Success) r.Notes.Add($"re-aplicar falhou: {r.Reapply.Describe()}");
         }
 
-        if (!tweak.Reversible) return;
+        if (!tweak.Reversible || _options.ApplyOnly) return;
+        await RevertStepsAsync(tweak, r, ct).ConfigureAwait(false);
+    }
 
+    private async Task RevertStepsAsync(Tweak tweak, TweakSelfTestResult r, CancellationToken ct)
+    {
         // 4) Reverter. Mesmo se aplicar falhou, tenta (limpeza), desde que haja backup.
-        if (!r.Apply.Success && host.ReadBackupJson(tweak.Id) is null)
+        if (host.ReadBackupJson(tweak.Id) is null)
         {
-            r.Notes.Add("aplicar falhou e não há backup: reversão não tentada.");
+            r.Notes.Add(r.Apply is { Success: true }
+                ? "não há backup na hora de reverter: reversão não tentada."
+                : "aplicar falhou e não há backup: reversão não tentada.");
             return;
         }
         r.Revert = await RunStepAsync(() => host.RevertAsync(tweak, ct)).ConfigureAwait(false);
@@ -159,6 +221,7 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
                 Success = result.Success,
                 Message = result.Message,
                 Errors = [.. result.Errors],
+                Notes = [.. result.Notes],
                 DurationMs = sw.ElapsedMilliseconds,
             };
         }
