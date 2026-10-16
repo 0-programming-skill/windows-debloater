@@ -228,5 +228,8 @@ finally {
 # Deixa o primeiro logon (FirstLogonCommands) terminar antes do checkpoint.
 Start-Sleep -Seconds 60
 Remove-DebloaterSetupMedia -VMName $Name
+# A remoção das mídias desliga e religa a VM; espera o Windows voltar antes do checkpoint.
+Remove-PSSession (Wait-DebloaterVmSession -VMName $Name -Credential $cred -TimeoutMinutes 10)
+Start-Sleep -Seconds 30
 Checkpoint-VM -Name $Name -SnapshotName 'base-limpa'
 Write-Host "Pronto. VM '$Name' instalada, ligada e com o checkpoint 'base-limpa'. Próximo passo: .\tools\vm\Invoke-VmSelfTest.ps1"

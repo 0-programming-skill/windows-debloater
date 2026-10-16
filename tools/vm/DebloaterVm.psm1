@@ -516,7 +516,21 @@ function Remove-DebloaterSetupMedia {
         (ele contém a senha da VM em texto).
     #>
     param([Parameter(Mandatory)][string]$VMName)
-    foreach ($dvd in @(Get-VMDvdDrive -VMName $VMName)) {
+    $drives = @(Get-VMDvdDrive -VMName $VMName | Where-Object { $_.Path })
+    if ($drives.Count -eq 0) { return }
+
+    # Ejetar/remover DVD com a VM ligada pode travar o VMMS inteiro (o convidado segura a mídia).
+    # Por isso a VM é desligada antes e religada depois, se estava ligada.
+    $wasRunning = (Get-VM -Name $VMName).State -eq 'Running'
+    if ($wasRunning) {
+        Write-Host 'Desligando a VM para remover as mídias de instalação...'
+        Stop-VM -Name $VMName -Force
+    }
+    elseif ((Get-VM -Name $VMName).State -eq 'Saved') {
+        Remove-VMSavedState -VMName $VMName
+    }
+
+    foreach ($dvd in $drives) {
         if (-not $dvd.Path) { continue }
         $path = $dvd.Path
         if ((Split-Path -Leaf $path) -like '*autounattend*.iso') {
@@ -529,6 +543,8 @@ function Remove-DebloaterSetupMedia {
             Write-Host "ISO ejetada: $path"
         }
     }
+
+    if ($wasRunning) { Start-VM -Name $VMName }
 }
 
 function Get-DebloaterDotNet {

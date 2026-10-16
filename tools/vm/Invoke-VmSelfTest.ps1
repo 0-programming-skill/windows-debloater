@@ -119,6 +119,8 @@ try {
         'Paused' { Resume-VM -Name $Name }
         default { Write-Host "Ligando a VM '$Name' (estado: $($vm.State))..."; Start-VM -Name $Name }
     }
+    # Antes de esperar a sessão: pode desligar e religar a VM se ainda houver mídia de instalação.
+    Remove-DebloaterSetupMedia -VMName $Name
     $session = Wait-DebloaterVmSession -VMName $Name -Credential $cred -TimeoutMinutes $BootTimeoutMinutes
     try {
         $info = Get-DebloaterGuestInfo -Session $session
@@ -134,7 +136,6 @@ try {
     if ($info.Model -ne 'Virtual Machine') {
         Write-Warning "Modelo do convidado '$($info.Model)' inesperado; o selftest fará a própria verificação."
     }
-    Remove-DebloaterSetupMedia -VMName $Name
 
     # ---------- 3. checkpoint ----------
     Write-Host "Criando o checkpoint '$checkpointName'..."
