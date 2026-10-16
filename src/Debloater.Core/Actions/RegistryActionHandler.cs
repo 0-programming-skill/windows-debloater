@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Security;
 using Debloater.Core.Engine;
 using Debloater.Core.Model;
@@ -99,25 +99,50 @@ public sealed class RegistryActionHandler : IActionHandler
 
     public Task ApplyAsync(ActionSpec spec, ScanContext ctx, CancellationToken ct = default)
     {
+        try
+        {
+            Write(spec);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException)
+        {
+            throw new ProtectedRegistryException(spec, ex);
+        }
+        return Task.CompletedTask;
+    }
+
+    private static void Write(ActionSpec spec)
+    {
         var (hive, subKey) = ParsePathOrThrow(spec.Path);
         using var baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
         if (spec.Delete)
         {
             using var existing = baseKey.OpenSubKey(subKey, writable: true);
             existing?.DeleteValue(spec.Name!, throwOnMissingValue: false);
-            return Task.CompletedTask;
+            return;
         }
 
         var kind = ParseKind(spec.Kind!);
         using var key = baseKey.CreateSubKey(subKey, writable: true)
             ?? throw new InvalidOperationException($"Não foi possível criar a chave {spec.Path}.");
         key.SetValue(spec.Name!, ToRegistryValue(kind, spec.Value!), kind);
-        return Task.CompletedTask;
     }
 
     public Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default)
     {
         if (backup is null) throw new InvalidOperationException($"Sem backup para {spec}.");
+        try
+        {
+            Restore(spec, backup, ctx);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException)
+        {
+            throw new ProtectedRegistryException(spec, ex);
+        }
+        return Task.CompletedTask;
+    }
+
+    private static void Restore(ActionSpec spec, ActionBackup backup, ScanContext ctx)
+    {
         var (hive, subKey) = ParsePathOrThrow(spec.Path);
         using var baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
 
@@ -129,7 +154,7 @@ public sealed class RegistryActionHandler : IActionHandler
                 : StringToData(kind, backup.Data ?? "");
             using var key = baseKey.CreateSubKey(subKey, writable: true);
             key.SetValue(spec.Name!, data, kind);
-            return Task.CompletedTask;
+            return;
         }
 
         // O valor não existia: remove-o e apaga as chaves que o apply criou, se ficaram vazias.
@@ -137,8 +162,18 @@ public sealed class RegistryActionHandler : IActionHandler
             key?.DeleteValue(spec.Name!, throwOnMissingValue: false);
 
         if (backup.Extra is { Length: > 0 } firstCreated)
-            DeleteEmptyKeysUpTo(baseKey, subKey, firstCreated);
-        return Task.CompletedTask;
+        {
+            // Limpeza das chaves que o apply criou: best-effort. Chave vazia que sobra não muda nada, e o
+            // Windows às vezes não deixa apagar (ex.: Policies\Microsoft\Dsh, protegida pelo UCPD no 26300).
+            try
+            {
+                DeleteEmptyKeysUpTo(baseKey, subKey, firstCreated);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException)
+            {
+                ctx.AddNote($"a chave vazia {RootName(hive)}\\{subKey} foi mantida: o Windows não permitiu apagá-la ({ex.Message}).");
+            }
+        }
     }
 
     // ---------- helpers ----------
@@ -160,6 +195,15 @@ public sealed class RegistryActionHandler : IActionHandler
         }
         return subKey.Length > 0;
     }
+
+    private static string RootName(RegistryHive hive) => hive switch
+    {
+        RegistryHive.LocalMachine => "HKLM",
+        RegistryHive.CurrentUser => "HKCU",
+        RegistryHive.ClassesRoot => "HKCR",
+        RegistryHive.Users => "HKU",
+        _ => hive.ToString(),
+    };
 
     private static (RegistryHive, string) ParsePathOrThrow(string? path) =>
         path is not null && TryParsePath(path, out var hive, out var sub)
@@ -313,4 +357,18 @@ public sealed class RegistryActionHandler : IActionHandler
             current = current[..idx];
         }
     }
+}
+
+/// <summary>
+/// O Windows negou a gravação de um valor de registro mesmo para administrador: chave com ACL restrita
+/// (ex.: TrustedInstaller) ou valor protegido por um filtro do kernel (ex.: o driver UCPD, que bloqueia
+/// valores como HKCU\...\Explorer\Advanced\TaskbarDa e HKLM\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests
+/// em builds recentes). O programa NÃO toma posse de chaves do sistema.
+/// </summary>
+public sealed class ProtectedRegistryException(ActionSpec spec, Exception inner) : InvalidOperationException(
+    $"chave protegida pelo sistema: o Windows negou a gravação de {spec.Target} mesmo como administrador " +
+    "(ACL restrita ou proteção do sistema, como o driver UCPD). O programa não toma posse de chaves do sistema; " +
+    "este ajuste não pode ser aplicado por este mecanismo neste build.", inner)
+{
+    public ActionSpec Spec { get; } = spec;
 }

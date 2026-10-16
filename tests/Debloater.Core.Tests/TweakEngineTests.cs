@@ -1,4 +1,4 @@
-using Debloater.Core.Engine;
+﻿using Debloater.Core.Engine;
 using Debloater.Core.Model;
 using Debloater.Core.Platform;
 using Microsoft.Win32;
@@ -146,5 +146,153 @@ public sealed class TweakEngineTests : IDisposable
 
         var ok = await engine.ApplyAsync(tweak, RiskLevel.Critical);
         Assert.True(ok.Success);
+    }
+
+    // ---------- pré-condição ----------
+
+    private TweakEngine EngineWithPrecondition(PreconditionResult result, List<string>? calls = null) => new(new TweakEngineOptions
+    {
+        BackupDirectory = _backupDir,
+        RequireElevation = false,
+        System = SystemInfo.Current with { IsElevated = false },
+        PreconditionEvaluator = (p, _) =>
+        {
+            calls?.Add(p.Powershell!);
+            return Task.FromResult(result);
+        },
+    });
+
+    private Tweak WithPrecondition(Tweak t)
+    {
+        t.Precondition = new Precondition { Powershell = "$false", Reason = "sem suporte a hibernação" };
+        return t;
+    }
+
+    [Fact]
+    public async Task Precondition_False_MakesTweakNotApplicable_AndApplyChangesNothing()
+    {
+        var engine = EngineWithPrecondition(PreconditionResult.False("sem suporte a hibernação"));
+        var tweak = WithPrecondition(SandboxTweak());
+
+        var status = await engine.GetStatusAsync(tweak);
+        Assert.Equal(TweakState.NotApplicable, status.State);
+        Assert.Equal("sem suporte a hibernação", status.Message);
+        Assert.Empty(status.Actions);
+
+        var applied = await engine.ApplyAsync(tweak);
+        Assert.False(applied.Success);
+        Assert.Contains("sem suporte a hibernação", applied.Message);
+        Assert.Null(_sandbox.TryOpen());
+        Assert.False(engine.Backups.Exists(tweak.Id));
+    }
+
+    [Fact]
+    public async Task Precondition_True_DetectsNormally_AndIsEvaluatedOncePerScan()
+    {
+        var calls = new List<string>();
+        var engine = EngineWithPrecondition(PreconditionResult.True(), calls);
+        var tweak = WithPrecondition(SandboxTweak());
+
+        var statuses = await engine.GetStatusesAsync([tweak, tweak]);
+        Assert.All(statuses, s => Assert.Equal(TweakState.NotApplied, s.State));
+        Assert.Single(calls);
+
+        var applied = await engine.ApplyAsync(tweak);
+        Assert.True(applied.Success, string.Join("\n", applied.Errors));
+        Assert.Equal(TweakState.Applied, applied.StatusAfter!.State);
+    }
+
+    [Fact]
+    public async Task Precondition_ScriptFailure_IsError()
+    {
+        var engine = EngineWithPrecondition(PreconditionResult.Failed("pré-condição retornou 'x'"));
+        var status = await engine.GetStatusAsync(WithPrecondition(SandboxTweak()));
+        Assert.Equal(TweakState.Error, status.State);
+        Assert.Contains("retornou 'x'", status.Message);
+    }
+
+    [Theory]
+    [InlineData("True\r\n", true)]
+    [InlineData("aviso qualquer\nfalse\n", false)]
+    [InlineData("", null)]
+    [InlineData("talvez", null)]
+    public void PreconditionEvaluator_InterpretsLastLine(string stdout, bool? expected)
+    {
+        var r = PreconditionEvaluator.Interpret(stdout, "", "motivo");
+        Assert.Equal(expected, r.Met);
+        if (expected == false) Assert.Equal("motivo", r.Detail);
+    }
+
+    [Fact]
+    public async Task PreconditionEvaluator_RunsPowerShell()
+    {
+        var yes = await PreconditionEvaluator.EvaluateAsync(new Precondition { Powershell = "1 -eq 1", Reason = "r" }, CancellationToken.None);
+        var no = await PreconditionEvaluator.EvaluateAsync(new Precondition { Powershell = "[bool]0", Reason = "r" }, CancellationToken.None);
+        Assert.True(yes.Met);
+        Assert.False(no.Met);
+        Assert.Equal("r", no.Detail);
+    }
+
+    // ---------- registro protegido ----------
+
+    [Fact]
+    public async Task Apply_ProtectedRegistryValue_ReportsClearError()
+    {
+        // Simula uma chave protegida: o próprio usuário sem direito de gravar valores nela.
+        using (var k = _sandbox.Create())
+        {
+            var acl = k.GetAccessControl();
+            acl.AddAccessRule(new System.Security.AccessControl.RegistryAccessRule(
+                System.Security.Principal.WindowsIdentity.GetCurrent().User!,
+                System.Security.AccessControl.RegistryRights.SetValue,
+                System.Security.AccessControl.AccessControlType.Deny));
+            k.SetAccessControl(acl);
+        }
+        // O Dispose da sandbox apaga a chave: negar SetValue não impede apagar a árvore inteira.
+        var applied = await Engine().ApplyAsync(SandboxTweak());
+        Assert.False(applied.Success);
+        Assert.Equal(2, applied.Errors.Count);
+        Assert.All(applied.Errors, e => Assert.Contains("chave protegida pelo sistema", e));
+        Assert.DoesNotContain(applied.Errors, e => e.Contains("Attempted to perform", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Revert_KeyThatCannotBeDeleted_StillSucceeds_WithNote()
+    {
+        _sandbox.Create().Dispose();
+        var tweak = new Tweak
+        {
+            Id = "test.sub", Name = "S", Description = "d", Category = "Teste",
+            Actions = [new ActionSpec { Type = ActionSpec.Registry, Path = _sandbox.Path + @"\Criada", Name = "A", Kind = "dword", Value = "1" }],
+        };
+        var engine = Engine();
+        Assert.True((await engine.ApplyAsync(tweak)).Success);
+
+        var user = System.Security.Principal.WindowsIdentity.GetCurrent().User!;
+        var sub = _sandbox.SubKey + @"\Criada";
+        void SetDenyDelete(bool deny)
+        {
+            using var k = Registry.CurrentUser.OpenSubKey(sub, RegistryKeyPermissionCheck.ReadWriteSubTree,
+                System.Security.AccessControl.RegistryRights.ChangePermissions | System.Security.AccessControl.RegistryRights.ReadPermissions)!;
+            var acl = k.GetAccessControl();
+            var rule = new System.Security.AccessControl.RegistryAccessRule(user,
+                System.Security.AccessControl.RegistryRights.Delete, System.Security.AccessControl.AccessControlType.Deny);
+            if (deny) acl.AddAccessRule(rule); else acl.RemoveAccessRule(rule);
+            k.SetAccessControl(acl);
+        }
+        SetDenyDelete(true);
+        try
+        {
+            var reverted = await engine.RevertAsync(tweak);
+            Assert.True(reverted.Success, string.Join('\n', reverted.Errors));
+            Assert.Contains(reverted.Notes, n => n.Contains("chave vazia") && n.Contains("Criada"));
+            using var k = _sandbox.TryOpen("Criada");
+            Assert.NotNull(k);
+            Assert.Null(k!.GetValue("A"));
+        }
+        finally
+        {
+            SetDenyDelete(false);
+        }
     }
 }

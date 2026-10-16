@@ -110,13 +110,41 @@ tweaks:
         value: 0
 
   - id: ui.taskbar.disable-widgets
-    name: Desativar Widgets (Notícias e interesses)
-    description: Desativa o painel de Widgets e remove o botão da barra de tarefas, por política.
+    name: Desativar o painel de Widgets
+    description: >
+      Política "Desabilitar o Quadro de Widgets": o painel de Widgets (Win+W) não abre e o botão some
+      da barra de tarefas. Substitui a política antiga "Permitir widgets" (AllowNewsAndInterests), cujo
+      valor o Windows protege a partir do build 26300: a gravação é negada até para administrador (driver
+      UCPD), assim como a chave TaskbarDa do usuário. A Microsoft documenta esta política como Insider na
+      Policy CSP, mas o ADMX do sistema e o PolicyManager já a trazem desde o 24H2.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - NewsAndInterests/DisableWidgetsBoard" }
+      - { kind: admx, ref: "NewsAndInterests.admx:DisableWidgetsBoard" }
+    minBuild: 26100
+    tags: [barra-de-tarefas, widgets, politica, anuncios]
+    breaks: O painel de Widgets (Win+W) deixa de funcionar.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Dsh
+        name: DisableWidgetsBoard
+        kind: dword
+        value: 1
+
+  - id: ui.taskbar.disable-widgets-legacy
+    name: Desativar Widgets (política antiga "Permitir widgets")
+    description: >
+      Política "Permitir widgets" = desabilitada (AllowNewsAndInterests = 0), para builds anteriores ao 24H2,
+      que não têm a política "Desabilitar o Quadro de Widgets". Em builds novos o Windows protege este
+      valor (driver UCPD) e a gravação é negada mesmo para administrador.
     risk: low
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - NewsAndInterests/AllowNewsAndInterests" }
       - { kind: admx, ref: "NewsAndInterests.admx:AllowNewsAndInterests" }
+    minBuild: 22000
+    maxBuild: 26099
     tags: [barra-de-tarefas, widgets, politica, anuncios]
     breaks: O painel de Widgets (Win+W) deixa de funcionar.
     actions:
