@@ -33,3 +33,6 @@ rea-work/
 *.rep/
 *.lock~
 ghidra-out/
+
+# Comparação de cobertura (tools/coverage): cache dos arquivos das outras ferramentas
+tools/coverage/.cache/

@@ -1,0 +1,58 @@
+# Itens que outras ferramentas alteram e que o catálogo NÃO vai incluir, com o motivo.
+# "match" é uma expressão regular sobre "<Tipo>:<alvo>", ex.: "Registry:HKLM\SYSTEM\...\Valor", "Service:UCPD".
+# Tipos: Registry, RegistryKey, Service, Task, Appx, Feature, Capability. Sem diferenciar maiúsculas.
+items:
+  - match: '\\Tcpip\\Parameters\\Interfaces\\.*\\(TcpAckFrequency|TCPNoDelay|TcpDelAckTicks)$|\\MSMQ\\Parameters\\TCPNoDelay$'
+    reason: >
+      Placebo ("desligar o algoritmo de Nagle"): afeta só conexões TCP que não definem TCP_NODELAY; jogos usam UDP
+      ou já desligam o Nagle no próprio socket. Sem ganho mensurável documentado.
+  - match: '\\Multimedia\\SystemProfile\\(NetworkThrottlingIndex|SystemResponsiveness)$|\\Multimedia\\SystemProfile\\Tasks\\'
+    reason: >
+      Ajustes do MMCSS vendidos como "menos latência em jogos": só valem para programas que se registram no MMCSS
+      (áudio profissional) e não têm ganho comprovado; NetworkThrottlingIndex só limitava a rede durante reprodução.
+  - match: '\\PriorityControl\\Win32PrioritySeparation$'
+    reason: >
+      O padrão do Windows cliente já favorece o programa em primeiro plano; os valores "otimizados" que circulam não
+      têm ganho mensurável documentado.
+  - match: '\\Control\\SvcHostSplitThresholdInKB$'
+    reason: >
+      Só agrupa serviços em menos processos svchost: economiza pouca memória e reduz o isolamento entre serviços
+      (uma falha derruba vários). Não é debloat.
+  - match: '\\Memory Management\\(LargeSystemCache|DisablePagingExecutive)$'
+    reason: Mito de desempenho para PCs de mesa; o Windows atual gerencia isso melhor sozinho e pode piorar a memória disponível.
+  - match: '\\Memory Management\\FeatureSettingsOverride(Mask)?$|\\Session Manager\\kernel\\DisableExceptionChainValidation$|\\Virtualization\\MinVmVersionForCpuBasedMitigations$'
+    reason: >
+      Desliga mitigações de segurança do processador (Spectre/Meltdown) ou do kernel (SEHOP). Fora do escopo: o
+      programa não reduz proteções de segurança do sistema por desempenho.
+  - match: '\\DeviceGuard\\(EnableVirtualizationBasedSecurity|RequirePlatformSecurityFeatures|Locked)$|\\HypervisorEnforcedCodeIntegrity\\|\\CI\\Policy\\VerifiedAndReputablePolicyState$'
+    reason: >
+      VBS/HVCI e Controle Inteligente de Aplicativos são proteções do kernel; desligá-las é decisão de segurança,
+      não de "desinchar". Fora do escopo por enquanto.
+  - match: '^Service:UCPD$|UCPD velocity'
+    reason: >
+      O UCPD protege associações de arquivos e alguns valores da barra de tarefas contra programas que os alteram.
+      O programa não desliga nem contorna proteções do sistema.
+  - match: '^Service:GpuEnergyDrv$'
+    reason: Driver do sistema (energia da GPU); desativar drivers não traz ganho comprovado e pode quebrar o Gerenciador de Tarefas.
+  - match: '\\(OEMInformation|CurrentVersion)\\(Manufacturer|Model|SupportURL|SupportPhone|SupportHours|Logo|RegisteredOrganization|RegisteredOwner)$'
+    reason: Personalização de marca/OEM do próprio playbook; não é ajuste do Windows.
+  - match: '\\(BraveSoftware|NVIDIA Corporation|Mozilla|Google\\Chrome|Adobe)\\'
+    reason: Configura programas de terceiros; fora do escopo do catálogo (só Windows e apps da Microsoft).
+  - match: '^Registry(Key)?:HKCR\\WindowsCleanup'
+    reason: Protocolo registrado pelo próprio Sophia Script para a tarefa dele; não é ajuste do Windows.
+  - match: '\\Keyboard Layout\\Scancode Map$'
+    reason: Remapeamento de teclas (preferência pessoal); fora do escopo.
+  - match: '\\GameConfigStore\\GameDVR_(FSEBehaviorMode|FSEBehavior|HonorUserFSEBehaviorMode|DXGIHonorFSEWindowsCompatible|EFSEFeatureFlags)$'
+    reason: >
+      "Desativar otimizações de tela cheia": efeito contestado; no Windows 11 o modo de apresentação flip costuma ser
+      igual ou melhor que a tela cheia exclusiva. Não incluído por falta de ganho comprovado.
+  - match: '\\GameBar\\(AutoGameModeEnabled|AllowAutoGameMode)$'
+    reason: O Modo de Jogo ligado é o padrão e não piora o desempenho; ligar/desligar não é debloat.
+  - match: '\\Schedule\\Maintenance\\MaintenanceDisabled$'
+    reason: >
+      Desliga a manutenção automática inteira (otimização/TRIM de unidades, verificações de disco, limpeza); mais
+      prejudica que ajuda. Tarefas específicas são tratadas uma a uma no catálogo.
+  - match: '\\Tcpip6\\Parameters\\DisabledComponents$|\\TCPIP\\v6Transition\\|Teredo'
+    reason: >
+      Desligar IPv6/Teredo não melhora desempenho e quebra recursos (Xbox Live, Grupo Doméstico, alguns VPNs); a
+      Microsoft desaconselha desativar o IPv6.

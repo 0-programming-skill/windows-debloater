@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Debloater.Core\Debloater.Core.csproj" />
+    <ProjectReference Include="..\..\tools\coverage\Debloater.Coverage.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -37,13 +37,20 @@ public sealed class SourceRef
     /// <summary>Engenharia reversa: ref = caminho do achado no repositório (ex.: docs/re/26300/x.md).</summary>
     public const string ReKind = "re";
 
-    public static IReadOnlyList<string> KnownKinds { get; } = [MsDocs, AdmxKind, Url, CommunityKind, ReKind];
+    /// <summary>
+    /// Outra ferramenta de "debloat" que faz o mesmo ajuste (ver docs/coverage): ref = "&lt;id&gt;:&lt;item&gt;", com o
+    /// id de tools/coverage/sources.json (ex.: "winutil:WPFTweaksTelemetry", "sophia:ScheduledTasks"). Só registra de
+    /// onde veio a ideia; a descrição do tweak é sempre nossa.
+    /// </summary>
+    public const string ToolKind = "tool";
 
-    /// <summary>msdocs | admx | url | community | re.</summary>
+    public static IReadOnlyList<string> KnownKinds { get; } = [MsDocs, AdmxKind, Url, CommunityKind, ReKind, ToolKind];
+
+    /// <summary>msdocs | admx | url | community | re | tool.</summary>
     public string Kind { get; set; } = "";
 
     /// <summary>msdocs: "Policy CSP - Área/Nome"; admx: "Arquivo.admx:Política"; url/community: endereço ou descrição;
-    /// re: caminho do documento de engenharia reversa no repositório (docs/re/...).</summary>
+    /// re: caminho do documento de engenharia reversa no repositório (docs/re/...); tool: "&lt;ferramenta&gt;:&lt;item&gt;".</summary>
     public string Ref { get; set; } = "";
 
     public override string ToString() => $"{Kind}:{Ref}";

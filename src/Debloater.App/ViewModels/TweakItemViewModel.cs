@@ -185,6 +185,7 @@ public sealed partial class TweakItemViewModel : ObservableObject
                 SourceRef.AdmxKind => "Política ADMX: " + s.Ref,
                 SourceRef.CommunityKind => "Comunidade: " + s.Ref,
                 SourceRef.ReKind => "Engenharia reversa: " + s.Ref,
+                SourceRef.ToolKind => "Ferramenta: " + s.Ref,
                 _ => s.Ref,
             };
             links.Add(new LinkItem(label, uri));
