@@ -1,25 +1,29 @@
 using System.Globalization;
+using Debloater.Core.Catalog;
 using Debloater.Core.Model;
 using Debloater.Core.Profiles;
 
 namespace Debloater.Core.Planning;
 
-/// <summary>Filtros da lista de ajustes (busca, categoria, estado, risco, confiança, "só o que difere").</summary>
+/// <summary>Filters of the tweak list (search, category, state, risk, confidence, "only what differs").</summary>
 public sealed class TweakQuery
 {
-    /// <summary>Texto procurado em id, nome, descrição e tags (todas as palavras precisam aparecer; ignora acentos).</summary>
+    /// <summary>
+    /// Text searched in id, name, description and tags (every word must appear; ignores accents). Both the
+    /// English text and the text in the current UI language are searched.
+    /// </summary>
     public string? Search { get; init; }
 
-    /// <summary>Prefixo de categoria (ver <see cref="ProfileStore.CategoryMatches"/>). Nulo = todas.</summary>
+    /// <summary>Category prefix (see <see cref="ProfileStore.CategoryMatches"/>). Null = all.</summary>
     public string? Category { get; init; }
 
     public IReadOnlySet<TweakState>? States { get; init; }
     public IReadOnlySet<RiskLevel>? Risks { get; init; }
 
-    /// <summary>Níveis de confiança; tweaks sem 'confidence' contam como <see cref="Confidence.Community"/>.</summary>
+    /// <summary>Confidence levels; tweaks without 'confidence' count as <see cref="Confidence.Community"/>.</summary>
     public IReadOnlySet<Confidence>? Confidences { get; init; }
 
-    /// <summary>Só tweaks com mudança pendente (estado atual diferente do desejado).</summary>
+    /// <summary>Only tweaks with a pending change (current state different from the desired one).</summary>
     public bool OnlyDiffering { get; init; }
 
     public bool Matches(Tweak tweak, TweakState? state, DesiredState? desired)
@@ -33,34 +37,42 @@ public sealed class TweakQuery
         {
             foreach (var w in Search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                if (!(Has(tweak.Id, w) || Has(tweak.Name, w) || Has(tweak.Description, w) || tweak.Tags.Any(t => Has(t, w))))
+                if (!(Has(tweak.Id, w) || Has(tweak.Name, w) || Has(tweak.Description, w)
+                    || Has(tweak.DisplayName, w) || Has(tweak.DisplayDescription, w) || tweak.Tags.Any(t => Has(t, w))))
                     return false;
             }
         }
         return true;
     }
 
-    /// <summary>Busca sem diferenciar maiúsculas nem acentos ("telemetria" acha "Telemetria", "anuncio" acha "anúncio").</summary>
+    /// <summary>Search ignoring case and accents ("telemetria" finds "Telemetria", "anuncio" finds "anúncio").</summary>
     public static bool Has(string? text, string word) =>
         text is not null && CultureInfo.InvariantCulture.CompareInfo.IndexOf(
             text, word, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0;
 }
 
-/// <summary>Nó da árvore de categorias ("A/B" → A → B).</summary>
+/// <summary>Node of the category tree ("A/B" → A → B).</summary>
 public sealed class CategoryNode
 {
+    /// <summary>Path segment (identifier; English for catalog categories).</summary>
     public string Name { get; init; } = "";
 
-    /// <summary>Caminho completo ("Privacidade/Telemetria").</summary>
+    /// <summary>Name shown to the user (translated when category names are given; otherwise <see cref="Name"/>).</summary>
+    public string DisplayName { get; init; } = "";
+
+    /// <summary>Full path ("Privacy/Telemetry").</summary>
     public string Path { get; init; } = "";
 
     public List<CategoryNode> Children { get; } = [];
 
-    /// <summary>Quantas entradas estão nesta categoria e em todas as subcategorias.</summary>
+    /// <summary>How many entries are in this category and all its subcategories.</summary>
     public int Count { get; set; }
 
-    /// <summary>Monta a árvore; cada item de <paramref name="categories"/> conta uma vez (passe uma por tweak).</summary>
-    public static List<CategoryNode> Build(IEnumerable<string> categories)
+    /// <summary>
+    /// Builds the tree; each item of <paramref name="categories"/> counts once (pass one per tweak).
+    /// <paramref name="names"/> translates the catalog's category nodes (current UI language); siblings are sorted by display name.
+    /// </summary>
+    public static List<CategoryNode> Build(IEnumerable<string> categories, CategoryNames? names = null)
     {
         var roots = new List<CategoryNode>();
         foreach (var category in categories)
@@ -74,7 +86,7 @@ public sealed class CategoryNode
                 var node = level.FirstOrDefault(n => n.Name.Equals(part, StringComparison.OrdinalIgnoreCase));
                 if (node is null)
                 {
-                    node = new CategoryNode { Name = part, Path = path };
+                    node = new CategoryNode { Name = part, Path = path, DisplayName = names?.DisplayNode(path) ?? part };
                     level.Add(node);
                 }
                 node.Count++;
@@ -87,7 +99,7 @@ public sealed class CategoryNode
 
     private static void Sort(List<CategoryNode> nodes)
     {
-        nodes.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCulture));
+        nodes.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.CurrentCulture));
         foreach (var n in nodes) Sort(n.Children);
     }
 }

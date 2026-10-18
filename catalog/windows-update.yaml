@@ -1,20 +1,27 @@
-# Comportamento do Windows Update (sem desligar as atualizações; para isso, services.windows-update.disable).
-category: Sistema/Windows Update
+# Windows Update behavior (without turning updates off; for that, see services.windows-update.disable).
+category: System/Windows Update
 
 tweaks:
   - id: update.exclude-drivers
-    name: Não instalar drivers pelo Windows Update
+    name: Don't install drivers through Windows Update
     description: >
-      Política "Não incluir drivers nas Atualizações do Windows": as atualizações de qualidade param de trazer
-      drivers. Útil para quem instala drivers do fabricante (placa de vídeo, áudio) e não quer que sejam trocados.
+      Policy "Do not include drivers with Windows Updates": quality updates stop delivering drivers. Useful
+      if you install drivers from the manufacturer (graphics, audio) and don't want them replaced.
     risk: medium
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - Update/ExcludeWUDriversInQualityUpdate" }
       - { kind: admx, ref: "WindowsUpdate.admx:ExcludeWUDriversInQualityUpdate" }
       - { kind: tool, ref: "winhance:exclude-drivers" }
-    tags: [windows-update, drivers, politica]
-    breaks: Drivers novos (inclusive correções de segurança de drivers) passam a depender de você instalar à mão.
+    tags: [windows-update, drivers, policy]
+    breaks: New drivers (including driver security fixes) must be installed manually.
+    i18n:
+      pt-BR:
+        name: Não instalar drivers pelo Windows Update
+        description: >
+          Política "Não incluir drivers nas Atualizações do Windows": as atualizações de qualidade param de trazer
+          drivers. Útil para quem instala drivers do fabricante (placa de vídeo, áudio) e não quer que sejam trocados.
+        breaks: Drivers novos (inclusive correções de segurança de drivers) passam a depender de você instalar à mão.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
@@ -23,17 +30,24 @@ tweaks:
         value: 1
 
   - id: update.no-device-driver-search
-    name: Não procurar drivers no Windows Update ao conectar dispositivos
+    name: Don't search Windows Update for drivers when connecting devices
     description: >
-      Configuração de instalação de dispositivos = "Não": ao conectar um dispositivo novo, o Windows usa só os
-      drivers que já tem, sem baixar driver nem software do fabricante.
+      Device installation settings = "No": when a new device is connected, Windows uses only the drivers it
+      already has, without downloading drivers or manufacturer software.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "winutil:WPFTweaksPreventDeviceMetadataFromNetwork" }
       - { kind: tool, ref: "atlas:drivers" }
     tags: [windows-update, drivers]
-    breaks: Dispositivos sem driver na caixa podem ficar sem funcionar até você instalar o driver.
+    breaks: Devices without an inbox driver may not work until you install the driver.
+    i18n:
+      pt-BR:
+        name: Não procurar drivers no Windows Update ao conectar dispositivos
+        description: >
+          Configuração de instalação de dispositivos = "Não": ao conectar um dispositivo novo, o Windows usa só os
+          drivers que já tem, sem baixar driver nem software do fabricante.
+        breaks: Dispositivos sem driver na caixa podem ficar sem funcionar até você instalar o driver.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching
@@ -42,17 +56,23 @@ tweaks:
         value: 0
 
   - id: update.no-device-metadata
-    name: Não baixar apps e ícones de fabricantes para dispositivos
+    name: Don't download manufacturer apps and icons for devices
     description: >
-      Política "Impedir a recuperação de metadados de dispositivos da Internet": o Windows não baixa ícones,
-      informações e apps associados a dispositivos (ex.: apps de fabricante instalados ao conectar um periférico).
+      Policy "Prevent device metadata retrieval from the Internet": Windows doesn't download icons, info or
+      apps associated with devices (e.g. manufacturer apps installed when a peripheral is connected).
     risk: low
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - DeviceInstallation/PreventDeviceMetadataFromNetwork" }
       - { kind: admx, ref: "DeviceSetup.admx:DeviceMetadata_PreventDeviceMetadataFromNetwork" }
       - { kind: tool, ref: "win11debloat:Disable_Device_Auto_App_Download" }
-    tags: [windows-update, drivers, politica, bloatware]
+    tags: [windows-update, drivers, policy, bloatware]
+    i18n:
+      pt-BR:
+        name: Não baixar apps e ícones de fabricantes para dispositivos
+        description: >
+          Política "Impedir a recuperação de metadados de dispositivos da Internet": o Windows não baixa ícones,
+          informações e apps associados a dispositivos (ex.: apps de fabricante instalados ao conectar um periférico).
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\Device Metadata
@@ -61,17 +81,24 @@ tweaks:
         value: 1
 
   - id: update.no-auto-restart-logged-on
-    name: Não reiniciar sozinho com usuário conectado
+    name: Don't restart automatically while a user is signed in
     description: >
-      Política "Sem reinicialização automática com usuários conectados para instalações de atualizações
-      automáticas agendadas": enquanto houver alguém conectado, o Windows avisa e espera você reiniciar.
+      Policy "No auto-restart with logged on users for scheduled automatic updates installations": while
+      someone is signed in, Windows notifies and waits for you to restart.
     risk: low
     confidence: admx
     sources:
       - { kind: admx, ref: "WindowsUpdate.admx:NoAutoRebootWithLoggedOnUsers_Title" }
       - { kind: tool, ref: "win11debloat:Disable_Auto_Restart" }
-    tags: [windows-update, reinicializacao, politica]
-    breaks: Atualizações ficam pendentes até você reiniciar; reinicie com frequência para não ficar sem correções.
+    tags: [windows-update, restart, policy]
+    breaks: Updates stay pending until you restart; restart often so you don't miss fixes.
+    i18n:
+      pt-BR:
+        name: Não reiniciar sozinho com usuário conectado
+        description: >
+          Política "Sem reinicialização automática com usuários conectados para instalações de atualizações
+          automáticas agendadas": enquanto houver alguém conectado, o Windows avisa e espera você reiniciar.
+        breaks: Atualizações ficam pendentes até você reiniciar; reinicie com frequência para não ficar sem correções.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
@@ -80,18 +107,25 @@ tweaks:
         value: 1
 
   - id: update.notify-before-install
-    name: Baixar atualizações e avisar antes de instalar
+    name: Download updates and notify before installing
     description: >
-      Política "Configurar Atualizações Automáticas" = 3 (baixar automaticamente e notificar para instalar): as
-      atualizações continuam sendo baixadas, mas só instalam quando você mandar.
+      Policy "Configure Automatic Updates" = 3 (Auto download and notify for install): updates are still
+      downloaded, but only install when you tell them to.
     risk: medium
     confidence: admx
     sources:
       - { kind: msdocs, ref: "Policy CSP - Update/AllowAutoUpdate" }
       - { kind: admx, ref: "WindowsUpdate.admx:AutoUpdateCfg" }
       - { kind: tool, ref: "atlas:automatic-updates" }
-    tags: [windows-update, politica]
-    breaks: Se você não instalar, o PC fica sem as correções de segurança baixadas.
+    tags: [windows-update, policy]
+    breaks: If you don't install them, the PC stays without the downloaded security fixes.
+    i18n:
+      pt-BR:
+        name: Baixar atualizações e avisar antes de instalar
+        description: >
+          Política "Configurar Atualizações Automáticas" = 3 (baixar automaticamente e notificar para instalar): as
+          atualizações continuam sendo baixadas, mas só instalam quando você mandar.
+        breaks: Se você não instalar, o PC fica sem as correções de segurança baixadas.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
@@ -100,19 +134,26 @@ tweaks:
         value: 3
 
   - id: update.defer-feature-updates
-    name: Adiar atualizações de recurso por 365 dias
+    name: Defer feature updates by 365 days
     description: >
-      Política "Selecionar quando as Compilações de Visualização e as Atualizações de Recursos são recebidas":
-      versões novas do Windows (ex.: 25H2 → 26H2) só são oferecidas 365 dias depois de lançadas. Atualizações
-      de segurança mensais não são afetadas.
+      Policy "Select when Preview Builds and Feature Updates are received": new Windows versions (e.g.
+      25H2 → 26H2) are only offered 365 days after release. Monthly security updates are not affected.
     risk: medium
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - Update/DeferFeatureUpdatesPeriodInDays" }
       - { kind: admx, ref: "WindowsUpdate.admx:DeferFeatureUpdates" }
       - { kind: tool, ref: "atlas:update-defer" }
-    tags: [windows-update, politica]
-    breaks: Recursos novos chegam um ano depois; perto do fim do suporte da versão, a atualização ainda é oferecida.
+    tags: [windows-update, policy]
+    breaks: New features arrive a year later; near the version's end of support, the update is still offered.
+    i18n:
+      pt-BR:
+        name: Adiar atualizações de recurso por 365 dias
+        description: >
+          Política "Selecionar quando as Compilações de Visualização e as Atualizações de Recursos são recebidas":
+          versões novas do Windows (ex.: 25H2 → 26H2) só são oferecidas 365 dias depois de lançadas. Atualizações
+          de segurança mensais não são afetadas.
+        breaks: Recursos novos chegam um ano depois; perto do fim do suporte da versão, a atualização ainda é oferecida.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
@@ -126,18 +167,25 @@ tweaks:
         value: 365
 
   - id: update.defer-quality-updates
-    name: Adiar atualizações de qualidade por 7 dias
+    name: Defer quality updates by 7 days
     description: >
-      Política "Selecionar quando as Atualizações de Qualidade são recebidas" = 7 dias: dá tempo de a Microsoft
-      retirar uma atualização com problema antes de ela chegar ao PC.
+      Policy "Select when Quality Updates are received" = 7 days: gives Microsoft time to pull a faulty
+      update before it reaches the PC.
     risk: medium
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - Update/DeferQualityUpdatesPeriodInDays" }
       - { kind: admx, ref: "WindowsUpdate.admx:DeferQualityUpdates" }
       - { kind: tool, ref: "privacysexy:defer-quality-updates" }
-    tags: [windows-update, politica]
-    breaks: Correções de segurança chegam com uma semana de atraso.
+    tags: [windows-update, policy]
+    breaks: Security fixes arrive a week late.
+    i18n:
+      pt-BR:
+        name: Adiar atualizações de qualidade por 7 dias
+        description: >
+          Política "Selecionar quando as Atualizações de Qualidade são recebidas" = 7 dias: dá tempo de a Microsoft
+          retirar uma atualização com problema antes de ela chegar ao PC.
+        breaks: Correções de segurança chegam com uma semana de atraso.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
@@ -151,10 +199,10 @@ tweaks:
         value: 7
 
   - id: update.no-early-updates
-    name: Não receber atualizações assim que ficam disponíveis
+    name: Don't get updates as soon as they're available
     description: >
-      Desliga "Obter as atualizações mais recentes assim que estiverem disponíveis" (recursos novos liberados
-      aos poucos, antes da atualização mensal).
+      Turns off "Get the latest updates as soon as they're available" (new features rolled out gradually,
+      ahead of the monthly update).
     risk: low
     confidence: community
     minBuild: 22621
@@ -162,6 +210,12 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Disable_Update_ASAP" }
       - { kind: tool, ref: "sophia:UpdateMicrosoftProducts" }
     tags: [windows-update]
+    i18n:
+      pt-BR:
+        name: Não receber atualizações assim que ficam disponíveis
+        description: >
+          Desliga "Obter as atualizações mais recentes assim que estiverem disponíveis" (recursos novos liberados
+          aos poucos, antes da atualização mensal).
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings
@@ -170,18 +224,25 @@ tweaks:
         value: 0
 
   - id: update.store-no-auto-update
-    name: Não atualizar apps da Microsoft Store automaticamente
+    name: Don't update Microsoft Store apps automatically
     description: >
-      Política "Desativar o download e a instalação automáticos de atualizações" da Store (AutoDownload = 2). Os
-      apps só atualizam quando você abre a Store e manda.
+      Store policy "Turn off Automatic Download and Install of updates" (AutoDownload = 2). Apps only update
+      when you open the Store and tell it to.
     risk: medium
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - ApplicationManagement/AllowAppStoreAutoUpdate" }
       - { kind: admx, ref: "WindowsStore.admx:DisableAutoInstall" }
       - { kind: tool, ref: "winhance:store-auto-update" }
-    tags: [windows-update, store, politica]
-    breaks: Apps da Store (inclusive Bloco de Notas, Fotos, Terminal) ficam sem correções até você atualizar à mão.
+    tags: [windows-update, store, policy]
+    breaks: Store apps (including Notepad, Photos, Terminal) get no fixes until you update them manually.
+    i18n:
+      pt-BR:
+        name: Não atualizar apps da Microsoft Store automaticamente
+        description: >
+          Política "Desativar o download e a instalação automáticos de atualizações" da Store (AutoDownload = 2). Os
+          apps só atualizam quando você abre a Store e manda.
+        breaks: Apps da Store (inclusive Bloco de Notas, Fotos, Terminal) ficam sem correções até você atualizar à mão.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\WindowsStore

@@ -1,0 +1,32 @@
+# Translated display names of the category tree. Category paths in the catalog are English
+# identifiers; each node of a path (e.g. "Privacy" and "Privacy/Telemetry") is translated here
+# on its own (the value is only that node's name). Nodes without a name fall back to English;
+# 'validate' warns about them.
+pt-BR:
+  AI: IA
+  AI/Agents: Agentes
+  AI/Copilot and Recall: Copilot e Recall
+  Apps: Apps
+  Apps/Bloatware: Bloatware
+  Apps/OneDrive: OneDrive
+  Browser: Navegador
+  Browser/Microsoft Edge: Microsoft Edge
+  Interface: Interface
+  Interface/Explorer and taskbar: Explorador e barra de tarefas
+  Interface/Start and Search: Iniciar e Pesquisa
+  Interface/Visual effects and theme: Efeitos visuais e tema
+  Privacy: Privacidade
+  Privacy/Ads and suggestions: Anúncios e sugestões
+  Privacy/Permissions and personal data: Permissões e dados pessoais
+  Privacy/Telemetry: Telemetria
+  Security: Segurança
+  Security/Microsoft Defender: Microsoft Defender
+  System: Sistema
+  System/Gaming: Jogos
+  System/General: Geral
+  System/Network and power: Rede e energia
+  System/Optional features: Recursos opcionais
+  System/Performance: Desempenho
+  System/Scheduled tasks: Tarefas agendadas
+  System/Services: Serviços
+  System/Windows Update: Windows Update

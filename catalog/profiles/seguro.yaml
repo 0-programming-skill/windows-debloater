@@ -1,9 +1,0 @@
-# Perfil embutido: só ajustes de risco baixo, de todas as categorias.
-name: Seguro
-description: >
-  Somente ajustes de risco baixo, em todas as categorias. Bom ponto de partida: nada que costume
-  quebrar funcionalidades.
-rules:
-  maxRisk: low
-  # Remover apps não é reversível pelo programa: fica fora do perfil seguro.
-  includeIrreversible: false

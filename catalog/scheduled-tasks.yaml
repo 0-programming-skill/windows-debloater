@@ -1,0 +1,215 @@
+# Telemetry and unnecessary maintenance scheduled tasks.
+category: System/Scheduled tasks
+
+tweaks:
+  - id: tasks.compatibility-appraiser
+    name: Disable Microsoft Compatibility Appraiser
+    description: >
+      Disables the tasks that collect data about installed programs for telemetry and upgrade compatibility
+      assessment.
+    risk: low
+    confidence: community
+    tags: [task, telemetry]
+    breaks: Compatibility checks before feature updates may become less accurate.
+    i18n:
+      pt-BR:
+        name: Desativar o Avaliador de Compatibilidade da Microsoft
+        description: >
+          Desativa as tarefas que coletam dados de programas instalados para telemetria e avaliação de
+          compatibilidade de upgrades.
+        breaks: Verificações de compatibilidade antes de atualizações de recurso podem ficar menos precisas.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\ProgramDataUpdater
+        state: disabled
+
+  - id: tasks.ceip
+    name: Disable Customer Experience Improvement Program (CEIP) tasks
+    description: Disables the tasks that consolidate and upload CEIP data.
+    risk: low
+    confidence: community
+    tags: [task, telemetry]
+    i18n:
+      pt-BR:
+        name: Desativar tarefas do Programa de Aperfeiçoamento (CEIP)
+        description: Desativa as tarefas que consolidam e enviam dados do CEIP.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Customer Experience Improvement Program\Consolidator
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Customer Experience Improvement Program\UsbCeip
+        state: disabled
+
+  - id: tasks.disk-diagnostic-collector
+    name: Disable the disk diagnostic data collector
+    description: Disables the task that sends general disk and system information to Microsoft.
+    risk: low
+    confidence: community
+    tags: [task, telemetry]
+    i18n:
+      pt-BR:
+        name: Desativar o coletor de diagnóstico de disco
+        description: Desativa a tarefa que envia informações gerais de disco e sistema para a Microsoft.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector
+        state: disabled
+
+  - id: tasks.feedback-siuf
+    name: Disable feedback (SIUF) tasks
+    description: Disables the Windows feedback client tasks.
+    risk: low
+    confidence: community
+    tags: [task, telemetry, feedback]
+    i18n:
+      pt-BR:
+        name: Desativar tarefas de feedback (SIUF)
+        description: Desativa as tarefas do cliente de feedback do Windows.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Feedback\Siuf\DmClient
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload
+        state: disabled
+
+  - id: tasks.autochk-proxy
+    name: Disable the Autochk Proxy task
+    description: Disables the task that collects Autochk SQM data.
+    risk: low
+    confidence: community
+    tags: [task, telemetry]
+    i18n:
+      pt-BR:
+        name: Desativar a tarefa Autochk Proxy
+        description: Desativa a tarefa que coleta dados SQM do Autochk.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Autochk\Proxy
+        state: disabled
+
+  - id: tasks.maps
+    name: Disable Maps app tasks
+    description: Disables automatic map updates and notifications from the Maps app.
+    risk: low
+    confidence: community
+    tags: [task, maps]
+    breaks: Offline maps are not updated automatically.
+    i18n:
+      pt-BR:
+        name: Desativar tarefas do app Mapas
+        description: Desativa a atualização automática de mapas e as notificações do app Mapas.
+        breaks: Mapas offline não são atualizados automaticamente.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Maps\MapsUpdateTask
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Maps\MapsToastTask
+        state: disabled
+
+  - id: tasks.xbox-game-save
+    name: Disable the Xbox game save task
+    description: Disables the Xbox Live saved game sync task.
+    risk: low
+    confidence: community
+    tags: [task, xbox, gaming]
+    breaks: Xbox cloud saved game sync.
+    i18n:
+      pt-BR:
+        name: Desativar a tarefa de salvamento de jogos do Xbox
+        description: Desativa a tarefa de sincronização de jogos salvos do Xbox Live.
+        breaks: Sincronização de jogos salvos na nuvem do Xbox.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\XblGameSave\XblGameSaveTask
+        state: disabled
+
+  - id: tasks.wer-queue-reporting
+    name: Disable error report queue uploads
+    description: Disables the task that sends pending error reports (Windows Error Reporting\QueueReporting).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:ScheduledTasks" }
+      - { kind: tool, ref: "winhance:QueueReporting" }
+    tags: [task, telemetry]
+    i18n:
+      pt-BR:
+        name: Desativar o envio da fila de relatórios de erro
+        description: Desativa a tarefa que envia relatórios de erro pendentes (Windows Error Reporting\QueueReporting).
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Windows Error Reporting\QueueReporting
+        state: disabled
+
+  - id: tasks.application-experience-extra
+    name: Disable Application Experience tasks (inventory)
+    description: >
+      Disables MareBackup, StartupAppTask and PcaPatchDbTask (Application Experience), which collect program
+      and startup inventory.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:ScheduledTasks" }
+      - { kind: tool, ref: "privacysexy:Application Experience" }
+    tags: [task, telemetry]
+    breaks: The Task Manager "Startup impact" column may show no data.
+    i18n:
+      pt-BR:
+        name: Desativar tarefas de experiência de aplicativos (inventário)
+        description: >
+          Desativa MareBackup, StartupAppTask e PcaPatchDbTask (Application Experience), que coletam inventário de
+          programas e de inicialização.
+        breaks: A coluna "Impacto na inicialização" do Gerenciador de Tarefas pode ficar sem dados.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\MareBackup
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\StartupAppTask
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\PcaPatchDbTask
+        state: disabled
+
+  - id: tasks.power-efficiency-diagnostics
+    name: Disable power efficiency diagnostics
+    description: Disables the task that periodically analyzes the system's power usage (AnalyzeSystem).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:AnalyzeSystem" }
+      - { kind: tool, ref: "atlas:disable-scheduled-tasks" }
+    tags: [task, telemetry, power]
+    i18n:
+      pt-BR:
+        name: Desativar o diagnóstico de eficiência de energia
+        description: Desativa a tarefa que analisa periodicamente o consumo de energia do sistema (AnalyzeSystem).
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem
+        state: disabled
+
+  - id: tasks.sustainability-telemetry
+    name: Disable sustainability telemetry
+    description: Disables the SustainabilityTelemetry task (power usage data for sustainability features).
+    risk: low
+    confidence: community
+    minBuild: 26100
+    tags: [task, telemetry, power]
+    i18n:
+      pt-BR:
+        name: Desativar a telemetria de sustentabilidade
+        description: Desativa a tarefa SustainabilityTelemetry (dados de consumo de energia para recursos de sustentabilidade).
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Sustainability\SustainabilityTelemetry
+        state: disabled

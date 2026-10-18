@@ -1,0 +1,186 @@
+# Windows services.
+category: System/Services
+
+tweaks:
+  - id: services.windows-update.disable
+    name: Disable Windows Update
+    description: >
+      Disables the Windows Update and Update Orchestrator services and applies the policy that turns off
+      automatic updates. The PC stops receiving security updates.
+    risk: critical
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Update/AllowAutoUpdate" }
+      - { kind: admx, ref: "WindowsUpdate.admx:AutoUpdateCfg" }
+    tags: [windows-update, service, security]
+    breaks: >
+      No security, driver or Defender definition updates; Microsoft Store and "Features on demand" may
+      fail. WaaSMedicSvc (Windows Update Medic Service) is protected by the system and may refuse the
+      change or re-enable the services.
+    i18n:
+      pt-BR:
+        name: Desativar o Windows Update
+        description: >
+          Desativa os serviços do Windows Update e do Orquestrador de Atualizações e aplica a política
+          que desliga as atualizações automáticas. O PC deixa de receber atualizações de segurança.
+        breaks: >
+          Sem atualizações de segurança, de drivers e de definições do Defender; Microsoft Store e
+          "Recursos sob demanda" podem falhar. O WaaSMedicSvc (serviço de correção) é protegido pelo
+          sistema e pode recusar a alteração ou reativar os serviços.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+        name: NoAutoUpdate
+        kind: dword
+        value: 1
+      - type: service
+        name: wuauserv
+        startup: disabled
+      - type: service
+        name: UsoSvc
+        startup: disabled
+      - type: service
+        name: WaaSMedicSvc
+        startup: disabled
+
+  - id: services.sysmain.disable
+    name: Disable SysMain (Superfetch)
+    description: Disables preloading apps into memory. May help on PCs with little RAM and high disk usage.
+    risk: medium
+    confidence: community
+    tags: [service, performance]
+    breaks: Apps may open more slowly, especially on HDDs.
+    i18n:
+      pt-BR:
+        name: Desativar o SysMain (Superfetch)
+        description: Desativa o pré-carregamento de apps na memória. Pode ajudar em PCs com pouca RAM e uso de disco alto.
+        breaks: Apps podem abrir mais devagar, especialmente em HDDs.
+    actions:
+      - type: service
+        name: SysMain
+        startup: disabled
+
+  - id: services.windows-search.disable
+    name: Disable Windows Search (indexing)
+    description: Disables the file indexing service.
+    risk: high
+    confidence: community
+    tags: [service, search, performance]
+    breaks: >
+      Search in Start and File Explorer becomes much slower and incomplete; Outlook and other apps that
+      rely on the index can no longer search correctly.
+    i18n:
+      pt-BR:
+        name: Desativar o Windows Search (indexação)
+        description: Desativa o serviço de indexação de arquivos.
+        breaks: >
+          Pesquisa no Iniciar e no Explorador fica muito mais lenta e incompleta; o Outlook e outros apps
+          que dependem do índice deixam de pesquisar corretamente.
+    actions:
+      - type: service
+        name: WSearch
+        startup: disabled
+
+  - id: services.print-spooler.disable
+    name: Disable Print Spooler
+    description: Disables the print service. Reduces the attack surface on PCs without a printer.
+    risk: high
+    confidence: community
+    tags: [service, security, printing]
+    breaks: All printing, including "Microsoft Print to PDF".
+    i18n:
+      pt-BR:
+        name: Desativar o Spooler de Impressão
+        description: Desativa o serviço de impressão. Reduz a superfície de ataque em PCs sem impressora.
+        breaks: Toda impressão, incluindo "Imprimir para PDF".
+    actions:
+      - type: service
+        name: Spooler
+        startup: disabled
+
+  - id: services.xbox.disable
+    name: Disable Xbox services
+    description: Disables Xbox Live authentication, cloud saves and networking.
+    risk: medium
+    confidence: community
+    tags: [service, xbox, gaming]
+    breaks: Xbox app, Game Pass, cloud saves and game achievements.
+    i18n:
+      pt-BR:
+        name: Desativar serviços do Xbox
+        description: Desativa autenticação, salvamento na nuvem e rede do Xbox Live.
+        breaks: App Xbox, Game Pass, salvamento na nuvem e conquistas de jogos.
+    actions:
+      - type: service
+        name: XblAuthManager
+        startup: disabled
+      - type: service
+        name: XblGameSave
+        startup: disabled
+      - type: service
+        name: XboxNetApiSvc
+        startup: disabled
+
+  - id: services.fax.disable
+    name: Disable the Fax service
+    description: Disables the Fax service.
+    risk: low
+    confidence: community
+    tags: [service]
+    breaks: Sending and receiving faxes through Windows.
+    i18n:
+      pt-BR:
+        name: Desativar o serviço de Fax
+        description: Desativa o serviço de Fax.
+        breaks: Envio e recebimento de fax pelo Windows.
+    actions:
+      - type: service
+        name: Fax
+        startup: disabled
+
+  - id: services.remote-registry.disable
+    name: Disable Remote Registry
+    description: Ensures the registry can't be edited remotely. Already disabled by default.
+    risk: low
+    confidence: community
+    tags: [service, security]
+    i18n:
+      pt-BR:
+        name: Desativar o Registro Remoto
+        description: Garante que o registro não possa ser editado remotamente. Já vem desativado por padrão.
+    actions:
+      - type: service
+        name: RemoteRegistry
+        startup: disabled
+
+  - id: services.maps-broker.disable
+    name: Disable Downloaded Maps Manager
+    description: Disables the service that updates offline maps.
+    risk: low
+    confidence: community
+    tags: [service, maps]
+    breaks: Offline maps in the Maps app.
+    i18n:
+      pt-BR:
+        name: Desativar o Gerenciador de Mapas Baixados
+        description: Desativa o serviço que atualiza mapas offline.
+        breaks: Mapas offline do app Mapas.
+    actions:
+      - type: service
+        name: MapsBroker
+        startup: disabled
+
+  - id: services.retail-demo.disable
+    name: Disable Retail Demo Service
+    description: Disables the in-store demo mode service.
+    risk: low
+    confidence: community
+    tags: [service]
+    i18n:
+      pt-BR:
+        name: Desativar o serviço de demonstração de varejo
+        description: Desativa o serviço do modo de demonstração em lojas.
+    actions:
+      - type: service
+        name: RetailDemo
+        startup: disabled

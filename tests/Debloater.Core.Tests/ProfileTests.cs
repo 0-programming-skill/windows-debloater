@@ -12,8 +12,8 @@ internal static class TestTweaks
         Confidence? confidence = null, string[]? tags = null) => new()
     {
         Id = id,
-        Name = "Nome " + id,
-        Description = "Descrição de " + id,
+        Name = "Name " + id,
+        Description = "Description of " + id,
         Category = category,
         Risk = risk,
         Reversible = reversible,
@@ -29,39 +29,40 @@ public class ProfileStoreTests
 {
     private static readonly List<Tweak> Catalog =
     [
-        TestTweaks.Make("p.low", RiskLevel.Low, "Privacidade/Telemetria"),
-        TestTweaks.Make("p.med", RiskLevel.Medium, "Privacidade/Anúncios"),
-        TestTweaks.Make("ai.app", RiskLevel.Low, "IA/Copilot", reversible: false),
-        TestTweaks.Make("s.high", RiskLevel.High, "Sistema/Serviços"),
-        TestTweaks.Make("s.crit", RiskLevel.Critical, "Sistema/Serviços"),
-        TestTweaks.Make("x.other", RiskLevel.Low, "PrivacidadeX"),
+        TestTweaks.Make("p.low", RiskLevel.Low, "Privacy/Telemetry"),
+        TestTweaks.Make("p.med", RiskLevel.Medium, "Privacy/Ads"),
+        TestTweaks.Make("ai.app", RiskLevel.Low, "AI/Copilot", reversible: false),
+        TestTweaks.Make("s.high", RiskLevel.High, "System/Services"),
+        TestTweaks.Make("s.crit", RiskLevel.Critical, "System/Services"),
+        TestTweaks.Make("x.other", RiskLevel.Low, "PrivacyX"),
     ];
 
     [Fact]
     public void Parse_RulesAndExplicitEntries()
     {
         var p = ProfileStore.Parse("""
-            name: Teste
+            name: Test
             description: d
             rules:
               maxRisk: medium
-              categories: [Privacidade]
+              categories: [Privacy]
               excludeIds: [p.med]
             tweaks:
               - { id: s.high, desired: applied }
               - { id: p.low, desired: notApplied }
             """);
 
-        Assert.Equal("Teste", p.Name);
+        Assert.Equal("Test", p.Name);
         Assert.Equal(RiskLevel.Medium, p.Rules!.MaxRisk);
         Assert.Equal(DesiredState.NotApplied, p.Tweaks[1].Desired);
     }
 
     [Theory]
-    [InlineData("description: sem nome\nrules: { maxRisk: low }", "name")]
-    [InlineData("name: Vazio", "rules")]
-    [InlineData("name: X\ntweaks:\n  - { id: a.b }\n  - { id: A.B }", "repetido")]
-    [InlineData("name: X\ncampoErrado: 1", "linha")]
+    [InlineData("description: no name\nrules: { maxRisk: low }", "name")]
+    [InlineData("name: Empty", "rules")]
+    [InlineData("name: X\ntweaks:\n  - { id: a.b }\n  - { id: A.B }", "duplicate")]
+    [InlineData("name: X\nwrongField: 1", "line")]
+    [InlineData("name: X\nrules: { maxRisk: low }\ni18n: { xx-YY: { name: Y } }", "unknown language")]
     public void Parse_InvalidProfiles_ThrowFormatException(string yaml, string expectedFragment)
     {
         var ex = Assert.Throws<FormatException>(() => ProfileStore.Parse(yaml));
@@ -74,18 +75,18 @@ public class ProfileStoreTests
         var p = new Profile
         {
             Name = "x",
-            Rules = new ProfileRules { MaxRisk = RiskLevel.Medium, Categories = ["Privacidade", "IA"], ExcludeIds = ["p.med"] },
-            Tweaks = [new ProfileEntry { Id = "p.low", Desired = DesiredState.NotApplied }, new ProfileEntry { Id = "nao.existe" }],
+            Rules = new ProfileRules { MaxRisk = RiskLevel.Medium, Categories = ["Privacy", "AI"], ExcludeIds = ["p.med"] },
+            Tweaks = [new ProfileEntry { Id = "p.low", Desired = DesiredState.NotApplied }, new ProfileEntry { Id = "does.not-exist" }],
         };
 
         var r = ProfileStore.Resolve(p, Catalog);
 
         Assert.Equal(DesiredState.NotApplied, r.Desired["p.low"]);
         Assert.Equal(DesiredState.Applied, r.Desired["ai.app"]);
-        Assert.False(r.Desired.ContainsKey("p.med"));      // excluído
-        Assert.False(r.Desired.ContainsKey("s.high"));     // categoria
-        Assert.False(r.Desired.ContainsKey("x.other"));    // "PrivacidadeX" não é subcategoria de "Privacidade"
-        Assert.Equal(["nao.existe"], r.UnknownIds);
+        Assert.False(r.Desired.ContainsKey("p.med"));      // excluded
+        Assert.False(r.Desired.ContainsKey("s.high"));     // category
+        Assert.False(r.Desired.ContainsKey("x.other"));    // "PrivacyX" is not a subcategory of "Privacy"
+        Assert.Equal(["does.not-exist"], r.UnknownIds);
     }
 
     [Fact]
@@ -104,18 +105,19 @@ public class ProfileStoreTests
         var dir = Path.Combine(Path.GetTempPath(), "debloater-profiles-" + Guid.NewGuid().ToString("N"));
         try
         {
-            var p = ProfileStore.FromSelection("Meu perfil", "desc",
+            var p = ProfileStore.FromSelection("My profile", "desc",
                 [new("b.two", DesiredState.NotApplied), new("a.one", DesiredState.Applied)]);
             var file = Path.Combine(dir, ProfileStore.FileNameFor(p.Name));
             ProfileStore.Save(p, file);
 
             var text = File.ReadAllText(file);
             Assert.Contains("notApplied", text);
-            Assert.EndsWith("meu-perfil.yaml", file);
+            Assert.EndsWith("my-profile.yaml", file);
+            Assert.DoesNotContain("i18n", text);
 
             var loaded = ProfileStore.LoadDirectory(dir, builtIn: false);
             var single = Assert.Single(loaded);
-            Assert.Equal("Meu perfil", single.Name);
+            Assert.Equal("My profile", single.Name);
             Assert.Equal(["a.one", "b.two"], single.Tweaks.Select(t => t.Id));
             Assert.Equal(DesiredState.NotApplied, single.Tweaks[1].Desired);
             Assert.Equal(file, single.SourceFile);
@@ -133,14 +135,14 @@ public class ProfileStoreTests
         Directory.CreateDirectory(dir);
         try
         {
-            File.WriteAllText(Path.Combine(dir, "ruim.yaml"), "name: [quebrado");
-            File.WriteAllText(Path.Combine(dir, "bom.yaml"), "name: Bom\nrules: { maxRisk: low }");
+            File.WriteAllText(Path.Combine(dir, "bad.yaml"), "name: [broken");
+            File.WriteAllText(Path.Combine(dir, "good.yaml"), "name: Good\nrules: { maxRisk: low }");
             var errors = new List<string>();
 
             var loaded = ProfileStore.LoadDirectory(dir, builtIn: true, errors);
 
             Assert.True(Assert.Single(loaded).IsBuiltIn);
-            Assert.Contains(errors, e => e.StartsWith("ruim.yaml"));
+            Assert.Contains(errors, e => e.StartsWith("bad.yaml"));
         }
         finally
         {
@@ -149,9 +151,9 @@ public class ProfileStoreTests
     }
 
     [Theory]
-    [InlineData("Meu Perfil!", "meu-perfil.yaml")]
-    [InlineData("  ", "perfil.yaml")]
-    [InlineData("Privacidade máxima", "privacidade-máxima.yaml")]
+    [InlineData("My Profile!", "my-profile.yaml")]
+    [InlineData("  ", "profile.yaml")]
+    [InlineData("Résumé Profile", "résumé-profile.yaml")] // accented letters are kept
     public void FileNameFor(string name, string expected) => Assert.Equal(expected, ProfileStore.FileNameFor(name));
 
     [Fact]
@@ -163,18 +165,45 @@ public class ProfileStoreTests
         var profiles = ProfileStore.LoadDirectory(Path.Combine(catalogDir, CatalogLoader.ProfilesFolder), builtIn: true, errors);
 
         Assert.Empty(errors);
-        Assert.Equal(["Agressivo", "Privacidade", "Seguro"], profiles.Select(p => p.Name).Order());
+        Assert.Equal(["Aggressive", "Privacy", "Safe"], profiles.Select(p => p.Name).Order());
         foreach (var p in profiles)
         {
             var r = ProfileStore.Resolve(p, tweaks);
             Assert.NotEmpty(r.Desired);
             Assert.Empty(r.UnknownIds);
-            // Nenhum perfil embutido inclui risco crítico.
+            // No built-in profile includes critical risk.
             Assert.DoesNotContain(r.Desired.Keys, id => tweaks.First(t => t.Id == id).Risk == RiskLevel.Critical);
+            // Every built-in profile has a complete pt-BR translation.
+            Assert.False(string.IsNullOrWhiteSpace(p.I18n?["pt-BR"].Name), p.Name);
+            Assert.False(string.IsNullOrWhiteSpace(p.I18n?["pt-BR"].Description), p.Name);
         }
-        var seguro = ProfileStore.Resolve(profiles.First(p => p.Name == "Seguro"), tweaks);
-        Assert.All(seguro.Desired.Keys, id => Assert.Equal(RiskLevel.Low, tweaks.First(t => t.Id == id).Risk));
-        Assert.All(seguro.Desired.Keys, id => Assert.True(tweaks.First(t => t.Id == id).Reversible));
+        var safe = ProfileStore.Resolve(profiles.First(p => p.Name == "Safe"), tweaks);
+        Assert.All(safe.Desired.Keys, id => Assert.Equal(RiskLevel.Low, tweaks.First(t => t.Id == id).Risk));
+        Assert.All(safe.Desired.Keys, id => Assert.True(tweaks.First(t => t.Id == id).Reversible));
+        // The rule categories of the Privacy profile are English catalog paths that exist.
+        var privacy = profiles.First(p => p.Name == "Privacy");
+        Assert.All(privacy.Rules!.Categories, c => Assert.Contains(tweaks, t => ProfileStore.CategoryMatches(t.Category, c)));
+    }
+
+    [Fact]
+    public void DisplayTexts_FollowUiLanguage_WithEnglishFallback()
+    {
+        var p = ProfileStore.Parse("""
+            name: Safe
+            description: Only low risk.
+            i18n:
+              pt-BR:
+                name: Seguro
+            rules: { maxRisk: low }
+            """);
+
+        using (new UiCultureScope("pt-BR"))
+        {
+            Assert.Equal("Seguro", p.DisplayName);
+            Assert.Equal("Only low risk.", p.DisplayDescription); // no pt-BR description: English
+        }
+        using (new UiCultureScope("en-US"))
+            Assert.Equal("Safe", p.DisplayName);
     }
 
     [Fact]
@@ -188,7 +217,7 @@ public class ProfileStoreTests
                 category: A/B
                 tweaks:
                   - id: test.one
-                    name: Um
+                    name: One
                     description: d
                     actions:
                       - { type: registry, path: HKCU\Software\X, name: V, kind: dword, value: 1 }
@@ -257,7 +286,7 @@ public class ChangePlannerTests
         Assert.Equal(ChangeKind.Apply, plan.Single(c => c.Tweak.Id == "a.low").Kind);
         Assert.False(plan.Single(c => c.Tweak.Id == "r.ok").IsBlocked);
         Assert.Contains("backup", plan.Single(c => c.Tweak.Id == "r.nobackup").BlockedReason);
-        Assert.Contains("reversível", plan.Single(c => c.Tweak.Id == "r.irrev").BlockedReason);
+        Assert.Contains("cannot be reverted", plan.Single(c => c.Tweak.Id == "r.irrev").BlockedReason);
         Assert.Equal(RiskLevel.High, ChangePlanner.MaxRisk(plan));
         Assert.Equal(RiskLevel.Low, ChangePlanner.MaxRisk([]));
     }
@@ -265,29 +294,48 @@ public class ChangePlannerTests
 
 public class TweakQueryTests
 {
-    private static readonly Tweak T = TestTweaks.Make("privacy.ads.id", RiskLevel.Medium, "Privacidade/Anúncios",
-        confidence: Confidence.Official, tags: ["publicidade"]);
+    private static readonly Tweak T = WithTranslation(TestTweaks.Make("privacy.ads.id", RiskLevel.Medium, "Privacy/Ads",
+        confidence: Confidence.Official, tags: ["advertising"]));
+
+    private static Tweak WithTranslation(Tweak t)
+    {
+        t.I18n = new() { ["pt-BR"] = new TweakText { Name = "Anúncios personalizados", Description = "Descrição em português" } };
+        return t;
+    }
 
     [Theory]
     [InlineData("ADS", true)]
-    [InlineData("anuncios", false)]        // categoria não entra na busca
-    [InlineData("descricao privacy", true)] // sem acento, várias palavras
-    [InlineData("publicidade", true)]       // tags
-    [InlineData("privacy inexistente", false)]
+    [InlineData("Privacy/Ads", false)]           // the category is not searched
+    [InlineData("description privacy", true)]    // several words
+    [InlineData("advertising", true)]            // tags
+    [InlineData("privacy nonexistent", false)]
     [InlineData("  ", true)]
-    public void Search(string text, bool expected) =>
+    public void Search(string text, bool expected)
+    {
+        using var _ = new UiCultureScope("en-US");
         Assert.Equal(expected, new TweakQuery { Search = text }.Matches(T, TweakState.Applied, null));
+    }
+
+    [Theory]
+    [InlineData("pt-BR", "anuncios personalizados", true)] // translated name, without accents
+    [InlineData("pt-BR", "description", true)]             // the English text is always searched
+    [InlineData("en-US", "anuncios", false)]               // a translation only in its own language
+    public void Search_UsesUiLanguageAndEnglish(string culture, string text, bool expected)
+    {
+        using var _ = new UiCultureScope(culture);
+        Assert.Equal(expected, new TweakQuery { Search = text }.Matches(T, TweakState.Applied, null));
+    }
 
     [Fact]
     public void Filters()
     {
-        Assert.True(new TweakQuery { Category = "Privacidade" }.Matches(T, null, null));
+        Assert.True(new TweakQuery { Category = "Privacy" }.Matches(T, null, null));
         Assert.False(new TweakQuery { Category = "Priv" }.Matches(T, null, null));
         Assert.True(new TweakQuery { States = new HashSet<TweakState> { TweakState.Applied } }.Matches(T, TweakState.Applied, null));
         Assert.False(new TweakQuery { States = new HashSet<TweakState> { TweakState.Applied } }.Matches(T, null, null));
         Assert.False(new TweakQuery { Risks = new HashSet<RiskLevel> { RiskLevel.Low } }.Matches(T, null, null));
         Assert.True(new TweakQuery { Confidences = new HashSet<Confidence> { Confidence.Official } }.Matches(T, null, null));
-        // Sem 'confidence' conta como community.
+        // Without 'confidence' it counts as community.
         Assert.True(new TweakQuery { Confidences = new HashSet<Confidence> { Confidence.Community } }.Matches(TestTweaks.Make("a.b"), null, null));
         Assert.True(new TweakQuery { OnlyDiffering = true }.Matches(T, TweakState.NotApplied, DesiredState.Applied));
         Assert.False(new TweakQuery { OnlyDiffering = true }.Matches(T, TweakState.Applied, DesiredState.Applied));
@@ -297,13 +345,35 @@ public class TweakQueryTests
     [Fact]
     public void CategoryTree()
     {
-        var roots = CategoryNode.Build(["Sistema/Serviços", "Privacidade/Telemetria", "Privacidade/Anúncios", "Privacidade/Telemetria"]);
+        var roots = CategoryNode.Build(["System/Services", "Privacy/Telemetry", "Privacy/Ads", "Privacy/Telemetry"]);
 
-        Assert.Equal(["Privacidade", "Sistema"], roots.Select(r => r.Name));
+        Assert.Equal(["Privacy", "System"], roots.Select(r => r.Name));
         Assert.Equal(3, roots[0].Count);
-        Assert.Equal(["Anúncios", "Telemetria"], roots[0].Children.Select(c => c.Name));
-        Assert.Equal("Privacidade/Telemetria", roots[0].Children[1].Path);
+        Assert.Equal(["Ads", "Telemetry"], roots[0].Children.Select(c => c.Name));
+        Assert.Equal(["Ads", "Telemetry"], roots[0].Children.Select(c => c.DisplayName));
+        Assert.Equal("Privacy/Telemetry", roots[0].Children[1].Path);
         Assert.Equal(2, roots[0].Children[1].Count);
+    }
+
+    [Fact]
+    public void CategoryTree_TranslatedNames_SortByDisplayName()
+    {
+        var names = CategoryNames.Parse("""
+            pt-BR:
+              Privacy: Privacidade
+              Privacy/Ads: Anúncios
+              Privacy/Telemetry: Telemetria
+              System: Sistema
+              System/Services: Serviços
+            """);
+        using var _ = new UiCultureScope("pt-BR");
+
+        var roots = CategoryNode.Build(["System/Services", "Privacy/Telemetry", "Privacy/Ads"], names);
+
+        Assert.Equal(["Privacidade", "Sistema"], roots.Select(r => r.DisplayName));
+        Assert.Equal(["Privacy", "System"], roots.Select(r => r.Name));
+        Assert.Equal(["Anúncios", "Telemetria"], roots[0].Children.Select(c => c.DisplayName));
+        Assert.Equal("Privacy/Telemetry", roots[0].Children[1].Path);
     }
 }
 
@@ -320,13 +390,13 @@ public class OperationLogTests
             using (var log = new OperationLog(dir, new DateTime(2026, 1, 2, 3, 4, 5)))
             {
                 log.LineWritten += l => seen = l;
-                log.Write("aplicando x");
+                log.Write("applying x");
                 path = log.FilePath;
                 Assert.Null(log.Error);
             }
             Assert.EndsWith("2026-01-02_030405.log", path);
-            Assert.Contains("aplicando x", File.ReadAllText(path));
-            Assert.Contains("aplicando x", seen);
+            Assert.Contains("applying x", File.ReadAllText(path));
+            Assert.Contains("applying x", seen);
         }
         finally
         {

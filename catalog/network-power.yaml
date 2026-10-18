@@ -1,0 +1,164 @@
+# Network and power. "Latency" tweaks with no proven effect (Nagle, NetworkThrottlingIndex...) are left out:
+# see tools/coverage/exclusions.yaml and .claude/docs/coverage.
+category: System/Network and power
+
+tweaks:
+  - id: network.llmnr.disable
+    name: Turn off multicast name resolution (LLMNR)
+    description: >
+      Policy "Turn off multicast name resolution": the PC stops asking the local network for names over LLMNR
+      when DNS doesn't answer. Closes a well-known credential capture vector (LLMNR poisoning) on shared
+      networks.
+    risk: medium
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_DnsClient/Turn_Off_Multicast" }
+      - { kind: admx, ref: "DnsClient.admx:Turn_Off_Multicast" }
+      - { kind: tool, ref: "atlas:disable-llmnr" }
+    tags: [network, security, policy]
+    breaks: >
+      Reaching another PC, NAS or printer on the local network by name when there is no local DNS (use the
+      IP address or the .local name via mDNS).
+    i18n:
+      pt-BR:
+        name: Desativar a resolução de nomes por multicast (LLMNR)
+        description: >
+          Política "Desativar a resolução de nomes multicast": o PC deixa de perguntar nomes à rede local por LLMNR
+          quando o DNS não responde. Fecha um vetor conhecido de captura de credenciais (envenenamento de LLMNR) em
+          redes compartilhadas.
+        breaks: >
+          Acessar outro PC, NAS ou impressora da rede local pelo nome quando não há DNS local (use o IP ou o nome
+          .local via mDNS).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient
+        name: EnableMulticast
+        kind: dword
+        value: 0
+
+  - id: network.netbios.disable-resolution
+    name: Turn off NetBIOS name resolution
+    description: >
+      Policy "Configure NetBIOS settings" = Disable NetBIOS name resolution: the DNS client no longer uses
+      NetBIOS to resolve names. Same risk family as LLMNR (spoofed answers on the local network). Does not
+      remove NetBIOS from the network adapters.
+    risk: medium
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_DnsClient/DNS_Netbios" }
+      - { kind: admx, ref: "DnsClient.admx:DNS_Netbios" }
+    minBuild: 22621
+    tags: [network, security, policy]
+    breaks: Legacy networks that rely on NetBIOS names (no DNS) to find PCs and shares.
+    i18n:
+      pt-BR:
+        name: Desativar a resolução de nomes NetBIOS
+        description: >
+          Política "Configurar NetBIOS" = Desabilitar: o cliente DNS não usa mais NetBIOS para resolver nomes. É a
+          mesma família de risco do LLMNR (respostas falsas na rede local). Não remove o NetBIOS dos adaptadores.
+        breaks: Redes antigas que dependem de nomes NetBIOS (sem DNS) para achar PCs e compartilhamentos.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient
+        name: EnableNetbios
+        kind: dword
+        value: 0
+
+  - id: power.standby-no-network
+    name: No network during Modern Standby
+    description: >
+      Policies "Allow network connectivity during connected-standby" = Disabled (plugged in and on battery):
+      on PCs with Modern Standby (S0), the network is turned off during sleep, saving battery. On PCs without
+      Modern Standby nothing changes.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_Power/ACConnectivityInStandby_2" }
+      - { kind: msdocs, ref: "Policy CSP - ADMX_Power/DCConnectivityInStandby_2" }
+      - { kind: admx, ref: "Power.admx:ACConnectivityInStandby_2" }
+      - { kind: admx, ref: "Power.admx:DCConnectivityInStandby_2" }
+      - { kind: tool, ref: "win11debloat:Disable_Modern_Standby_Networking" }
+    tags: [power, battery, network, policy]
+    breaks: Email, notifications and sync don't arrive while the PC is asleep.
+    i18n:
+      pt-BR:
+        name: Sem rede durante o modo de espera moderno
+        description: >
+          Políticas "Permitir conectividade de rede durante o modo de espera conectado" = Desabilitada (na tomada e
+          na bateria): em PCs com Modern Standby (S0), a rede é desligada ao dormir, poupando bateria. Em PCs sem
+          Modern Standby não muda nada.
+        breaks: E-mails, notificações e sincronização não chegam enquanto o PC dorme.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Power\PowerSettings\f15576e8-98b7-4186-b944-eafa664402d9
+        name: ACSettingIndex
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Power\PowerSettings\f15576e8-98b7-4186-b944-eafa664402d9
+        name: DCSettingIndex
+        kind: dword
+        value: 0
+
+  - id: power.throttling.disable
+    name: Turn off Power Throttling (EcoQoS)
+    description: >
+      Policy "Turn off Power Throttling": turns off the power limiting Windows applies to background processes
+      (EcoQoS). Background programs run at full speed; on laptops, battery life is shorter.
+    risk: medium
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_Power/PowerThrottlingTurnOff" }
+      - { kind: admx, ref: "Power.admx:PowerThrottlingTurnOff" }
+      - { kind: tool, ref: "winhance:power-throttling" }
+      - { kind: tool, ref: "optimizerduck:PowerThrottling" }
+    tags: [power, performance]
+    breaks: Shorter battery life and more heat on laptops.
+    i18n:
+      pt-BR:
+        name: Desativar o "Power Throttling" (EcoQoS)
+        description: >
+          Política "Desativar o Power Throttling": desliga a limitação de energia que o Windows aplica a processos em segundo plano (EcoQoS). Programas em
+          segundo plano rodam na velocidade total; em notebooks, a bateria dura menos.
+        breaks: Menos autonomia de bateria e mais calor em notebooks.
+    actions:
+      - type: registry
+        path: HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling
+        name: PowerThrottlingOff
+        kind: dword
+        value: 1
+
+  - id: power.plan.high-performance
+    name: Use the "High performance" power plan
+    description: >
+      Activates the "High performance" power plan (powercfg /setactive). Reverting switches to the "Balanced"
+      plan (the Windows default), not necessarily to the plan that was active before.
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFAddUltPerf" }
+      - { kind: tool, ref: "winhance:power-plan" }
+    tags: [power, performance]
+    breaks: Higher power use and heat; on laptops, battery life is much shorter.
+    precondition:
+      powershell: |
+        [bool]((powercfg.exe /list | Out-String) -match '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c')
+      reason: the "High performance" plan doesn't exist on this PC (common on PCs with Modern Standby).
+    i18n:
+      pt-BR:
+        name: Usar o plano de energia "Alto desempenho"
+        description: >
+          Ativa o plano de energia "Alto desempenho" (powercfg /setactive). Reverter volta ao plano "Equilibrado"
+          (o padrão do Windows), não necessariamente ao plano que estava ativo antes.
+        breaks: Mais consumo e calor; em notebooks a bateria dura bem menos.
+        reason: o plano "Alto desempenho" não existe neste PC (comum em PCs com Modern Standby).
+    actions:
+      - type: powershell
+        detect: |
+          [bool]((powercfg.exe /getactivescheme | Out-String) -match '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c')
+        apply: |
+          powercfg.exe /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+          if ($LASTEXITCODE -ne 0) { throw "powercfg failed ($LASTEXITCODE)" }
+        revert: |
+          powercfg.exe /setactive 381b4222-f694-41f0-9685-ff5bb260df2e
+          if ($LASTEXITCODE -ne 0) { throw "powercfg failed ($LASTEXITCODE)" }

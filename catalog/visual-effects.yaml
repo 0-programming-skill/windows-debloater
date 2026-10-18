@@ -1,0 +1,268 @@
+# Visual effects, theme and keyboard/accessibility.
+category: Interface/Visual effects and theme
+
+tweaks:
+  - id: ui.visual.disable-transparency
+    name: Turn off transparency effects
+    description: Turns off transparency (acrylic/Mica) on the taskbar, Start and system windows.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_Transparency" }
+      - { kind: tool, ref: "winhance:transparency" }
+    tags: [visual, performance]
+    i18n:
+      pt-BR:
+        name: Desativar os efeitos de transparência
+        description: Desliga a transparência (acrílico/mica) da barra de tarefas, do Iniciar e das janelas do sistema.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize
+        name: EnableTransparency
+        kind: dword
+        value: 0
+
+  - id: ui.visual.disable-window-animations
+    name: Turn off window and taskbar animations
+    description: >
+      Turns off "Animate windows when minimizing and maximizing" and the taskbar animations, and selects
+      "Custom" in Performance Options. Takes effect after signing out and back in.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksDisplay" }
+      - { kind: tool, ref: "winhance:visual-effects" }
+    tags: [visual, performance, animations]
+    i18n:
+      pt-BR:
+        name: Desativar animações de janelas e da barra de tarefas
+        description: >
+          Desliga "Animar janelas ao minimizar e maximizar" e as animações da barra de tarefas, e marca a opção
+          "Personalizado" em Opções de desempenho. Vale depois de sair e entrar de novo na conta.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Desktop\WindowMetrics
+        name: MinAnimate
+        kind: string
+        value: "0"
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarAnimations
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects
+        name: VisualFXSetting
+        kind: dword
+        value: 3
+
+  - id: ui.visual.disable-peek
+    name: Turn off desktop Peek
+    description: Turns off the desktop preview shown when hovering the far corner of the taskbar (Aero Peek).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksDisplay" }
+      - { kind: tool, ref: "atlas:visual-effects" }
+    tags: [visual, performance]
+    i18n:
+      pt-BR:
+        name: Desativar a "Espiada" da área de trabalho
+        description: Desliga a pré-visualização da área de trabalho ao passar o mouse no canto da barra de tarefas (Aero Peek).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\DWM
+        name: EnableAeroPeek
+        kind: dword
+        value: 0
+
+  - id: ui.visual.disable-list-effects
+    name: Turn off icon label shadows and translucent selection
+    description: Turns off the drop shadow under icon labels and the translucent selection rectangle in File Explorer.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksDisplay" }
+      - { kind: tool, ref: "winhance:visual-effects" }
+    tags: [visual, performance]
+    i18n:
+      pt-BR:
+        name: Desativar sombras e seleção translúcida nos ícones
+        description: Desliga a sombra sob os nomes dos ícones e o retângulo de seleção translúcido do Explorador.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ListviewAlphaSelect
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ListviewShadow
+        kind: dword
+        value: 0
+
+  - id: ui.visual.no-drag-full-windows
+    name: Don't show window contents while dragging
+    description: When dragging a window, shows only its outline (helps weak GPUs and low-end PCs). Takes effect after signing out and back in.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksDisplay" }
+    tags: [visual, performance]
+    i18n:
+      pt-BR:
+        name: Não mostrar o conteúdo da janela ao arrastar
+        description: Ao arrastar uma janela, mostra só o contorno (alivia GPUs e PCs muito fracos). Vale depois de sair e entrar.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Desktop
+        name: DragFullWindows
+        kind: string
+        value: "0"
+
+  - id: ui.visual.faster-menus
+    name: Faster menus (100 ms delay)
+    description: >
+      Reduces the hover delay before submenus open from 400 ms (default) to 100 ms. Takes effect after signing
+      out and back in.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksDisplay" }
+      - { kind: tool, ref: "winhance:menu-delay" }
+    tags: [visual, responsiveness]
+    i18n:
+      pt-BR:
+        name: Menus mais rápidos (atraso de 100 ms)
+        description: >
+          Reduz o atraso para abrir submenus ao passar o mouse de 400 ms (padrão) para 100 ms. Vale depois de sair e
+          entrar na conta.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Desktop
+        name: MenuShowDelay
+        kind: string
+        value: "100"
+
+  - id: ui.visual.wallpaper-full-quality
+    name: JPEG wallpaper without recompression
+    description: >
+      Windows recompresses JPEG wallpapers at 85% quality. At 100, the image has no additional loss.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:JPEGWallpapersQuality" }
+      - { kind: tool, ref: "winhance:wallpaper-quality" }
+    tags: [visual, wallpaper]
+    i18n:
+      pt-BR:
+        name: Papel de parede JPEG sem recompressão
+        description: >
+          O Windows recomprime papéis de parede JPEG com qualidade 85 %. Com 100, a imagem fica sem perda adicional.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Desktop
+        name: JPEGImportQuality
+        kind: dword
+        value: 100
+
+  - id: ui.theme.dark-mode
+    name: Use dark mode (apps and system)
+    description: Turns on the dark theme for Windows (taskbar, Start) and for apps.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFToggleDarkMode" }
+      - { kind: tool, ref: "win11debloat:Enable_Dark_Mode" }
+    tags: [visual, theme, preference]
+    i18n:
+      pt-BR:
+        name: Usar o modo escuro (apps e sistema)
+        description: Ativa o tema escuro para o Windows (barra de tarefas, Iniciar) e para os apps.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize
+        name: AppsUseLightTheme
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize
+        name: SystemUsesLightTheme
+        kind: dword
+        value: 0
+
+  - id: ui.accessibility.disable-shortcut-keys
+    name: Turn off the Sticky Keys, Filter Keys and Toggle Keys shortcuts
+    description: >
+      Stops pressing Shift five times (Sticky Keys), holding right Shift (Filter Keys) or holding Num Lock
+      (Toggle Keys) from opening the accessibility prompt. The features remain available in Settings.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFToggleStickyKeys" }
+      - { kind: tool, ref: "sophia:StickyShift" }
+    tags: [accessibility, keyboard, gaming]
+    breaks: Users who rely on the accessibility shortcuts must turn the features on in Settings.
+    i18n:
+      pt-BR:
+        name: Desativar os atalhos de Teclas de Aderência, Filtragem e Alternância
+        description: >
+          Impede que apertar Shift cinco vezes (Teclas de Aderência), segurar o Shift direito (Teclas de Filtragem) ou
+          segurar o Num Lock (Teclas de Alternância) abra o aviso de acessibilidade. Os recursos continuam disponíveis
+          nas Configurações.
+        breaks: Quem usa os atalhos de acessibilidade precisa ligá-los pelas Configurações.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Accessibility\StickyKeys
+        name: Flags
+        kind: string
+        value: "506"
+      - type: registry
+        path: HKCU\Control Panel\Accessibility\Keyboard Response
+        name: Flags
+        kind: string
+        value: "122"
+      - type: registry
+        path: HKCU\Control Panel\Accessibility\ToggleKeys
+        name: Flags
+        kind: string
+        value: "58"
+
+  - id: ui.keyboard.numlock-on
+    name: Num Lock on at sign-in
+    description: Turns Num Lock on when the user signs in.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFToggleNumLock" }
+      - { kind: tool, ref: "sophia:NumLock" }
+    tags: [keyboard, preference]
+    i18n:
+      pt-BR:
+        name: Num Lock ligado ao entrar
+        description: Liga o Num Lock quando o usuário entra na conta.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Keyboard
+        name: InitialKeyboardIndicators
+        kind: string
+        value: "2"
+
+  - id: ui.keyboard.printscreen-classic
+    name: Print Screen copies the screen (doesn't open Snipping Tool)
+    description: Turns off "Use the Print screen key to open screen capture"; the key copies the whole screen again.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:PrtScnSnippingTool" }
+    tags: [keyboard, preference]
+    i18n:
+      pt-BR:
+        name: Print Screen copia a tela (sem abrir a Ferramenta de Captura)
+        description: Desliga "Usar a tecla Print Screen para abrir a captura de tela"; a tecla volta a copiar a tela inteira.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Keyboard
+        name: PrintScreenKeyForSnippingEnabled
+        kind: dword
+        value: 0

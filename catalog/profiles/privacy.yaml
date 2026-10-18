@@ -1,0 +1,12 @@
+# Built-in profile: privacy, ads and AI, up to medium risk.
+name: Privacy
+description: >
+  Telemetry, ads, suggestions, Copilot, Recall and other AI features, up to medium risk.
+i18n:
+  pt-BR:
+    name: Privacidade
+    description: >
+      Telemetria, anúncios, sugestões, Copilot, Recall e outros recursos de IA, até risco médio.
+rules:
+  maxRisk: medium
+  categories: [Privacy, AI]

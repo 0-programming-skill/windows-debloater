@@ -1,0 +1,441 @@
+# Ads, suggestions and promotional content.
+category: Privacy/Ads and suggestions
+
+tweaks:
+  - id: privacy.ads.advertising-id
+    name: Disable the advertising ID
+    description: Prevents apps from using the advertising ID to show personalized ads.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Privacy/DisableAdvertisingId" }
+      - { kind: admx, ref: "UserProfiles.admx:DisableAdvertisingId" }
+    tags: [ads]
+    i18n:
+      pt-BR:
+        name: Desativar o ID de anúncio
+        description: Impede que apps usem o ID de publicidade para mostrar anúncios personalizados.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo
+        name: Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo
+        name: DisabledByGroupPolicy
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.language-list
+    name: Don't expose the language list to websites
+    description: Prevents websites from accessing your language list to provide locally relevant content.
+    risk: low
+    confidence: community
+    tags: [ads, web]
+    i18n:
+      pt-BR:
+        name: Não expor a lista de idiomas aos sites
+        description: Impede que sites acessem sua lista de idiomas para mostrar conteúdo local.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\International\User Profile
+        name: HttpAcceptLanguageOptOut
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.welcome-experience
+    name: Disable the "welcome experience" after updates
+    description: Doesn't show the Windows what's new/welcome screen after updates and when signing in.
+    risk: low
+    confidence: community
+    tags: [ads, content-delivery]
+    i18n:
+      pt-BR:
+        name: Desativar a "experiência de boas-vindas" após atualizações
+        description: Não mostra a tela de novidades/boas-vindas do Windows após atualizações e ao entrar.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-310093Enabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.tips-suggestions
+    name: Disable Windows tips and suggestions
+    description: Turns off "Get tips and suggestions when using Windows" (promotional notifications).
+    risk: low
+    confidence: community
+    tags: [ads, content-delivery, notifications]
+    i18n:
+      pt-BR:
+        name: Desativar dicas e sugestões do Windows
+        description: Desativa "Obter dicas e sugestões ao usar o Windows" (notificações promocionais).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-338389Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SoftLandingEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.settings-suggestions
+    name: Disable suggested content in the Settings app
+    description: Removes the content suggestions shown in the Settings app.
+    risk: low
+    confidence: community
+    tags: [ads, content-delivery]
+    i18n:
+      pt-BR:
+        name: Desativar conteúdo sugerido no app Configurações
+        description: Remove as sugestões de conteúdo exibidas no app Configurações.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-338393Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-353694Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-353696Enabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.silent-app-install
+    name: Prevent silent installation of suggested apps
+    description: Prevents Windows from automatically installing sponsored apps (Candy Crush, etc.).
+    risk: low
+    confidence: community
+    tags: [ads, content-delivery, bloatware]
+    i18n:
+      pt-BR:
+        name: Impedir instalação silenciosa de apps sugeridos
+        description: Impede que o Windows instale automaticamente apps patrocinados (Candy Crush etc.).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SilentInstalledAppsEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: PreInstalledAppsEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: OemPreInstalledAppsEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.consumer-features
+    name: Turn off "Microsoft consumer experiences"
+    description: >
+      Policy that prevents Windows from downloading apps and promotional content for new users.
+      Officially it is only honored on Enterprise/Education editions.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowWindowsConsumerFeatures" }
+      - { kind: admx, ref: "CloudContent.admx:DisableWindowsConsumerFeatures" }
+    tags: [ads, policy, bloatware]
+    i18n:
+      pt-BR:
+        name: Desativar "Experiências do consumidor da Microsoft"
+        description: >
+          Política que impede o Windows de baixar apps e conteúdo promocional para novos usuários.
+          Oficialmente só é respeitada nas edições Enterprise/Education.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent
+        name: DisableWindowsConsumerFeatures
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.lock-screen-tips
+    name: Disable fun facts and tips on the lock screen
+    description: Removes "fun facts, tips, tricks, and more" and ads from the lock screen.
+    risk: low
+    confidence: community
+    tags: [ads, content-delivery, lock-screen]
+    i18n:
+      pt-BR:
+        name: Desativar curiosidades e dicas na tela de bloqueio
+        description: Remove "fatos divertidos, dicas e truques" e anúncios da tela de bloqueio.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: RotatingLockScreenOverlayEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-338387Enabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.finish-setup-nag
+    name: Don't suggest "finish setting up your device"
+    description: Turns off the screen that suggests finishing setup (OneDrive, Microsoft 365, Game Pass...).
+    risk: low
+    confidence: community
+    tags: [ads]
+    i18n:
+      pt-BR:
+        name: Não sugerir "concluir a configuração do dispositivo"
+        description: Desativa a tela que sugere concluir a configuração (OneDrive, Microsoft 365, Game Pass...).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement
+        name: ScoobeSystemSettingEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.start-recommendations
+    name: Disable tip and app recommendations in Start
+    description: Turns off "Show recommendations for tips, shortcuts, new apps, and more" in the Start menu.
+    risk: low
+    confidence: community
+    minBuild: 22621
+    tags: [ads, start]
+    i18n:
+      pt-BR:
+        name: Desativar recomendações de dicas e apps no Iniciar
+        description: Desativa "Mostrar recomendações de dicas, atalhos, novos aplicativos e muito mais" no menu Iniciar.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Start_IrisRecommendations
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.explorer-sync-provider
+    name: Disable sync provider notifications in File Explorer
+    description: Removes the ads (OneDrive/Microsoft 365) shown in File Explorer.
+    risk: low
+    confidence: community
+    tags: [ads, explorer]
+    i18n:
+      pt-BR:
+        name: Desativar notificações do provedor de sincronização no Explorador
+        description: Remove os anúncios (OneDrive/Microsoft 365) exibidos no Explorador de Arquivos.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ShowSyncProviderNotifications
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.start-suggestions
+    name: Don't show app suggestions in Start
+    description: >
+      Turns off "Show suggestions occasionally in Start" (promoted apps) and the system pane suggestions, two
+      Content Delivery Manager content items.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:start-suggestions" }
+      - { kind: tool, ref: "win11debloat:Disable_Windows_Suggestions" }
+    tags: [ads, start, suggestions]
+    i18n:
+      pt-BR:
+        name: Não mostrar sugestões de apps no Iniciar
+        description: >
+          Desliga "Mostrar sugestões ocasionalmente no Iniciar" (apps promovidos) e as sugestões do painel do
+          sistema, dois conteúdos do Gerenciador de Entrega de Conteúdo.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContent-338388Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SystemPaneSuggestionsEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.content-delivery
+    name: Turn off the Content Delivery Manager
+    description: >
+      Turns off the Content Delivery Manager master switches (ContentDeliveryAllowed,
+      SubscribedContentEnabled, FeatureManagementEnabled and PreInstalledAppsEverEnabled), which feed
+      suggestions, promoted apps, tips and Windows Spotlight.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:content-delivery" }
+      - { kind: tool, ref: "atlas:config-content-delivery" }
+    tags: [ads, suggestions]
+    breaks: Windows Spotlight on the lock screen and desktop (Bing images) stops updating.
+    i18n:
+      pt-BR:
+        name: Desligar o Gerenciador de Entrega de Conteúdo
+        description: >
+          Desliga os interruptores gerais do Gerenciador de Entrega de Conteúdo (ContentDeliveryAllowed,
+          SubscribedContentEnabled, FeatureManagementEnabled e PreInstalledAppsEverEnabled), que alimentam
+          sugestões, apps promovidos, dicas e o Windows Spotlight.
+        breaks: Windows Spotlight na tela de bloqueio e na área de trabalho (imagens do Bing) para de atualizar.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: ContentDeliveryAllowed
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: SubscribedContentEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: FeatureManagementEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+        name: PreInstalledAppsEverEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.account-notifications
+    name: Don't show Microsoft account notices in Start and Settings
+    description: >
+      Turns off account notifications (e.g. "finish your backup", "sign in with a Microsoft account") in the
+      Start menu profile menu and in Settings.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:AccountNotifications" }
+      - { kind: tool, ref: "winhance:account-notifications" }
+    tags: [ads, account, start]
+    i18n:
+      pt-BR:
+        name: Não mostrar avisos da conta Microsoft no Iniciar e nas Configurações
+        description: >
+          Desliga as notificações da conta (ex.: "conclua o backup", "entre com a conta Microsoft") no menu do perfil
+          do Iniciar e nas Configurações.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Start_AccountNotifications
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SystemSettings\AccountNotifications
+        name: EnableAccountNotifications
+        kind: dword
+        value: 0
+
+  - id: privacy.ads.windows-tips-policy
+    name: Do not show Windows tips (policy)
+    description: >
+      Policy "Do not show Windows tips" (DisableSoftLanding), which applies to all users. The Policy CSP
+      documents this policy only for Enterprise/Education; on Pro/Home the effect is not guaranteed (the user
+      setting privacy.ads.tips-suggestions still applies).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: admx, ref: "CloudContent.admx:DisableSoftLanding" }
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowWindowsTips" }
+    tags: [ads, tips, policy]
+    i18n:
+      pt-BR:
+        name: Não mostrar dicas do Windows (política)
+        description: >
+          Política "Não mostrar dicas do Windows" (DisableSoftLanding), que vale para todos os usuários. A Policy CSP
+          documenta essa política só para Enterprise/Education; no Pro/Home o efeito não é garantido (o ajuste do
+          usuário privacy.ads.tips-suggestions continua valendo).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent
+        name: DisableSoftLanding
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.settings-account-content
+    name: Don't show account promotions (Microsoft 365, OneDrive) in Settings
+    description: >
+      Policy "Turn off cloud consumer account state content": the Settings Home page and other places show
+      default content instead of offers tied to the Microsoft account. The Policy CSP lists only
+      Enterprise/Education; on Pro/Home the effect is not guaranteed.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/DisableConsumerAccountStateContent" }
+      - { kind: admx, ref: "CloudContent.admx:DisableConsumerAccountStateContent" }
+      - { kind: tool, ref: "win11debloat:Disable_Settings_365_Ads" }
+    tags: [ads, settings, policy]
+    i18n:
+      pt-BR:
+        name: Não mostrar promoções da conta (Microsoft 365, OneDrive) nas Configurações
+        description: >
+          Política "Desativar conteúdo do estado da conta de consumidor na nuvem": a página Início das Configurações
+          e outros lugares mostram o conteúdo padrão em vez de ofertas ligadas à conta Microsoft. A Policy CSP lista
+          só Enterprise/Education; no Pro/Home o efeito não é garantido.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent
+        name: DisableConsumerAccountStateContent
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.spotlight
+    name: Turn off Windows Spotlight (user policy)
+    description: >
+      Policy "Turn off all Windows spotlight features" for the current user: Spotlight images, tips and
+      suggestions on the lock screen, the desktop and in Action Center. The Policy CSP lists only
+      Enterprise/Education; on Pro/Home the effect is not guaranteed (privacy.ads.content-delivery turns off
+      Spotlight through the user settings).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowWindowsSpotlight" }
+      - { kind: admx, ref: "CloudContent.admx:DisableWindowsSpotlightFeatures" }
+      - { kind: tool, ref: "atlas:cloud-content" }
+    tags: [ads, spotlight, policy]
+    breaks: Spotlight images stop appearing; choose a fixed wallpaper/picture again.
+    i18n:
+      pt-BR:
+        name: Desativar o Windows Spotlight (política do usuário)
+        description: >
+          Política "Desativar todos os recursos do Windows Spotlight" para o usuário atual: imagens, dicas e
+          sugestões do Spotlight na tela de bloqueio, na área de trabalho e na Central de Ações. A Policy CSP lista
+          só Enterprise/Education; no Pro/Home o efeito não é garantido (privacy.ads.content-delivery desliga o
+          Spotlight pelas configurações do usuário).
+        breaks: As imagens do Spotlight deixam de aparecer; volte a escolher um papel de parede/imagem fixa.
+    actions:
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\CloudContent
+        name: DisableWindowsSpotlightFeatures
+        kind: dword
+        value: 1
+
+  - id: privacy.ads.third-party-suggestions
+    name: Do not suggest third-party content in Windows Spotlight
+    description: Policy "Do not suggest third-party content in Windows spotlight" (apps and content from other publishers).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowThirdPartySuggestionsInWindowsSpotlight" }
+      - { kind: admx, ref: "CloudContent.admx:DisableThirdPartySuggestions" }
+    tags: [ads, spotlight, policy]
+    i18n:
+      pt-BR:
+        name: Não sugerir conteúdo de terceiros no Spotlight
+        description: Política "Não sugerir conteúdo de terceiros no Windows Spotlight" (apps e conteúdo de outros editores).
+    actions:
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\CloudContent
+        name: DisableThirdPartySuggestions
+        kind: dword
+        value: 1

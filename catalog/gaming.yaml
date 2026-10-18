@@ -1,0 +1,97 @@
+# Xbox Game Bar, capture and gaming tweaks.
+category: System/Gaming
+
+tweaks:
+  - id: gaming.capture.disable
+    name: Disable game capture (Game Bar)
+    description: >
+      Turns off "Record what happened" and Xbox Game Bar clip capture in the user's Settings
+      (complements perf.game-dvr.disable, which applies the policy).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:game-capture" }
+      - { kind: tool, ref: "atlas:disable-game-bar" }
+    tags: [gaming, game-bar, performance]
+    breaks: Clip recording and screenshots through the Game Bar (Win+Alt+G, Win+Alt+PrtScn).
+    i18n:
+      pt-BR:
+        name: Desativar a captura de jogos (Game Bar)
+        description: >
+          Desliga "Gravar o que aconteceu" e a captura de clipes do Xbox Game Bar nas Configurações do usuário
+          (complementa perf.game-dvr.disable, que aplica a política).
+        breaks: Gravação de clipes e capturas de tela pela Game Bar (Win+Alt+G, Win+Alt+PrtScn).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR
+        name: AppCaptureEnabled
+        kind: dword
+        value: 0
+
+  - id: gaming.game-bar.disable-controller-button
+    name: Don't open Game Bar with the controller's Xbox button
+    description: Turns off "Allow your controller to open Game Bar" (Xbox/Guide button).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_Game_Bar_Integration" }
+      - { kind: tool, ref: "winhance:game-bar-controller" }
+    tags: [gaming, game-bar, controller]
+    i18n:
+      pt-BR:
+        name: Não abrir a Game Bar pelo botão Xbox do controle
+        description: Desliga "Permitir que o controle abra a Game Bar" (botão Xbox/Guia).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\GameBar
+        name: UseNexusForGameBarEnabled
+        kind: dword
+        value: 0
+
+  - id: gaming.game-bar.disable-startup-tips
+    name: Don't show Game Bar tips when starting games
+    description: Turns off the Game Bar tips panel that appears when a game is opened.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "atlas:disable-game-bar" }
+      - { kind: tool, ref: "winhance:game-bar-tips" }
+    tags: [gaming, game-bar]
+    i18n:
+      pt-BR:
+        name: Não mostrar dicas da Game Bar ao iniciar jogos
+        description: Desliga o painel de dicas da Game Bar que aparece ao abrir um jogo.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\GameBar
+        name: ShowStartupPanel
+        kind: dword
+        value: 0
+
+  - id: gaming.hags.enable
+    name: Enable hardware-accelerated GPU scheduling
+    description: >
+      Turns on "Hardware-accelerated GPU scheduling" (HAGS): the GPU itself manages its video memory.
+      Requires a compatible GPU and driver (WDDM 2.7+) and a restart; without support, the value is ignored. It
+      can reduce latency in some games and is required by Frame Generation on some GPUs.
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:GPUScheduling" }
+      - { kind: tool, ref: "winhance:hags" }
+    tags: [gaming, gpu, performance]
+    breaks: Rarely, instability with old drivers or with capture/streaming; revert if you get freezes.
+    i18n:
+      pt-BR:
+        name: Ativar o agendamento de GPU acelerado por hardware
+        description: >
+          Liga o "Agendamento de GPU acelerado por hardware" (HAGS): a própria GPU gerencia sua memória de vídeo.
+          Exige GPU e driver compatíveis (WDDM 2.7+) e reinicialização; sem suporte, o valor é ignorado. Pode
+          reduzir a latência em alguns jogos e é exigido pela Geração de Quadros de algumas GPUs.
+        breaks: Raramente, instabilidade com drivers antigos ou com captura/streaming; desfaça se houver travamentos.
+    actions:
+      - type: registry
+        path: HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers
+        name: HwSchMode
+        kind: dword
+        value: 2

@@ -1,8 +1,9 @@
+using Debloater.Core.Localization;
 using YamlDotNet.Serialization;
 
 namespace Debloater.Core.Model;
 
-/// <summary>Nível de risco de um tweak. A ordem importa: é usada no controle de risco (risk gating).</summary>
+/// <summary>Risk level of a tweak. The order matters: it is used by risk gating.</summary>
 public enum RiskLevel
 {
     Low = 0,
@@ -12,11 +13,11 @@ public enum RiskLevel
 }
 
 /// <summary>
-/// Quão bem documentado está o mecanismo do tweak (opcional no YAML).
-/// official: documentado pela Microsoft (Policy CSP em learn.microsoft.com);
-/// admx: corresponde a uma política de um modelo administrativo (ADMX) oficial;
-/// community: conhecido pela comunidade (ferramentas consolidadas), sem documentação oficial;
-/// questionable: há indícios de que não funciona como descrito (valor fora do previsto, edição...).
+/// How well documented the tweak's mechanism is (optional in the YAML).
+/// official: documented by Microsoft (Policy CSP on learn.microsoft.com);
+/// admx: matches a policy from an official administrative template (ADMX);
+/// community: known in the community (established tools), without official documentation;
+/// questionable: there are signs it does not work as described (unexpected value, edition...).
 /// </summary>
 public enum Confidence
 {
@@ -26,7 +27,7 @@ public enum Confidence
     Questionable,
 }
 
-/// <summary>Fonte que sustenta um tweak (ex.: { kind: msdocs, ref: "Policy CSP - System/AllowTelemetry" }).</summary>
+/// <summary>Source backing a tweak (e.g. { kind: msdocs, ref: "Policy CSP - System/AllowTelemetry" }).</summary>
 public sealed class SourceRef
 {
     public const string MsDocs = "msdocs";
@@ -34,13 +35,16 @@ public sealed class SourceRef
     public const string Url = "url";
     public const string CommunityKind = "community";
 
-    /// <summary>Engenharia reversa: ref = caminho do achado no repositório (ex.: docs/re/26300/x.md).</summary>
+    /// <summary>
+    /// Reverse engineering: ref = "&lt;build&gt;/&lt;slug&gt;" identifying a finding (e.g. "26300/start-show-suggested-files").
+    /// The write-ups are kept outside the repository; the id is what the catalog records.
+    /// </summary>
     public const string ReKind = "re";
 
     /// <summary>
-    /// Outra ferramenta de "debloat" que faz o mesmo ajuste (ver docs/coverage): ref = "&lt;id&gt;:&lt;item&gt;", com o
-    /// id de tools/coverage/sources.json (ex.: "winutil:WPFTweaksTelemetry", "sophia:ScheduledTasks"). Só registra de
-    /// onde veio a ideia; a descrição do tweak é sempre nossa.
+    /// Another debloat tool that makes the same change: ref = "&lt;id&gt;:&lt;item&gt;", with the id from
+    /// tools/coverage/sources.json (e.g. "winutil:WPFTweaksTelemetry", "sophia:ScheduledTasks"). It only records where
+    /// the idea came from; the tweak's description is always our own.
     /// </summary>
     public const string ToolKind = "tool";
 
@@ -49,63 +53,107 @@ public sealed class SourceRef
     /// <summary>msdocs | admx | url | community | re | tool.</summary>
     public string Kind { get; set; } = "";
 
-    /// <summary>msdocs: "Policy CSP - Área/Nome"; admx: "Arquivo.admx:Política"; url/community: endereço ou descrição;
-    /// re: caminho do documento de engenharia reversa no repositório (docs/re/...); tool: "&lt;ferramenta&gt;:&lt;item&gt;".</summary>
+    /// <summary>msdocs: "Policy CSP - Area/Name"; admx: "File.admx:Policy"; url/community: address or description;
+    /// re: "&lt;build&gt;/&lt;slug&gt;" of a reverse-engineering finding; tool: "&lt;tool&gt;:&lt;item&gt;".</summary>
     public string Ref { get; set; } = "";
 
     public override string ToString() => $"{Kind}:{Ref}";
 }
 
-/// <summary>Um tweak do catálogo. É apenas DADO, carregado de YAML, sem lógica.</summary>
+/// <summary>Translated texts of a tweak for one language (any field may be omitted: falls back to English).</summary>
+public sealed class TweakText
+{
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public string? Breaks { get; set; }
+
+    /// <summary>Translation of <see cref="Precondition.Reason"/>.</summary>
+    public string? Reason { get; set; }
+}
+
+/// <summary>A catalog tweak. It is only DATA, loaded from YAML, with no logic.</summary>
 public sealed class Tweak
 {
-    /// <summary>Identificador estável, em inglês, separado por pontos (ex.: privacy.telemetry.allow-telemetry).</summary>
+    /// <summary>Stable identifier, in English, dot-separated (e.g. privacy.telemetry.allow-telemetry).</summary>
     public string Id { get; set; } = "";
 
-    /// <summary>Nome curto exibido na interface (pt-BR).</summary>
+    /// <summary>Short name shown in the interface (English; see <see cref="DisplayName"/>).</summary>
     public string Name { get; set; } = "";
 
-    /// <summary>Explicação do que o tweak faz (pt-BR).</summary>
+    /// <summary>Explanation of what the tweak does (English; see <see cref="DisplayDescription"/>).</summary>
     public string Description { get; set; } = "";
 
-    /// <summary>Caminho de categoria separado por "/" (ex.: Privacidade/Telemetria). Se omitido, herda o do arquivo.</summary>
+    /// <summary>
+    /// Category path separated by "/" (e.g. Privacy/Telemetry), always in English: it is also an identifier
+    /// (profile rules, --category). Display names come from catalog/i18n/categories.yaml. If omitted, inherits the file's.
+    /// </summary>
     public string Category { get; set; } = "";
 
     public RiskLevel Risk { get; set; } = RiskLevel.Low;
 
-    /// <summary>Nível de confiança (opcional). Ver <see cref="Model.Confidence"/>.</summary>
+    /// <summary>Confidence level (optional). See <see cref="Model.Confidence"/>.</summary>
     public Confidence? Confidence { get; set; }
 
-    /// <summary>Fontes que sustentam o tweak (opcional).</summary>
+    /// <summary>Sources backing the tweak (optional).</summary>
     public List<SourceRef> Sources { get; set; } = [];
 
-    /// <summary>Build mínimo do Windows (inclusive).</summary>
+    /// <summary>Minimum Windows build (inclusive).</summary>
     public int? MinBuild { get; set; }
 
-    /// <summary>Build máximo do Windows (inclusive).</summary>
+    /// <summary>Maximum Windows build (inclusive).</summary>
     public int? MaxBuild { get; set; }
 
     public List<string> Tags { get; set; } = [];
 
-    /// <summary>Aviso do que pode deixar de funcionar.</summary>
+    /// <summary>Warning about what may stop working (English; see <see cref="DisplayBreaks"/>).</summary>
     public string? Breaks { get; set; }
 
     public List<string> References { get; set; } = [];
 
-    /// <summary>Se o engine consegue desfazer o tweak a partir do backup.</summary>
+    /// <summary>Whether the engine can undo the tweak from the backup.</summary>
     public bool Reversible { get; set; } = true;
 
     /// <summary>
-    /// Condição opcional para o tweak fazer sentido neste sistema (ex.: o hardware suporta hibernação).
-    /// Se for falsa, o tweak é NotApplicable e não é aplicado.
+    /// Optional condition for the tweak to make sense on this system (e.g. the hardware supports hibernation).
+    /// If it is false, the tweak is NotApplicable and is not applied.
     /// </summary>
     public Precondition? Precondition { get; set; }
 
+    /// <summary>
+    /// Translations keyed by language (e.g. "pt-BR"). Format:
+    /// <code>
+    /// i18n:
+    ///   pt-BR:
+    ///     name: ...
+    ///     description: ...
+    ///     breaks: ...      # when the tweak has 'breaks'
+    ///     reason: ...      # when the tweak has a 'precondition'
+    /// </code>
+    /// </summary>
+    public Dictionary<string, TweakText>? I18n { get; set; }
+
     public List<ActionSpec> Actions { get; set; } = [];
 
-    /// <summary>Arquivo YAML de origem (preenchido pelo loader).</summary>
+    /// <summary>Source YAML file (filled in by the loader).</summary>
     [YamlIgnore]
     public string? SourceFile { get; set; }
+
+    /// <summary>Name in the current UI language (English fallback).</summary>
+    [YamlIgnore]
+    public string DisplayName => UiLanguage.Pick(Name, I18n, t => t.Name) ?? Name;
+
+    /// <summary>Description in the current UI language (English fallback).</summary>
+    [YamlIgnore]
+    public string DisplayDescription => UiLanguage.Pick(Description, I18n, t => t.Description) ?? Description;
+
+    /// <summary><see cref="Breaks"/> in the current UI language (English fallback); null when the tweak has none.</summary>
+    [YamlIgnore]
+    public string? DisplayBreaks => Breaks is null ? null : UiLanguage.Pick(Breaks, I18n, t => t.Breaks);
+
+    /// <summary><see cref="Precondition.Reason"/> in the current UI language (English fallback).</summary>
+    [YamlIgnore]
+    public string? DisplayPreconditionReason =>
+        Precondition?.Reason is null ? null : UiLanguage.Pick(Precondition.Reason, I18n, t => t.Reason);
 
     public bool IsBuildInRange(int build) =>
         (MinBuild is null || build >= MinBuild) && (MaxBuild is null || build <= MaxBuild);
@@ -114,22 +162,22 @@ public sealed class Tweak
 }
 
 /// <summary>
-/// Pré-condição de um tweak: um script PowerShell que imprime True (o tweak se aplica a este sistema)
-/// ou False (não se aplica) na última linha. Só leitura: não pode alterar o sistema.
+/// Precondition of a tweak: a PowerShell script that prints True (the tweak applies to this system)
+/// or False (it does not) on its last line. Read-only: it must not change the system.
 /// </summary>
 public sealed class Precondition
 {
-    /// <summary>Script que imprime True ou False.</summary>
+    /// <summary>Script that prints True or False.</summary>
     public string? Powershell { get; set; }
 
-    /// <summary>Por que o tweak não se aplica quando o script retorna False (pt-BR, mostrado ao usuário).</summary>
+    /// <summary>Why the tweak does not apply when the script returns False (English, shown to the user; translated in i18n.*.reason).</summary>
     public string? Reason { get; set; }
 }
 
-/// <summary>Formato de um arquivo de catálogo: categoria padrão + lista de tweaks.</summary>
+/// <summary>Format of a catalog file: default category + list of tweaks.</summary>
 public sealed class CatalogFile
 {
-    /// <summary>Categoria padrão para os tweaks do arquivo que não definem a sua.</summary>
+    /// <summary>Default category for the file's tweaks that do not define their own.</summary>
     public string? Category { get; set; }
 
     public List<Tweak> Tweaks { get; set; } = [];

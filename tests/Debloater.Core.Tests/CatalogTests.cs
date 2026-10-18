@@ -14,7 +14,18 @@ public class CatalogTests
 
         Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors));
         Assert.True(result.FileCount >= 8);
-        Assert.True(result.Tweaks.Count >= 40, $"apenas {result.Tweaks.Count} tweaks");
+        Assert.True(result.Tweaks.Count >= 40, $"only {result.Tweaks.Count} tweaks");
+    }
+
+    [Fact]
+    public void RealCatalog_IsFullyTranslated()
+    {
+        var result = CatalogLoader.LoadDirectory(CatalogDir);
+
+        Assert.True(result.Warnings.Count == 0, string.Join(Environment.NewLine, result.Warnings));
+        Assert.All(result.Tweaks, t => Assert.True(t.I18n?.ContainsKey("pt-BR"), t.Id));
+        using var _ = new UiCultureScope("pt-BR");
+        Assert.Equal("Privacidade/Telemetria", result.Categories.DisplayPath("Privacy/Telemetry"));
     }
 
     [Fact]
@@ -37,26 +48,27 @@ public class CatalogTests
     }
 
     [Fact]
-    public void RealCatalog_ReverseEngineeringSourcesPointToExistingDocs()
+    public void RealCatalog_ReverseEngineeringSources_AreIdsWithWriteUpsWhenDocsArePresent()
     {
-        // A raiz do repositório é onde está a pasta docs/re (subindo a partir da saída dos testes).
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "docs", "re"))) dir = dir.Parent;
-        Assert.NotNull(dir);
-
         var refs = CatalogLoader.LoadDirectory(CatalogDir).Tweaks
             .SelectMany(t => t.Sources.Where(s => s.Kind == SourceRef.ReKind).Select(s => (t.Id, s.Ref)))
             .ToList();
         Assert.NotEmpty(refs);
+
+        // The write-ups live outside git, in <repo>/.claude/docs/re/<build>/<slug>.md. Check them only when that
+        // folder exists (the owner's machine); in CI or a fresh clone only the id format is checked (by the loader).
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Debloater.slnx"))) dir = dir.Parent;
+        var reDir = dir is null ? null : Path.Combine(dir.FullName, ".claude", "docs", "re");
+        if (reDir is null || !Directory.Exists(reDir)) return;
         foreach (var (id, reference) in refs)
         {
-            Assert.StartsWith("docs/re/", reference);
-            Assert.True(File.Exists(Path.Combine(dir!.FullName, reference.Replace('/', Path.DirectorySeparatorChar))),
-                $"{id}: fonte re '{reference}' não existe no repositório.");
+            Assert.True(File.Exists(Path.Combine(reDir, reference.Replace('/', Path.DirectorySeparatorChar) + ".md")),
+                $"{id}: re source '{reference}' has no write-up in {reDir}.");
         }
     }
 
-    private static CatalogLoadResult LoadSingle(string yaml, string file = "teste.yaml") =>
+    private static CatalogLoadResult LoadSingle(string yaml, string file = "test.yaml") =>
         CatalogLoader.Load([(file, () => yaml)]);
 
     [Fact]
@@ -66,7 +78,7 @@ public class CatalogTests
             category: A/B
             tweaks:
               - id: test.one
-                name: Um
+                name: One
                 description: d
                 risk: critical
                 actions:
@@ -96,20 +108,20 @@ public class CatalogTests
                     name: Foo
                     startup: disabled
             """;
-        var result = CatalogLoader.Load([("um.yaml", () => yaml), ("dois.yaml", () => yaml)]);
+        var result = CatalogLoader.Load([("one.yaml", () => yaml), ("two.yaml", () => yaml)]);
 
         var error = Assert.Single(result.Errors);
-        Assert.Equal("dois.yaml", error.File);
-        Assert.Contains("um.yaml", error.Message);
+        Assert.Equal("two.yaml", error.File);
+        Assert.Contains("one.yaml", error.Message);
     }
 
     [Theory]
-    [InlineData("type: banana", "desconhecido")]
+    [InlineData("type: banana", "unknown")]
     [InlineData("type: registry\n        path: HKCU\\Software\\X\n        name: V\n        kind: dword", "value")]
-    [InlineData("type: registry\n        path: HKXX\\Software\\X\n        name: V\n        kind: dword\n        value: 1", "path inválido")]
-    [InlineData("type: registry\n        path: HKCU\\Software\\X\n        name: V\n        kind: dword\n        value: abc", "número inválido")]
+    [InlineData("type: registry\n        path: HKXX\\Software\\X\n        name: V\n        kind: dword\n        value: 1", "invalid path")]
+    [InlineData("type: registry\n        path: HKCU\\Software\\X\n        name: V\n        kind: dword\n        value: abc", "invalid number")]
     [InlineData("type: service\n        name: Foo\n        startup: sometimes", "startup")]
-    [InlineData("type: scheduledTask\n        path: Microsoft\\Task\n        state: disabled", "caminho completo")]
+    [InlineData("type: scheduledTask\n        path: Microsoft\\Task\n        state: disabled", "full task path")]
     [InlineData("type: appx\n        name: Foo\n        state: removed", "reversible: false")]
     [InlineData("type: powershell\n        detect: x\n        apply: y", "revert")]
     public void InvalidActions_ProduceClearErrors(string actionYaml, string expectedFragment)
@@ -123,10 +135,10 @@ public class CatalogTests
                 actions:
                   - {actionYaml}
             """;
-        var result = LoadSingle(yaml, "ruim.yaml");
+        var result = LoadSingle(yaml, "bad.yaml");
 
         Assert.False(result.IsValid);
-        Assert.All(result.Errors, e => Assert.Equal("ruim.yaml", e.File));
+        Assert.All(result.Errors, e => Assert.Equal("bad.yaml", e.File));
         Assert.Contains(result.Errors, e => e.Message.Contains(expectedFragment, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -140,11 +152,11 @@ public class CatalogTests
             """);
 
         var messages = string.Join("\n", result.Errors.Select(e => e.Message));
-        Assert.Contains("id 'Not Valid' inválido", messages);
+        Assert.Contains("invalid id 'Not Valid'", messages);
         Assert.Contains("'name'", messages);
         Assert.Contains("'description'", messages);
         Assert.Contains("'category'", messages);
-        Assert.Contains("sem ações", messages);
+        Assert.Contains("without actions", messages);
     }
 
     [Fact]
@@ -154,12 +166,12 @@ public class CatalogTests
             category: A
             tweaks:
               - id: test.x
-                nome: errado
+                nmae: typo
             """, "typo.yaml");
 
         var error = Assert.Single(result.Errors);
         Assert.Equal("typo.yaml", error.File);
-        Assert.Contains("linha 4", error.Message);
+        Assert.Contains("line 4", error.Message);
     }
 
     [Fact]
@@ -180,13 +192,113 @@ public class CatalogTests
                     kind: dword
                     value: 1
             """;
-        var ok = LoadSingle(Template.Replace("PRE", "{ powershell: '$true', reason: sem suporte }"));
+        var ok = LoadSingle(Template.Replace("PRE", "{ powershell: '$true', reason: not supported }"));
         Assert.True(ok.IsValid, string.Join('\n', ok.Errors));
-        Assert.Equal("sem suporte", ok.Tweaks[0].Precondition!.Reason);
+        Assert.Equal("not supported", ok.Tweaks[0].Precondition!.Reason);
 
-        var noScript = LoadSingle(Template.Replace("PRE", "{ reason: sem suporte }"));
+        var noScript = LoadSingle(Template.Replace("PRE", "{ reason: not supported }"));
         Assert.Contains(noScript.Errors, e => e.Message.Contains("'powershell'"));
         var noReason = LoadSingle(Template.Replace("PRE", "{ powershell: '$true' }"));
         Assert.Contains(noReason.Errors, e => e.Message.Contains("'reason'"));
+    }
+
+    private const string TranslatedTweak = """
+        category: A/B
+        tweaks:
+          - id: test.i18n
+            name: Disable the thing
+            description: Disables the thing.
+            breaks: The thing stops working.
+            precondition: { powershell: '$true', reason: not supported here }
+            I18N
+            actions:
+              - { type: registry, path: HKCU\Software\X, name: V, kind: dword, value: 1 }
+        """;
+
+    [Fact]
+    public void I18n_ResolvesByUiCulture_WithEnglishFallback()
+    {
+        var result = LoadSingle(TranslatedTweak.Replace("I18N", """
+            i18n:
+                  pt-BR:
+                    name: Desativar a coisa
+                    description: Desativa a coisa.
+                    reason: sem suporte aqui
+            """));
+        Assert.True(result.IsValid, string.Join('\n', result.Errors));
+        var t = result.Tweaks[0];
+
+        using (new UiCultureScope("pt-BR"))
+        {
+            Assert.Equal("Desativar a coisa", t.DisplayName);
+            Assert.Equal("Desativa a coisa.", t.DisplayDescription);
+            Assert.Equal("The thing stops working.", t.DisplayBreaks); // missing translation: English
+            Assert.Equal("sem suporte aqui", t.DisplayPreconditionReason);
+            Assert.Equal("Disable the thing", t.Name);                 // the base text is untouched
+        }
+        using (new UiCultureScope("pt-PT"))
+            Assert.Equal("Desativar a coisa", t.DisplayName);           // same language: pt-BR
+        foreach (var culture in new[] { "en-US", "de-DE", "fr-FR" })
+        {
+            using var _ = new UiCultureScope(culture);
+            Assert.Equal("Disable the thing", t.DisplayName);
+            Assert.Equal("not supported here", t.DisplayPreconditionReason);
+        }
+
+        // The missing 'breaks' translation is a warning, not an error.
+        var warning = Assert.Single(result.Warnings);
+        Assert.Equal("test.i18n", warning.TweakId);
+        Assert.Contains("breaks", warning.Message);
+    }
+
+    [Fact]
+    public void I18n_MissingTranslation_IsWarning_UnknownField_IsError()
+    {
+        var missing = LoadSingle(TranslatedTweak.Replace("I18N", ""));
+        Assert.True(missing.IsValid);
+        Assert.Contains("missing pt-BR translation", Assert.Single(missing.Warnings).Message);
+
+        var typo = LoadSingle(TranslatedTweak.Replace("I18N", "i18n: { pt-BR: { nome: x } }"));
+        Assert.False(typo.IsValid);
+    }
+
+    [Fact]
+    public void CategoryNames_TranslateEachNode_AndWarnWhenMissing()
+    {
+        const string yaml = """
+            category: Privacy/Telemetry
+            tweaks:
+              - id: test.cat
+                name: N
+                description: d
+                i18n: { pt-BR: { name: N, description: d } }
+                actions:
+                  - { type: service, name: Foo, startup: disabled }
+            """;
+        var result = CatalogLoader.Load([("a.yaml", () => yaml)], () => "pt-BR:\n  Privacy: Privacidade\n");
+
+        Assert.True(result.IsValid, string.Join('\n', result.Errors));
+        var warning = Assert.Single(result.Warnings);
+        Assert.Contains("'Privacy/Telemetry'", warning.Message);
+        using (new UiCultureScope("pt-BR"))
+        {
+            Assert.Equal("Privacidade/Telemetry", result.Categories.DisplayPath("Privacy/Telemetry"));
+            Assert.Equal("Privacidade", result.Categories.DisplayNode("Privacy"));
+        }
+        using (new UiCultureScope("en-US"))
+            Assert.Equal("Privacy/Telemetry", result.Categories.DisplayPath("Privacy/Telemetry"));
+
+        var badLanguage = CatalogLoader.Load([("a.yaml", () => yaml)], () => "xx-YY:\n  Privacy: P\n");
+        Assert.Contains(badLanguage.Errors, e => e.Message.Contains("unknown language 'xx-YY'"));
+    }
+
+    [Theory]
+    [InlineData("26300/start-show-suggested-files", true)]
+    [InlineData("docs/re/26300/x.md", false)]
+    [InlineData("26300/Bad_Slug", false)]
+    public void ReSources_MustBeBuildSlugIds(string reference, bool valid)
+    {
+        var result = LoadSingle(TranslatedTweak.Replace("I18N", $"sources: [{{ kind: re, ref: \"{reference}\" }}]"));
+        Assert.Equal(valid, result.IsValid);
     }
 }

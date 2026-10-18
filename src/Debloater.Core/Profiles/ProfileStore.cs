@@ -7,10 +7,10 @@ using YamlDotNet.Core;
 
 namespace Debloater.Core.Profiles;
 
-/// <summary>Leitura, gravação e resolução de perfis (YAML).</summary>
+/// <summary>Reading, writing and resolution of profiles (YAML).</summary>
 public static class ProfileStore
 {
-    /// <summary>Lê um perfil de texto YAML. Lança <see cref="FormatException"/> com mensagem em pt-BR.</summary>
+    /// <summary>Reads a profile from YAML text. Throws <see cref="FormatException"/> with an English message.</summary>
     public static Profile Parse(string yaml, string? sourceFile = null)
     {
         Profile? profile;
@@ -21,11 +21,11 @@ public static class ProfileStore
         catch (YamlException ex)
         {
             var inner = ex.InnerException is null ? "" : $" ({ex.InnerException.Message})";
-            throw new FormatException($"Perfil inválido na linha {ex.Start.Line}, coluna {ex.Start.Column}: {ex.Message}{inner}", ex);
+            throw new FormatException($"Invalid profile at line {ex.Start.Line}, column {ex.Start.Column}: {ex.Message}{inner}", ex);
         }
-        if (profile is null) throw new FormatException("Perfil vazio.");
+        if (profile is null) throw new FormatException("Empty profile.");
         var errors = Validate(profile);
-        if (errors.Count > 0) throw new FormatException("Perfil inválido: " + string.Join(" ", errors));
+        if (errors.Count > 0) throw new FormatException("Invalid profile: " + string.Join(" ", errors));
         profile.SourceFile = sourceFile;
         return profile;
     }
@@ -35,21 +35,23 @@ public static class ProfileStore
     public static List<string> Validate(Profile profile)
     {
         var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(profile.Name)) errors.Add("campo 'name' é obrigatório.");
+        if (string.IsNullOrWhiteSpace(profile.Name)) errors.Add("field 'name' is required.");
         if (profile.Rules is null && profile.Tweaks.Count == 0 && profile.Policies is not { Count: > 0 })
-            errors.Add("o perfil precisa de 'rules', 'tweaks' ou 'policies'.");
-        if (profile.Tweaks.Any(e => string.IsNullOrWhiteSpace(e.Id))) errors.Add("item de 'tweaks' sem 'id'.");
+            errors.Add("the profile needs 'rules', 'tweaks' or 'policies'.");
+        if (profile.Tweaks.Any(e => string.IsNullOrWhiteSpace(e.Id))) errors.Add("'tweaks' item without 'id'.");
         var dup = profile.Tweaks.Where(e => !string.IsNullOrWhiteSpace(e.Id))
             .GroupBy(e => e.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
-        if (dup is not null) errors.Add($"id repetido em 'tweaks': {dup.Key}.");
+        if (dup is not null) errors.Add($"duplicate id in 'tweaks': {dup.Key}.");
         foreach (var p in profile.Policies ?? [])
         {
             if (string.IsNullOrWhiteSpace(p.Policy) || !p.Policy.Contains(':'))
-                errors.Add($"item de 'policies' com 'policy' inválido ('{p.Policy}'; use \"Arquivo.admx:Nome\").");
+                errors.Add($"'policies' item with invalid 'policy' ('{p.Policy}'; use \"File.admx:Name\").");
         }
         var dupPolicy = (profile.Policies ?? []).Where(p => !string.IsNullOrWhiteSpace(p.Policy))
             .GroupBy(p => (p.Policy.Trim(), p.Scope), PolicyKeyComparer.Instance).FirstOrDefault(g => g.Count() > 1);
-        if (dupPolicy is not null) errors.Add($"política repetida em 'policies': {dupPolicy.Key.Item1}.");
+        if (dupPolicy is not null) errors.Add($"duplicate policy in 'policies': {dupPolicy.Key.Item1}.");
+        foreach (var lang in (profile.I18n ?? []).Keys.Where(l => !CatalogLoader.TranslationLanguages.Contains(l, StringComparer.OrdinalIgnoreCase)))
+            errors.Add($"unknown language '{lang}' in 'i18n' (translations: {string.Join(", ", CatalogLoader.TranslationLanguages)}).");
         return errors;
     }
 
@@ -62,8 +64,8 @@ public static class ProfileStore
     }
 
     /// <summary>
-    /// Casa as políticas do perfil com as definições ADMX deste PC ("Arquivo.admx:Nome", sem diferenciar
-    /// maiúsculas). Políticas que não existem aqui são devolvidas à parte.
+    /// Matches the profile's policies with this PC's ADMX definitions ("File.admx:Name", case-insensitive).
+    /// Policies that do not exist here are returned separately.
     /// </summary>
     public static (List<PolicyRequest> Requests, List<string> Unknown) ResolvePolicies(Profile profile, IEnumerable<AdmxPolicy> admx)
     {
@@ -84,7 +86,7 @@ public static class ProfileStore
         return (requests, unknown);
     }
 
-    // Serializador próprio: enums em camelCase ("notApplied", "medium"), como se escreve à mão.
+    // Dedicated serializer: enums in camelCase ("notApplied", "medium"), as written by hand.
     private static readonly YamlDotNet.Serialization.ISerializer Serializer = new YamlDotNet.Serialization.SerializerBuilder()
         .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.CamelCaseNamingConvention.Instance)
         .WithEnumNamingConvention(YamlDotNet.Serialization.NamingConventions.CamelCaseNamingConvention.Instance)
@@ -102,7 +104,7 @@ public static class ProfileStore
         profile.SourceFile = file;
     }
 
-    /// <summary>Carrega todos os perfis de uma pasta (não recursivo). Arquivos inválidos vão para <paramref name="errors"/>.</summary>
+    /// <summary>Loads every profile of a folder (not recursive). Invalid files go to <paramref name="errors"/>.</summary>
     public static List<Profile> LoadDirectory(string directory, bool builtIn, List<string>? errors = null)
     {
         var result = new List<Profile>();
@@ -127,8 +129,8 @@ public static class ProfileStore
     }
 
     /// <summary>
-    /// Resolve o perfil contra o catálogo: primeiro as regras (cada tweak que casa fica "aplicado"),
-    /// depois a lista explícita, que prevalece. Ids que não existem no catálogo são devolvidos à parte.
+    /// Resolves the profile against the catalog: first the rules (every matching tweak becomes "applied"),
+    /// then the explicit list, which takes precedence. Ids that do not exist in the catalog are returned separately.
     /// </summary>
     public static ProfileResolution Resolve(Profile profile, IEnumerable<Tweak> catalog)
     {
@@ -165,7 +167,7 @@ public static class ProfileStore
         };
     }
 
-    /// <summary>"Privacidade" casa com "Privacidade" e "Privacidade/Telemetria", mas não com "PrivacidadeX".</summary>
+    /// <summary>"Privacy" matches "Privacy" and "Privacy/Telemetry", but not "PrivacyX".</summary>
     public static bool CategoryMatches(string category, string prefix)
     {
         prefix = prefix.Trim().TrimEnd('/');
@@ -173,7 +175,7 @@ public static class ProfileStore
             || category.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Cria um perfil com lista explícita a partir de uma seleção (id → estado desejado).</summary>
+    /// <summary>Creates a profile with an explicit list from a selection (id → desired state).</summary>
     public static Profile FromSelection(string name, string? description, IEnumerable<KeyValuePair<string, DesiredState>> selection,
         IEnumerable<PolicySetting>? policies = null)
     {
@@ -193,13 +195,13 @@ public static class ProfileStore
         };
     }
 
-    /// <summary>Nome de arquivo seguro a partir do nome do perfil ("Meu perfil!" → "meu-perfil.yaml").</summary>
+    /// <summary>Safe file name from the profile name ("My profile!" → "my-profile.yaml").</summary>
     public static string FileNameFor(string name)
     {
         var chars = name.Trim().ToLowerInvariant()
             .Select(c => char.IsLetterOrDigit(c) ? c : '-')
             .ToArray();
         var slug = string.Join('-', new string(chars).Split('-', StringSplitOptions.RemoveEmptyEntries));
-        return (slug.Length == 0 ? "perfil" : slug) + ".yaml";
+        return (slug.Length == 0 ? "profile" : slug) + ".yaml";
     }
 }

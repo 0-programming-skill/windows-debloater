@@ -1,15 +1,15 @@
-# OneDrive: desinstalar, impedir o uso e tirar do Explorador.
+# OneDrive: uninstall it, prevent its use and remove it from File Explorer.
 category: Apps/OneDrive
 
 tweaks:
   - id: apps.onedrive.uninstall
-    name: Desinstalar o OneDrive
+    name: Uninstall OneDrive
     description: >
-      Fecha o OneDrive e roda o desinstalador oficial dele (OneDriveSetup.exe /uninstall, o mesmo de
-      "Aplicativos instalados"). Depois apaga só os arquivos do programa (%LocalAppData%\Microsoft\OneDrive e
-      %ProgramData%\Microsoft OneDrive) e a entrada que instala o OneDrive no primeiro logon do usuário. A pasta
-      de arquivos do usuário (%UserProfile%\OneDrive) não é tocada. Para reinstalar: winget install Microsoft.OneDrive.
-      Contas criadas depois ainda podem receber o OneDrive no primeiro logon (use também
+      Closes OneDrive and runs its official uninstaller (OneDriveSetup.exe /uninstall, the same one used by
+      "Installed apps"). Then deletes only the program files (%LocalAppData%\Microsoft\OneDrive and
+      %ProgramData%\Microsoft OneDrive) and the entry that installs OneDrive at the user's first sign-in. The
+      user's files folder (%UserProfile%\OneDrive) is not touched. To reinstall: winget install Microsoft.OneDrive.
+      Accounts created later may still get OneDrive at their first sign-in (also use
       apps.onedrive.disable-sync-policy).
     risk: high
     confidence: community
@@ -17,10 +17,23 @@ tweaks:
     sources:
       - { kind: tool, ref: "winutil:WPFTweaksRemoveOneDrive" }
       - { kind: tool, ref: "sophiapp:OneDrive" }
-    tags: [onedrive, appx, nuvem]
+    tags: [onedrive, appx, cloud]
     breaks: >
-      Sincronização de arquivos com o OneDrive, backup de pastas (Área de Trabalho, Documentos, Imagens) e
-      arquivos "sob demanda" que ainda não foram baixados (eles ficam só na nuvem; baixe antes o que precisar).
+      OneDrive file sync, folder backup (Desktop, Documents, Pictures) and "on-demand" files that have not been
+      downloaded yet (they stay only in the cloud; download what you need first).
+    i18n:
+      pt-BR:
+        name: Desinstalar o OneDrive
+        description: >
+          Fecha o OneDrive e roda o desinstalador oficial dele (OneDriveSetup.exe /uninstall, o mesmo de
+          "Aplicativos instalados"). Depois apaga só os arquivos do programa (%LocalAppData%\Microsoft\OneDrive e
+          %ProgramData%\Microsoft OneDrive) e a entrada que instala o OneDrive no primeiro logon do usuário. A pasta
+          de arquivos do usuário (%UserProfile%\OneDrive) não é tocada. Para reinstalar: winget install Microsoft.OneDrive.
+          Contas criadas depois ainda podem receber o OneDrive no primeiro logon (use também
+          apps.onedrive.disable-sync-policy).
+        breaks: >
+          Sincronização de arquivos com o OneDrive, backup de pastas (Área de Trabalho, Documentos, Imagens) e
+          arquivos "sob demanda" que ainda não foram baixados (eles ficam só na nuvem; baixe antes o que precisar).
     actions:
       - type: powershell
         detect: |
@@ -42,28 +55,35 @@ tweaks:
             $allUsers = @($installed | Where-Object { $_ -notlike "$env:LOCALAPPDATA*" }).Count -gt 0
             $argList = if ($allUsers) { '/uninstall /allusers' } else { '/uninstall' }
             $p = Start-Process -FilePath $setup -ArgumentList $argList -Wait -PassThru -WindowStyle Hidden
-            if ($p.ExitCode -ne 0) { throw "OneDriveSetup.exe $argList terminou com código $($p.ExitCode)" }
+            if ($p.ExitCode -ne 0) { throw "OneDriveSetup.exe $argList exited with code $($p.ExitCode)" }
           }
           Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name OneDriveSetup -ErrorAction SilentlyContinue
           foreach ($dir in @("$env:LOCALAPPDATA\Microsoft\OneDrive", "$env:ProgramData\Microsoft OneDrive")) {
             if (Test-Path $dir) { Remove-Item -Path $dir -Recurse -Force -ErrorAction SilentlyContinue }
           }
           $left = @("$env:LOCALAPPDATA\Microsoft\OneDrive\OneDrive.exe", "$env:ProgramFiles\Microsoft OneDrive\OneDrive.exe", "${env:ProgramFiles(x86)}\Microsoft OneDrive\OneDrive.exe") | Where-Object { Test-Path $_ }
-          if ($left) { throw "OneDrive ainda presente: $($left -join ', ')" }
+          if ($left) { throw "OneDrive is still present: $($left -join ', ')" }
 
   - id: apps.onedrive.disable-sync-policy
-    name: Impedir o uso do OneDrive para armazenar arquivos (política)
+    name: Prevent the usage of OneDrive for file storage (policy)
     description: >
-      Política "Impedir o uso do OneDrive para armazenamento de arquivos": o OneDrive não pode ser aberto nem
-      sincronizar, e some do Explorador. Funciona mesmo com o OneDrive instalado e vale para todos os usuários.
+      Policy "Prevent the usage of OneDrive for file storage": OneDrive cannot be opened or sync, and it
+      disappears from File Explorer. Works even with OneDrive installed and applies to all users.
     risk: medium
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - System/DisableOneDriveFileSync" }
       - { kind: admx, ref: "SkyDrive.admx:PreventOnedriveFileSync" }
       - { kind: tool, ref: "sophia:OneDrive" }
-    tags: [onedrive, nuvem, politica]
-    breaks: OneDrive (inclusive backup de pastas) e apps que salvam direto no OneDrive.
+    tags: [onedrive, cloud, policy]
+    breaks: OneDrive (including folder backup) and apps that save directly to OneDrive.
+    i18n:
+      pt-BR:
+        name: Impedir o uso do OneDrive para armazenar arquivos (política)
+        description: >
+          Política "Impedir o uso do OneDrive para armazenamento de arquivos": o OneDrive não pode ser aberto nem
+          sincronizar, e some do Explorador. Funciona mesmo com o OneDrive instalado e vale para todos os usuários.
+        breaks: OneDrive (inclusive backup de pastas) e apps que salvam direto no OneDrive.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive

@@ -18,7 +18,7 @@ public class YamlRoundTripTests
         { "task", new ActionSpec { Type = ActionSpec.ScheduledTask, Path = @"\Microsoft\Windows\Foo\Bar Baz", State = "disabled" } },
         { "appx", new ActionSpec { Type = ActionSpec.Appx, Name = "Microsoft.BingNews", State = "removed", StoreId = "9WZDNCRFHVFW" } },
         { "feature", new ActionSpec { Type = ActionSpec.OptionalFeature, Name = "SMB1Protocol", State = "disabled" } },
-        { "powershell", new ActionSpec { Type = ActionSpec.PowerShell, Detect = "$true\n'True'", Apply = "Write-Host 'a: b'", Revert = "# nada" } },
+        { "powershell", new ActionSpec { Type = ActionSpec.PowerShell, Detect = "$true\n'True'", Apply = "Write-Host 'a: b'", Revert = "# nothing" } },
     };
 
     [Theory]
@@ -27,19 +27,19 @@ public class YamlRoundTripTests
     {
         var file = new CatalogFile
         {
-            Category = "Teste",
+            Category = "Test",
             Tweaks =
             [
                 new Tweak
                 {
                     Id = $"test.{label}",
-                    Name = "Nome com acentuação",
-                    Category = "Teste/Sub",
-                    Description = "Descrição",
+                    Name = "Name with accents: café",
+                    Category = "Test/Sub",
+                    Description = "Description",
                     Risk = RiskLevel.High,
                     MinBuild = 22000,
                     Tags = ["a", "b"],
-                    Breaks = "algo",
+                    Breaks = "something",
                     References = ["https://example.com/x"],
                     Reversible = original.Type != ActionSpec.Appx,
                     Actions = [original],
@@ -52,7 +52,7 @@ public class YamlRoundTripTests
 
         var tweak = Assert.Single(back.Tweaks);
         Assert.Equal($"test.{label}", tweak.Id);
-        Assert.Equal("Nome com acentuação", tweak.Name);
+        Assert.Equal("Name with accents: café", tweak.Name);
         Assert.Equal(RiskLevel.High, tweak.Risk);
         Assert.Equal(22000, tweak.MinBuild);
         Assert.Null(tweak.MaxBuild);
@@ -72,7 +72,7 @@ public class YamlRoundTripTests
         Assert.Equal(original.Revert, a.Revert);
         Assert.Equal(original.Target, a.Target);
 
-        // O valor deserializado precisa produzir o mesmo dado de registro.
+        // The deserialized value must produce the same registry data.
         if (original.Type == ActionSpec.Registry && !original.Delete)
         {
             var kind = Debloater.Core.Actions.RegistryActionHandler.ParseKind(original.Kind!);
@@ -81,7 +81,7 @@ public class YamlRoundTripTests
             Assert.Equal(expected, actual);
         }
 
-        // E o tweak continua válido.
+        // And the tweak is still valid.
         Assert.Empty(CatalogLoader.Validate(tweak));
     }
 }

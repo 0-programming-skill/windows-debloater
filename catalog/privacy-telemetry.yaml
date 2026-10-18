@@ -1,0 +1,439 @@
+# Telemetry and diagnostic data collection.
+category: Privacy/Telemetry
+
+tweaks:
+  - id: privacy.telemetry.allow-telemetry
+    name: Reduce diagnostic data to the minimum
+    description: >
+      Sets the "Allow Diagnostic Data" policy to the minimum level. The value 0 (Security) is only
+      honored on Enterprise/Education/Server editions; on Home and Pro Windows treats it as 1
+      (Required diagnostic data only).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - System/AllowTelemetry" }
+      - { kind: admx, ref: "DataCollection.admx:AllowTelemetry" }
+    tags: [telemetry, policy]
+    breaks: The Windows Insider Program requires optional diagnostic data.
+    references:
+      - https://learn.microsoft.com/windows/privacy/configure-windows-diagnostic-data-in-your-organization
+    i18n:
+      pt-BR:
+        name: Reduzir dados de diagnóstico ao mínimo
+        description: >
+          Define a política "Permitir Dados de Diagnóstico" para o nível mínimo. O valor 0 (Segurança)
+          só é respeitado nas edições Enterprise/Education/Server; no Home e no Pro o Windows trata como
+          1 (Somente dados obrigatórios).
+        breaks: Programa Windows Insider exige dados opcionais.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: AllowTelemetry
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.diagtrack-service
+    name: Disable the telemetry service (DiagTrack)
+    description: >
+      Disables the "Connected User Experiences and Telemetry" service (DiagTrack), which sends
+      diagnostic data to Microsoft.
+    risk: medium
+    confidence: community
+    tags: [telemetry, service]
+    breaks: >
+      Windows Insider and some diagnostic/troubleshooting tools stop working. In rare cases some
+      Store games/apps report licensing errors.
+    i18n:
+      pt-BR:
+        name: Desativar o serviço de telemetria (DiagTrack)
+        description: >
+          Desativa o serviço "Experiências do Usuário Conectado e Telemetria" (DiagTrack), que envia os
+          dados de diagnóstico para a Microsoft.
+        breaks: >
+          Windows Insider e algumas ferramentas de diagnóstico/solução de problemas param de funcionar.
+          Alguns jogos/apps da Store reportam erros de licenciamento em casos raros.
+    actions:
+      - type: service
+        name: DiagTrack
+        startup: disabled
+
+  - id: privacy.telemetry.dmwappushservice
+    name: Disable the WAP push message routing service
+    description: >
+      Disables dmwappushservice, used for WAP push message routing and by device management (MDM).
+      Not needed on home PCs.
+    risk: medium
+    confidence: community
+    tags: [telemetry, service]
+    breaks: MDM/Intune enrollment and sync on corporate PCs.
+    i18n:
+      pt-BR:
+        name: Desativar o serviço de roteamento de mensagens WAP push
+        description: >
+          Desativa o dmwappushservice, usado para roteamento de mensagens WAP push e por gerenciamento de
+          dispositivos (MDM). Em PCs domésticos não é necessário.
+        breaks: Inscrição e sincronização com MDM/Intune em PCs corporativos.
+    actions:
+      - type: service
+        name: dmwappushservice
+        startup: disabled
+
+  - id: privacy.telemetry.feedback-requests
+    name: Never ask for feedback
+    description: Prevents Windows from asking for ratings and feedback (feedback frequency = Never).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/DoNotShowFeedbackNotifications" }
+      - { kind: admx, ref: "FeedbackNotifications.admx:DoNotShowFeedbackNotifications" }
+    tags: [telemetry, feedback]
+    i18n:
+      pt-BR:
+        name: Nunca pedir feedback
+        description: Impede que o Windows peça avaliações e feedback (frequência de feedback = Nunca).
+    actions:
+      - type: registry
+        path: HKCU\SOFTWARE\Microsoft\Siuf\Rules
+        name: NumberOfSIUFInPeriod
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: DoNotShowFeedbackNotifications
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.tailored-experiences
+    name: Turn off tailored experiences with diagnostic data
+    description: >
+      Prevents Microsoft from using your diagnostic data to show personalized tips, ads and
+      recommendations.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowTailoredExperiencesWithDiagnosticData" }
+      - { kind: admx, ref: "CloudContent.admx:DisableTailoredExperiencesWithDiagnosticData" }
+    tags: [telemetry, ads]
+    i18n:
+      pt-BR:
+        name: Desativar experiências personalizadas com dados de diagnóstico
+        description: >
+          Impede que a Microsoft use seus dados de diagnóstico para mostrar dicas, anúncios e
+          recomendações personalizadas.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy
+        name: TailoredExperiencesWithDiagnosticDataEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\CloudContent
+        name: DisableTailoredExperiencesWithDiagnosticData
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.inking-typing
+    name: Turn off inking and typing data collection
+    description: >
+      Turns off "Custom inking and typing dictionary" and sending typing data to improve
+      recognition. The local user dictionary is no longer populated.
+    risk: low
+    confidence: community
+    tags: [telemetry, typing]
+    breaks: Text suggestions and handwriting recognition become less personalized.
+    i18n:
+      pt-BR:
+        name: Desativar coleta de escrita à tinta e digitação
+        description: >
+          Desativa "Personalização de escrita à tinta e digitação" e o envio de dados de digitação para
+          melhorar o reconhecimento. O dicionário de usuário local deixa de ser alimentado.
+        breaks: Sugestões de texto e reconhecimento de caligrafia ficam menos personalizados.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Input\TIPC
+        name: Enabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\InputPersonalization
+        name: RestrictImplicitInkCollection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKCU\Software\Microsoft\InputPersonalization
+        name: RestrictImplicitTextCollection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKCU\Software\Microsoft\InputPersonalization\TrainedDataStore
+        name: HarvestContacts
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.activity-history
+    name: Turn off activity history
+    description: >
+      Prevents Windows from recording and sending activity history (apps, files, websites). On 26300
+      all three policies are still read: PublishUserActivities and UploadUserActivities by the
+      Connected Devices Platform service (cdp.dll) and by Windows.CloudStore.dll, and EnableActivityFeed
+      by both as well (the "possibly obsolete" warning from the 26200→26300 diff was a false positive).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Privacy/EnableActivityFeed" }
+      - { kind: msdocs, ref: "Policy CSP - Privacy/PublishUserActivities" }
+      - { kind: msdocs, ref: "Policy CSP - Privacy/UploadUserActivities" }
+      - { kind: admx, ref: "OSPolicy.admx:EnableActivityFeed" }
+      - { kind: admx, ref: "OSPolicy.admx:PublishUserActivities" }
+      - { kind: admx, ref: "OSPolicy.admx:UploadUserActivities" }
+      - { kind: re, ref: "26300/activity-history-publish-user-activities" }
+    tags: [telemetry, policy]
+    i18n:
+      pt-BR:
+        name: Desativar histórico de atividades
+        description: >
+          Impede que o Windows registre e envie o histórico de atividades (apps, arquivos, sites). No 26300
+          as três políticas continuam lidas: PublishUserActivities e UploadUserActivities pelo serviço de
+          plataforma de dispositivos conectados (cdp.dll) e pelo Windows.CloudStore.dll, EnableActivityFeed
+          pelos dois também (o aviso de "possivelmente obsoleto" do diff 26200→26300 era falso positivo).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: EnableActivityFeed
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: PublishUserActivities
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: UploadUserActivities
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.app-launch-tracking
+    name: Do not track app launches
+    description: >
+      Turns off "Let Windows improve Start and search results by tracking app launches".
+    risk: low
+    confidence: community
+    tags: [telemetry, start]
+    breaks: The Start menu "Most used" list is no longer populated.
+    i18n:
+      pt-BR:
+        name: Não rastrear inicialização de apps
+        description: >
+          Desativa "Permitir que o Windows melhore o Iniciar e os resultados de pesquisa rastreando a
+          inicialização de aplicativos".
+        breaks: A lista "Mais usados" do menu Iniciar deixa de ser preenchida.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Start_TrackProgs
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.error-reporting
+    name: Disable Windows Error Reporting
+    description: Prevents crash reports (WER) from being sent to Microsoft.
+    risk: medium
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ErrorReporting/DisableWindowsErrorReporting" }
+      - { kind: admx, ref: "ErrorReporting.admx:WerDisable_2" }
+    tags: [telemetry, policy]
+    breaks: Microsoft no longer receives crash dumps, and automatically suggested solutions do not appear.
+    i18n:
+      pt-BR:
+        name: Desativar o Relatório de Erros do Windows
+        description: Impede o envio de relatórios de falhas (WER) para a Microsoft.
+        breaks: A Microsoft deixa de receber dumps de falhas, e soluções sugeridas automaticamente não aparecem.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting
+        name: Disabled
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.ceip
+    name: Turn off the Customer Experience Improvement Program
+    description: Turns off CEIP (SQM) via policy.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_ICM/CEIPEnable" }
+      - { kind: admx, ref: "ICM.admx:CEIPEnable" }
+    tags: [telemetry, policy]
+    i18n:
+      pt-BR:
+        name: Desativar o Programa de Aperfeiçoamento da Experiência do Usuário
+        description: Desativa o CEIP (SQM) por política.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\SQMClient\Windows
+        name: CEIPEnable
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.app-compat-telemetry
+    name: Turn off application compatibility telemetry
+    description: >
+      Turns off Application Impact Telemetry (AIT) and the Inventory Collector, which collect data about
+      installed programs.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_AppCompat/AppCompatTurnOffApplicationImpactTelemetry" }
+      - { kind: msdocs, ref: "Policy CSP - ADMX_AppCompat/AppCompatTurnOffProgramInventory" }
+      - { kind: admx, ref: "AppCompat.admx:AppCompatTurnOffApplicationImpactTelemetry" }
+      - { kind: admx, ref: "AppCompat.admx:AppCompatTurnOffProgramInventory" }
+    tags: [telemetry, policy]
+    breaks: The Program Compatibility Assistant no longer receives inventory data.
+    i18n:
+      pt-BR:
+        name: Desativar telemetria de compatibilidade de aplicativos
+        description: >
+          Desativa o Application Impact Telemetry (AIT) e o Inventory Collector, que coletam dados sobre
+          os programas instalados.
+        breaks: O Assistente de Compatibilidade de Programas deixa de receber dados de inventário.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat
+        name: AITEnable
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat
+        name: DisableInventory
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.limit-diagnostics
+    name: Limit collection of diagnostic logs and dumps
+    description: >
+      Policies "Limit Diagnostic Log Collection", "Limit Dump Collection" and "Disable OneSettings
+      Downloads" (diagnostic configuration downloaded from Microsoft).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - System/LimitDiagnosticLogCollection" }
+      - { kind: msdocs, ref: "Policy CSP - System/LimitDumpCollection" }
+      - { kind: msdocs, ref: "Policy CSP - System/DisableOneSettingsDownloads" }
+      - { kind: admx, ref: "DataCollection.admx:LimitDiagnosticLogCollection" }
+      - { kind: admx, ref: "DataCollection.admx:LimitDumpCollection" }
+      - { kind: admx, ref: "DataCollection.admx:DisableOneSettingsDownloads" }
+    tags: [telemetry, policy]
+    i18n:
+      pt-BR:
+        name: Limitar a coleta de logs e despejos de diagnóstico
+        description: >
+          Políticas "Limitar a coleta de logs de diagnóstico", "Limitar a coleta de despejos de memória" e
+          "Desativar downloads do OneSettings" (configuração de diagnóstico baixada da Microsoft).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: LimitDiagnosticLogCollection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: LimitDumpCollection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: DisableOneSettingsDownloads
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.device-name
+    name: Do not send the PC name in diagnostic data
+    description: Policy "Allow device name to be sent in Windows diagnostic data" = Disabled.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - System/AllowDeviceNameInDiagnosticData" }
+      - { kind: admx, ref: "DataCollection.admx:AllowDeviceNameInDiagnosticData" }
+    tags: [telemetry, policy]
+    i18n:
+      pt-BR:
+        name: Não enviar o nome do PC nos dados de diagnóstico
+        description: Política "Permitir o envio do nome do dispositivo nos dados de diagnóstico" = Desabilitada.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: AllowDeviceNameInTelemetry
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.diagnostic-data-setting
+    name: Minimum diagnostic data (system setting)
+    description: >
+      Writes the diagnostic data level to the location the Settings app uses (outside Policies).
+      Complements the privacy.telemetry.allow-telemetry policy. On the Pro edition, 0 is equivalent to
+      "required" (the "security" level only exists on Enterprise/Education).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksTelemetry" }
+      - { kind: tool, ref: "sophia:DiagTrackService" }
+    tags: [telemetry]
+    i18n:
+      pt-BR:
+        name: Dados de diagnóstico no mínimo (configuração do sistema)
+        description: >
+          Grava o nível de dados de diagnóstico no lugar que as Configurações usam (fora de Policies). Complementa a
+          política privacy.telemetry.allow-telemetry. Na edição Pro, 0 equivale a "necessários" (o nível "segurança"
+          só existe no Enterprise/Education).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection
+        name: AllowTelemetry
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.wer-service
+    name: Disable the Windows Error Reporting service
+    description: Disables WerSvc, which sends program crash reports to Microsoft.
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:wer-service" }
+      - { kind: tool, ref: "sophia:ErrorReporting" }
+    tags: [telemetry, service]
+    breaks: Crash reports and solutions suggested by Windows; Reliability Monitor shows fewer details.
+    i18n:
+      pt-BR:
+        name: Desativar o serviço de Relatório de Erros do Windows
+        description: Desativa o WerSvc, que envia relatórios de falhas de programas à Microsoft.
+        breaks: Relatórios de falha e soluções sugeridas pelo Windows; o Monitor de Confiabilidade fica com menos detalhes.
+    actions:
+      - type: service
+        name: WerSvc
+        startup: disabled
+
+  - id: privacy.telemetry.pca-service
+    name: Disable the Program Compatibility Assistant
+    description: >
+      Disables PcaSvc, which monitors older programs and suggests compatibility settings (and collects
+      compatibility data).
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "privacysexy:PcaSvc" }
+      - { kind: tool, ref: "atlas:services" }
+    tags: [telemetry, service, compatibility]
+    breaks: Automatic compatibility warnings and fixes for older programs.
+    i18n:
+      pt-BR:
+        name: Desativar o Assistente de Compatibilidade de Programas
+        description: >
+          Desativa o PcaSvc, que monitora programas antigos e sugere configurações de compatibilidade (e coleta
+          dados de compatibilidade).
+        breaks: Avisos e correções automáticas de compatibilidade para programas antigos.
+    actions:
+      - type: service
+        name: PcaSvc
+        startup: disabled

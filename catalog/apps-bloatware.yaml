@@ -1,15 +1,19 @@
-# Apps pré-instalados. Remoção para todos os usuários + desprovisionamento.
-# Não são reversíveis pelo engine; "storeId" permite reinstalar via winget (msstore).
+# Preinstalled apps. Removal for all users + deprovisioning.
+# Not reversible by the engine; "storeId" allows reinstalling via winget (msstore).
 category: Apps/Bloatware
 
 tweaks:
   - id: apps.remove.bing-news
-    name: Remover Microsoft Notícias
-    description: Remove o app Notícias (Microsoft.BingNews).
+    name: Remove Microsoft News
+    description: Removes the News app (Microsoft.BingNews).
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware]
+    i18n:
+      pt-BR:
+        name: Remover Microsoft Notícias
+        description: Remove o app Notícias (Microsoft.BingNews).
     actions:
       - type: appx
         name: Microsoft.BingNews
@@ -17,13 +21,18 @@ tweaks:
         storeId: 9WZDNCRFHVFW
 
   - id: apps.remove.bing-weather
-    name: Remover Clima (MSN Weather)
-    description: Remove o app Clima (Microsoft.BingWeather).
+    name: Remove Weather (MSN Weather)
+    description: Removes the Weather app (Microsoft.BingWeather).
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware]
-    breaks: O widget de clima pode deixar de abrir o app.
+    breaks: The weather widget may no longer open the app.
+    i18n:
+      pt-BR:
+        name: Remover Clima (MSN Weather)
+        description: Remove o app Clima (Microsoft.BingWeather).
+        breaks: O widget de clima pode deixar de abrir o app.
     actions:
       - type: appx
         name: Microsoft.BingWeather
@@ -31,24 +40,32 @@ tweaks:
         storeId: 9WZDNCRFJ3Q2
 
   - id: apps.remove.bing-search
-    name: Remover o app Bing Search
-    description: Remove o pacote Microsoft Bing (Microsoft.BingSearch), instalado em builds recentes.
+    name: Remove the Bing Search app
+    description: Removes the Microsoft Bing package (Microsoft.BingSearch), installed on recent builds.
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware, bing]
+    i18n:
+      pt-BR:
+        name: Remover o app Bing Search
+        description: Remove o pacote Microsoft Bing (Microsoft.BingSearch), instalado em builds recentes.
     actions:
       - type: appx
         name: Microsoft.BingSearch
         state: removed
 
   - id: apps.remove.clipchamp
-    name: Remover Clipchamp
-    description: Remove o editor de vídeo Clipchamp.
+    name: Remove Clipchamp
+    description: Removes the Clipchamp video editor.
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware]
+    i18n:
+      pt-BR:
+        name: Remover Clipchamp
+        description: Remove o editor de vídeo Clipchamp.
     actions:
       - type: appx
         name: Clipchamp.Clipchamp
@@ -56,37 +73,50 @@ tweaks:
         storeId: 9P1J8S7CCWWT
 
   - id: apps.remove.get-help
-    name: Remover Obter Ajuda
-    description: Remove o app Obter Ajuda (Microsoft.GetHelp).
+    name: Remove Get Help
+    description: Removes the Get Help app (Microsoft.GetHelp).
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware]
-    breaks: Alguns solucionadores de problemas abrem o Obter Ajuda e deixarão de funcionar.
+    breaks: Some troubleshooters open Get Help and will stop working.
+    i18n:
+      pt-BR:
+        name: Remover Obter Ajuda
+        description: Remove o app Obter Ajuda (Microsoft.GetHelp).
+        breaks: Alguns solucionadores de problemas abrem o Obter Ajuda e deixarão de funcionar.
     actions:
       - type: appx
         name: Microsoft.GetHelp
         state: removed
 
   - id: apps.remove.tips
-    name: Remover Dicas
-    description: Remove o app Dicas / Introdução (Microsoft.Getstarted).
+    name: Remove Tips
+    description: Removes the Tips / Get Started app (Microsoft.Getstarted).
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware]
+    i18n:
+      pt-BR:
+        name: Remover Dicas
+        description: Remove o app Dicas / Introdução (Microsoft.Getstarted).
     actions:
       - type: appx
         name: Microsoft.Getstarted
         state: removed
 
   - id: apps.remove.solitaire
-    name: Remover Microsoft Solitaire Collection
-    description: Remove o pacote de jogos de paciência (com anúncios).
+    name: Remove Microsoft Solitaire Collection
+    description: Removes the solitaire games bundle (with ads).
     risk: low
     confidence: community
     reversible: false
-    tags: [appx, bloatware, jogos]
+    tags: [appx, bloatware, gaming]
+    i18n:
+      pt-BR:
+        name: Remover Microsoft Solitaire Collection
+        description: Remove o pacote de jogos de paciência (com anúncios).
     actions:
       - type: appx
         name: Microsoft.MicrosoftSolitaireCollection
@@ -94,13 +124,18 @@ tweaks:
         storeId: 9WZDNCRFHWD2
 
   - id: apps.remove.teams-consumer
-    name: Remover Microsoft Teams (pessoal)
-    description: Remove o Teams pessoal pré-instalado (pacote MSTeams; MicrosoftTeams nas versões antigas).
+    name: Remove Microsoft Teams (personal)
+    description: Removes the preinstalled personal Teams (MSTeams package; MicrosoftTeams on older versions).
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware]
-    breaks: Teams pessoal. O Teams corporativo instalado separadamente não é afetado se tiver outro nome de pacote.
+    breaks: Personal Teams. Work Teams installed separately is not affected if it has a different package name.
+    i18n:
+      pt-BR:
+        name: Remover Microsoft Teams (pessoal)
+        description: Remove o Teams pessoal pré-instalado (pacote MSTeams; MicrosoftTeams nas versões antigas).
+        breaks: Teams pessoal. O Teams corporativo instalado separadamente não é afetado se tiver outro nome de pacote.
     actions:
       - type: appx
         name: MSTeams
@@ -110,25 +145,34 @@ tweaks:
         state: removed
 
   - id: apps.remove.office-hub
-    name: Remover o app Microsoft 365 (Office)
-    description: Remove o hub "Microsoft 365 (Office)" pré-instalado. Não remove o Office instalado.
+    name: Remove the Microsoft 365 (Office) app
+    description: Removes the preinstalled "Microsoft 365 (Office)" hub. Does not remove an installed Office.
     risk: low
     confidence: community
     reversible: false
-    tags: [appx, bloatware, anuncios]
+    tags: [appx, bloatware, ads]
+    i18n:
+      pt-BR:
+        name: Remover o app Microsoft 365 (Office)
+        description: Remove o hub "Microsoft 365 (Office)" pré-instalado. Não remove o Office instalado.
     actions:
       - type: appx
         name: Microsoft.MicrosoftOfficeHub
         state: removed
 
   - id: apps.remove.feedback-hub
-    name: Remover Hub de Feedback
-    description: Remove o Hub de Feedback (Microsoft.WindowsFeedbackHub).
+    name: Remove Feedback Hub
+    description: Removes Feedback Hub (Microsoft.WindowsFeedbackHub).
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware, feedback]
-    breaks: Programa Windows Insider usa o Hub de Feedback.
+    breaks: The Windows Insider Program uses Feedback Hub.
+    i18n:
+      pt-BR:
+        name: Remover Hub de Feedback
+        description: Remove o Hub de Feedback (Microsoft.WindowsFeedbackHub).
+        breaks: Programa Windows Insider usa o Hub de Feedback.
     actions:
       - type: appx
         name: Microsoft.WindowsFeedbackHub
@@ -136,12 +180,16 @@ tweaks:
         storeId: 9NBLGGH4R32N
 
   - id: apps.remove.power-automate
-    name: Remover Power Automate Desktop
-    description: Remove o Power Automate pré-instalado.
+    name: Remove Power Automate Desktop
+    description: Removes the preinstalled Power Automate.
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware]
+    i18n:
+      pt-BR:
+        name: Remover Power Automate Desktop
+        description: Remove o Power Automate pré-instalado.
     actions:
       - type: appx
         name: Microsoft.PowerAutomateDesktop
@@ -149,12 +197,16 @@ tweaks:
         storeId: 9NFTCH6J7FHV
 
   - id: apps.remove.todo
-    name: Remover Microsoft To Do
-    description: Remove o app Microsoft To Do.
+    name: Remove Microsoft To Do
+    description: Removes the Microsoft To Do app.
     risk: low
     confidence: community
     reversible: false
     tags: [appx, bloatware]
+    i18n:
+      pt-BR:
+        name: Remover Microsoft To Do
+        description: Remove o app Microsoft To Do.
     actions:
       - type: appx
         name: Microsoft.Todos
@@ -162,25 +214,34 @@ tweaks:
         storeId: 9NBLGGH5R558
 
   - id: apps.remove.windows-maps
-    name: Remover Mapas do Windows
-    description: Remove o app Mapas (Microsoft.WindowsMaps), descontinuado pela Microsoft.
+    name: Remove Windows Maps
+    description: Removes the Maps app (Microsoft.WindowsMaps), discontinued by Microsoft.
     risk: low
     confidence: community
     reversible: false
-    tags: [appx, bloatware, mapas]
+    tags: [appx, bloatware, maps]
+    i18n:
+      pt-BR:
+        name: Remover Mapas do Windows
+        description: Remove o app Mapas (Microsoft.WindowsMaps), descontinuado pela Microsoft.
     actions:
       - type: appx
         name: Microsoft.WindowsMaps
         state: removed
 
   - id: apps.remove.phone-link
-    name: Remover Vincular ao Celular
-    description: Remove o app Vincular ao Celular (Microsoft.YourPhone).
+    name: Remove Phone Link
+    description: Removes the Phone Link app (Microsoft.YourPhone).
     risk: medium
     confidence: community
     reversible: false
     tags: [appx]
-    breaks: Integração com o celular (notificações, SMS, fotos) e recursos que dependem dele.
+    breaks: Phone integration (notifications, SMS, photos) and features that depend on it.
+    i18n:
+      pt-BR:
+        name: Remover Vincular ao Celular
+        description: Remove o app Vincular ao Celular (Microsoft.YourPhone).
+        breaks: Integração com o celular (notificações, SMS, fotos) e recursos que dependem dele.
     actions:
       - type: appx
         name: Microsoft.YourPhone
@@ -188,8 +249,8 @@ tweaks:
         storeId: 9NMPJ99VJBWV
 
   - id: apps.remove.outlook-new
-    name: Remover o novo Outlook
-    description: Remove o app "Outlook (novo)" pré-instalado (Microsoft.OutlookForWindows). Não afeta o Outlook do Microsoft 365 clássico.
+    name: Remove the new Outlook
+    description: Removes the preinstalled "Outlook (new)" app (Microsoft.OutlookForWindows). Does not affect classic Microsoft 365 Outlook.
     risk: low
     confidence: community
     reversible: false
@@ -197,7 +258,12 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "winhance:apps" }
     tags: [appx, bloatware, email]
-    breaks: E-mail e calendário pelo app Outlook novo (o Outlook na web continua disponível).
+    breaks: Email and calendar through the new Outlook app (Outlook on the web remains available).
+    i18n:
+      pt-BR:
+        name: Remover o novo Outlook
+        description: Remove o app "Outlook (novo)" pré-instalado (Microsoft.OutlookForWindows). Não afeta o Outlook do Microsoft 365 clássico.
+        breaks: E-mail e calendário pelo app Outlook novo (o Outlook na web continua disponível).
     actions:
       - type: appx
         name: Microsoft.OutlookForWindows
@@ -205,8 +271,8 @@ tweaks:
         storeId: 9NRX63209R7B
 
   - id: apps.remove.dev-home
-    name: Remover o Dev Home
-    description: Remove o Dev Home (Microsoft.Windows.DevHome), painel para desenvolvedores descontinuado pela Microsoft.
+    name: Remove Dev Home
+    description: Removes Dev Home (Microsoft.Windows.DevHome), a developer dashboard discontinued by Microsoft.
     risk: low
     confidence: community
     reversible: false
@@ -214,22 +280,31 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "atlas:appx" }
     tags: [appx, bloatware]
+    i18n:
+      pt-BR:
+        name: Remover o Dev Home
+        description: Remove o Dev Home (Microsoft.Windows.DevHome), painel para desenvolvedores descontinuado pela Microsoft.
     actions:
       - type: appx
         name: Microsoft.Windows.DevHome
         state: removed
 
   - id: apps.remove.quick-assist
-    name: Remover a Assistência Rápida
-    description: Remove a Assistência Rápida (acesso remoto para suporte técnico).
+    name: Remove Quick Assist
+    description: Removes Quick Assist (remote access for technical support).
     risk: low
     confidence: community
     reversible: false
     sources:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "revi:appx" }
-    tags: [appx, acesso-remoto, seguranca]
-    breaks: Receber ou dar suporte remoto pela Assistência Rápida (golpes de "suporte técnico" costumam usá-la).
+    tags: [appx, remote-access, security]
+    breaks: Receiving or giving remote support through Quick Assist ("tech support" scams often use it).
+    i18n:
+      pt-BR:
+        name: Remover a Assistência Rápida
+        description: Remove a Assistência Rápida (acesso remoto para suporte técnico).
+        breaks: Receber ou dar suporte remoto pela Assistência Rápida (golpes de "suporte técnico" costumam usá-la).
     actions:
       - type: appx
         name: MicrosoftCorporationII.QuickAssist
@@ -237,8 +312,8 @@ tweaks:
         storeId: 9P7BP5VNWKX5
 
   - id: apps.remove.family
-    name: Remover o Microsoft Family Safety
-    description: Remove o app de controle dos pais Microsoft Family Safety.
+    name: Remove Microsoft Family Safety
+    description: Removes the Microsoft Family Safety parental controls app.
     risk: low
     confidence: community
     reversible: false
@@ -246,15 +321,20 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "atlas:appx" }
     tags: [appx, bloatware]
-    breaks: Controle dos pais pelo app (as configurações da família na conta Microsoft continuam valendo).
+    breaks: Parental controls through the app (family settings on the Microsoft account still apply).
+    i18n:
+      pt-BR:
+        name: Remover o Microsoft Family Safety
+        description: Remove o app de controle dos pais Microsoft Family Safety.
+        breaks: Controle dos pais pelo app (as configurações da família na conta Microsoft continuam valendo).
     actions:
       - type: appx
         name: MicrosoftCorporationII.MicrosoftFamily
         state: removed
 
   - id: apps.remove.sound-recorder
-    name: Remover o Gravador de Som
-    description: Remove o Gravador de Som (Microsoft.WindowsSoundRecorder).
+    name: Remove Sound Recorder
+    description: Removes Sound Recorder (Microsoft.WindowsSoundRecorder).
     risk: low
     confidence: community
     reversible: false
@@ -262,6 +342,10 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "revi:appx" }
     tags: [appx]
+    i18n:
+      pt-BR:
+        name: Remover o Gravador de Som
+        description: Remove o Gravador de Som (Microsoft.WindowsSoundRecorder).
     actions:
       - type: appx
         name: Microsoft.WindowsSoundRecorder
@@ -269,8 +353,8 @@ tweaks:
         storeId: 9WZDNCRFHWKN
 
   - id: apps.remove.clock
-    name: Remover o Relógio (Alarmes)
-    description: Remove o app Relógio (alarmes, temporizador, cronômetro e sessões de foco).
+    name: Remove Clock (Alarms)
+    description: Removes the Clock app (alarms, timer, stopwatch and focus sessions).
     risk: medium
     confidence: community
     reversible: false
@@ -278,7 +362,12 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "revi:appx" }
     tags: [appx]
-    breaks: Alarmes, temporizador e as sessões de foco do Relógio.
+    breaks: Alarms, timer and Clock focus sessions.
+    i18n:
+      pt-BR:
+        name: Remover o Relógio (Alarmes)
+        description: Remove o app Relógio (alarmes, temporizador, cronômetro e sessões de foco).
+        breaks: Alarmes, temporizador e as sessões de foco do Relógio.
     actions:
       - type: appx
         name: Microsoft.WindowsAlarms
@@ -286,8 +375,8 @@ tweaks:
         storeId: 9WZDNCRFJ3PR
 
   - id: apps.remove.camera
-    name: Remover o app Câmera
-    description: Remove o app Câmera do Windows. A câmera continua funcionando em outros programas.
+    name: Remove the Camera app
+    description: Removes the Windows Camera app. The camera keeps working in other programs.
     risk: medium
     confidence: community
     reversible: false
@@ -295,7 +384,12 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "revi:appx" }
     tags: [appx, camera]
-    breaks: Tirar fotos e gravar vídeos pelo app Câmera e o leitor de QR code dele.
+    breaks: Taking photos and recording videos with the Camera app, and its QR code scanner.
+    i18n:
+      pt-BR:
+        name: Remover o app Câmera
+        description: Remove o app Câmera do Windows. A câmera continua funcionando em outros programas.
+        breaks: Tirar fotos e gravar vídeos pelo app Câmera e o leitor de QR code dele.
     actions:
       - type: appx
         name: Microsoft.WindowsCamera
@@ -303,8 +397,8 @@ tweaks:
         storeId: 9WZDNCRFJBBG
 
   - id: apps.remove.sticky-notes
-    name: Remover as Notas Autoadesivas
-    description: Remove o app Notas Autoadesivas (Microsoft.MicrosoftStickyNotes).
+    name: Remove Sticky Notes
+    description: Removes the Sticky Notes app (Microsoft.MicrosoftStickyNotes).
     risk: medium
     confidence: community
     reversible: false
@@ -312,7 +406,12 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "revi:appx" }
     tags: [appx]
-    breaks: Notas guardadas só no PC (as sincronizadas continuam na conta Microsoft/OneNote).
+    breaks: Notes stored only on the PC (synced ones remain in the Microsoft account/OneNote).
+    i18n:
+      pt-BR:
+        name: Remover as Notas Autoadesivas
+        description: Remove o app Notas Autoadesivas (Microsoft.MicrosoftStickyNotes).
+        breaks: Notas guardadas só no PC (as sincronizadas continuam na conta Microsoft/OneNote).
     actions:
       - type: appx
         name: Microsoft.MicrosoftStickyNotes
@@ -320,16 +419,21 @@ tweaks:
         storeId: 9NBLGGH4QGHW
 
   - id: apps.remove.media-player
-    name: Remover o Media Player (novo)
-    description: Remove o Media Player moderno (pacote Microsoft.ZuneMusic), o reprodutor padrão de música e vídeo.
+    name: Remove Media Player (new)
+    description: Removes the modern Media Player (Microsoft.ZuneMusic package), the default music and video player.
     risk: medium
     confidence: community
     reversible: false
     sources:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "revi:appx" }
-    tags: [appx, midia]
-    breaks: Arquivos de música e vídeo precisam de outro reprodutor (por exemplo, o VLC); o Windows Media Player clássico continua se o recurso estiver ativo.
+    tags: [appx, media]
+    breaks: Music and video files need another player (for example, VLC); classic Windows Media Player remains if the feature is enabled.
+    i18n:
+      pt-BR:
+        name: Remover o Media Player (novo)
+        description: Remove o Media Player moderno (pacote Microsoft.ZuneMusic), o reprodutor padrão de música e vídeo.
+        breaks: Arquivos de música e vídeo precisam de outro reprodutor (por exemplo, o VLC); o Windows Media Player clássico continua se o recurso estiver ativo.
     actions:
       - type: appx
         name: Microsoft.ZuneMusic
@@ -337,16 +441,21 @@ tweaks:
         storeId: 9WZDNCRFJ3PT
 
   - id: apps.remove.snipping-tool
-    name: Remover a Ferramenta de Captura
-    description: Remove a Ferramenta de Captura (Microsoft.ScreenSketch); Win+Shift+S e a tecla Print Screen deixam de abri-la.
+    name: Remove Snipping Tool
+    description: Removes Snipping Tool (Microsoft.ScreenSketch); Win+Shift+S and the Print Screen key no longer open it.
     risk: medium
     confidence: community
     reversible: false
     sources:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "winhance:apps" }
-    tags: [appx, captura]
-    breaks: Captura de região e gravação de tela pelo atalho Win+Shift+S (o Print Screen clássico ainda copia a tela).
+    tags: [appx, capture]
+    breaks: Region capture and screen recording via the Win+Shift+S shortcut (classic Print Screen still copies the screen).
+    i18n:
+      pt-BR:
+        name: Remover a Ferramenta de Captura
+        description: Remove a Ferramenta de Captura (Microsoft.ScreenSketch); Win+Shift+S e a tecla Print Screen deixam de abri-la.
+        breaks: Captura de região e gravação de tela pelo atalho Win+Shift+S (o Print Screen clássico ainda copia a tela).
     actions:
       - type: appx
         name: Microsoft.ScreenSketch
@@ -354,8 +463,8 @@ tweaks:
         storeId: 9MZ95KL8MR0L
 
   - id: apps.remove.paint
-    name: Remover o Paint
-    description: Remove o Paint (Microsoft.Paint).
+    name: Remove Paint
+    description: Removes Paint (Microsoft.Paint).
     risk: medium
     confidence: community
     reversible: false
@@ -363,7 +472,12 @@ tweaks:
       - { kind: tool, ref: "winhance:apps" }
       - { kind: tool, ref: "win11debloat:Apps" }
     tags: [appx]
-    breaks: Edição simples de imagens pelo Paint e "Editar com o Paint" no Explorador.
+    breaks: Simple image editing with Paint and "Edit with Paint" in File Explorer.
+    i18n:
+      pt-BR:
+        name: Remover o Paint
+        description: Remove o Paint (Microsoft.Paint).
+        breaks: Edição simples de imagens pelo Paint e "Editar com o Paint" no Explorador.
     actions:
       - type: appx
         name: Microsoft.Paint
@@ -371,32 +485,42 @@ tweaks:
         storeId: 9PCFS5B6T72H
 
   - id: apps.remove.cross-device
-    name: Remover a Experiência entre Dispositivos
-    description: Remove o pacote MicrosoftWindows.CrossDevice, que integra o celular ao Explorador e ao Iniciar.
+    name: Remove Cross Device Experience Host
+    description: Removes the MicrosoftWindows.CrossDevice package, which integrates the phone with File Explorer and Start.
     risk: low
     confidence: community
     reversible: false
     sources:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "sophia:CrossDevice" }
-    tags: [appx, celular]
-    breaks: O celular Android no Explorador de Arquivos e recursos de continuidade entre celular e PC.
+    tags: [appx, phone]
+    breaks: The Android phone in File Explorer and continuity features between phone and PC.
+    i18n:
+      pt-BR:
+        name: Remover a Experiência entre Dispositivos
+        description: Remove o pacote MicrosoftWindows.CrossDevice, que integra o celular ao Explorador e ao Iniciar.
+        breaks: O celular Android no Explorador de Arquivos e recursos de continuidade entre celular e PC.
     actions:
       - type: appx
         name: MicrosoftWindows.CrossDevice
         state: removed
 
   - id: apps.remove.xbox-app
-    name: Remover o app Xbox
-    description: Remove o app Xbox (Microsoft.GamingApp). Os serviços de jogos e a Game Bar não são removidos.
+    name: Remove the Xbox app
+    description: Removes the Xbox app (Microsoft.GamingApp). Gaming services and Game Bar are not removed.
     risk: medium
     confidence: community
     reversible: false
     sources:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "winhance:apps" }
-    tags: [appx, xbox, jogos]
-    breaks: Game Pass para PC e instalação de jogos pelo app Xbox.
+    tags: [appx, xbox, gaming]
+    breaks: PC Game Pass and installing games through the Xbox app.
+    i18n:
+      pt-BR:
+        name: Remover o app Xbox
+        description: Remove o app Xbox (Microsoft.GamingApp). Os serviços de jogos e a Game Bar não são removidos.
+        breaks: Game Pass para PC e instalação de jogos pelo app Xbox.
     actions:
       - type: appx
         name: Microsoft.GamingApp
@@ -404,16 +528,21 @@ tweaks:
         storeId: 9MV0B5HZVK9Z
 
   - id: apps.remove.game-bar
-    name: Remover a Xbox Game Bar
-    description: Remove a Xbox Game Bar (Microsoft.XboxGamingOverlay).
+    name: Remove Xbox Game Bar
+    description: Removes Xbox Game Bar (Microsoft.XboxGamingOverlay).
     risk: medium
     confidence: community
     reversible: false
     sources:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "winhance:apps" }
-    tags: [appx, xbox, jogos]
-    breaks: Win+G, captura de jogos e widgets de desempenho; alguns jogos mostram um aviso pedindo o app "ms-gamebar".
+    tags: [appx, xbox, gaming]
+    breaks: Win+G, game capture and performance widgets; some games show a prompt asking for the "ms-gamebar" app.
+    i18n:
+      pt-BR:
+        name: Remover a Xbox Game Bar
+        description: Remove a Xbox Game Bar (Microsoft.XboxGamingOverlay).
+        breaks: Win+G, captura de jogos e widgets de desempenho; alguns jogos mostram um aviso pedindo o app "ms-gamebar".
     actions:
       - type: appx
         name: Microsoft.XboxGamingOverlay
@@ -421,16 +550,21 @@ tweaks:
         storeId: 9NZKPSTSNW4P
 
   - id: apps.remove.xbox-speech-overlay
-    name: Remover a sobreposição de fala do Xbox
-    description: Remove Microsoft.XboxSpeechToTextOverlay (legendas de chat de voz em jogos) e Microsoft.Xbox.TCUI.
+    name: Remove the Xbox speech overlay
+    description: Removes Microsoft.XboxSpeechToTextOverlay (voice chat captions in games) and Microsoft.Xbox.TCUI.
     risk: low
     confidence: community
     reversible: false
     sources:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "privacysexy:xbox-tcui" }
-    tags: [appx, xbox, jogos]
-    breaks: Convites, perfis e chat de voz do Xbox dentro de alguns jogos.
+    tags: [appx, xbox, gaming]
+    breaks: Xbox invites, profiles and voice chat inside some games.
+    i18n:
+      pt-BR:
+        name: Remover a sobreposição de fala do Xbox
+        description: Remove Microsoft.XboxSpeechToTextOverlay (legendas de chat de voz em jogos) e Microsoft.Xbox.TCUI.
+        breaks: Convites, perfis e chat de voz do Xbox dentro de alguns jogos.
     actions:
       - type: appx
         name: Microsoft.XboxSpeechToTextOverlay
@@ -440,10 +574,10 @@ tweaks:
         state: removed
 
   - id: apps.remove.legacy-inbox
-    name: Remover apps antigos descontinuados (Cortana, Pessoas, Email e Calendário, Skype)
+    name: Remove discontinued legacy apps (Cortana, People, Mail and Calendar, Skype)
     description: >
-      Remove apps que vinham em versões anteriores e foram descontinuados pela Microsoft: Cortana, Pessoas, Email e
-      Calendário e Skype. Em instalações novas do Windows 11 eles já não existem (o tweak fica aplicado).
+      Removes apps that shipped with earlier versions and were discontinued by Microsoft: Cortana, People, Mail and
+      Calendar, and Skype. On new Windows 11 installs they no longer exist (the tweak shows as applied).
     risk: low
     confidence: community
     reversible: false
@@ -451,6 +585,12 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "privacysexy:legacy-apps" }
     tags: [appx, bloatware]
+    i18n:
+      pt-BR:
+        name: Remover apps antigos descontinuados (Cortana, Pessoas, Email e Calendário, Skype)
+        description: >
+          Remove apps que vinham em versões anteriores e foram descontinuados pela Microsoft: Cortana, Pessoas, Email e
+          Calendário e Skype. Em instalações novas do Windows 11 eles já não existem (o tweak fica aplicado).
     actions:
       - type: appx
         name: Microsoft.549981C3F5F10
@@ -466,8 +606,8 @@ tweaks:
         state: removed
 
   - id: apps.remove.legacy-3d
-    name: Remover apps 3D e de realidade misturada
-    description: Remove o Visualizador 3D, o Paint 3D e o Portal de Realidade Misturada, de versões anteriores do Windows.
+    name: Remove 3D and mixed reality apps
+    description: Removes 3D Viewer, Paint 3D and Mixed Reality Portal, from earlier versions of Windows.
     risk: low
     confidence: community
     reversible: false
@@ -475,6 +615,10 @@ tweaks:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "winhance:apps" }
     tags: [appx, bloatware]
+    i18n:
+      pt-BR:
+        name: Remover apps 3D e de realidade misturada
+        description: Remove o Visualizador 3D, o Paint 3D e o Portal de Realidade Misturada, de versões anteriores do Windows.
     actions:
       - type: appx
         name: Microsoft.Microsoft3DViewer
@@ -487,15 +631,19 @@ tweaks:
         state: removed
 
   - id: apps.remove.promoted-third-party
-    name: Remover apps de terceiros promovidos (Spotify e similares)
-    description: Remove apps de terceiros que o Windows instala como promoção (Spotify, Disney+, Instagram, TikTok, LinkedIn).
+    name: Remove promoted third-party apps (Spotify and similar)
+    description: Removes third-party apps that Windows installs as promotions (Spotify, Disney+, Instagram, TikTok, LinkedIn).
     risk: low
     confidence: community
     reversible: false
     sources:
       - { kind: tool, ref: "win11debloat:Apps" }
       - { kind: tool, ref: "privacysexy:third-party-apps" }
-    tags: [appx, bloatware, anuncios]
+    tags: [appx, bloatware, ads]
+    i18n:
+      pt-BR:
+        name: Remover apps de terceiros promovidos (Spotify e similares)
+        description: Remove apps de terceiros que o Windows instala como promoção (Spotify, Disney+, Instagram, TikTok, LinkedIn).
     actions:
       - type: appx
         name: SpotifyAB.SpotifyMusic

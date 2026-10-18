@@ -1,0 +1,383 @@
+# App permissions, location, clipboard, speech and sync.
+category: Privacy/Permissions and personal data
+
+tweaks:
+  - id: privacy.location.disable
+    name: Turn off the location service (policy)
+    description: >
+      Policy "Turn off location": the Windows location feature is turned off and no program can use it.
+      Unlike the toggle in Settings, the user cannot turn it back on while the policy is applied.
+    risk: medium
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - System/AllowLocation" }
+      - { kind: admx, ref: "Sensors.admx:DisableLocation_2" }
+      - { kind: tool, ref: "win11debloat:Disable_Location_Services" }
+    tags: [privacy, location, policy]
+    breaks: >
+      Maps, location-based weather, "Find my device", automatic time zone based on location and apps that
+      request the PC's position.
+    i18n:
+      pt-BR:
+        name: Desligar o serviço de localização (política)
+        description: >
+          Política "Desativar localização": o recurso de localização do Windows fica desligado e nenhum programa
+          consegue usá-lo. Diferente do botão nas Configurações, o usuário não consegue religar enquanto a política
+          estiver aplicada.
+        breaks: >
+          Mapas, clima pela localização, "Encontrar meu dispositivo", fuso horário automático pela localização e apps
+          que pedem a posição do PC.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors
+        name: DisableLocation
+        kind: dword
+        value: 1
+
+  - id: privacy.location.deny-apps
+    name: Deny location access to apps (default)
+    description: >
+      Turns off the "Location services" (device-wide) and "Let apps access your location" (per user) toggles
+      in Settings > Privacy & security. The user can turn them back on in Settings.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:LocationServices" }
+      - { kind: tool, ref: "winhance:location" }
+    tags: [privacy, location, permissions]
+    breaks: Apps no longer know the location until the user allows it again.
+    i18n:
+      pt-BR:
+        name: Negar acesso à localização para os apps (padrão)
+        description: >
+          Desliga os botões "Serviços de localização" (no PC) e "Permitir que os aplicativos acessem sua localização"
+          (no usuário) em Configurações > Privacidade. O usuário pode religar pelas Configurações.
+        breaks: Apps deixam de saber a localização até o usuário permitir de novo.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location
+        name: Value
+        kind: string
+        value: Deny
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location
+        name: Value
+        kind: string
+        value: Deny
+
+  - id: privacy.camera.deny-apps
+    name: Deny camera access to apps (default)
+    description: >
+      Turns off "Let apps access your camera" for the current user. This is not a policy: the user can allow
+      it again (per app) in Settings > Privacy & security > Camera.
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "privacysexy:webcam" }
+    tags: [privacy, camera, permissions]
+    breaks: Camera in Store apps and video call apps until the user allows it again.
+    i18n:
+      pt-BR:
+        name: Negar acesso à câmera para os apps (padrão)
+        description: >
+          Desliga "Permitir que os aplicativos acessem sua câmera" para o usuário atual. Não é uma política: o
+          usuário pode permitir de novo (por app) em Configurações > Privacidade > Câmera.
+        breaks: Câmera em apps da Store e em apps de videochamada até o usuário permitir de novo.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam
+        name: Value
+        kind: string
+        value: Deny
+
+  - id: privacy.microphone.deny-apps
+    name: Deny microphone access to apps (default)
+    description: >
+      Turns off "Let apps access your microphone" for the current user. The user can allow it again (per app)
+      in Settings > Privacy & security > Microphone.
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "privacysexy:microphone" }
+    tags: [privacy, microphone, permissions]
+    breaks: Microphone in Store apps, dictation and calls until the user allows it again.
+    i18n:
+      pt-BR:
+        name: Negar acesso ao microfone para os apps (padrão)
+        description: >
+          Desliga "Permitir que os aplicativos acessem seu microfone" para o usuário atual. O usuário pode permitir
+          de novo (por app) em Configurações > Privacidade > Microfone.
+        breaks: Microfone em apps da Store, ditado e chamadas até o usuário permitir de novo.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone
+        name: Value
+        kind: string
+        value: Deny
+
+  - id: privacy.app-diagnostics.deny
+    name: Prevent apps from reading diagnostic information
+    description: >
+      Policy "Let Windows apps access diagnostic information about other apps" = Force Deny.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Privacy/LetAppsGetDiagnosticInfo" }
+      - { kind: admx, ref: "AppPrivacy.admx:LetAppsGetDiagnosticInfo" }
+      - { kind: tool, ref: "privacysexy:app-diagnostics" }
+    tags: [privacy, permissions, policy]
+    i18n:
+      pt-BR:
+        name: Impedir que apps leiam informações de diagnóstico
+        description: >
+          Política "Permitir que aplicativos do Windows acessem informações de diagnóstico sobre outros aplicativos"
+          = Forçar negação.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy
+        name: LetAppsGetDiagnosticInfo
+        kind: dword
+        value: 2
+
+  - id: privacy.voice-activation.deny
+    name: Prevent apps from being activated by voice
+    description: Policy "Let Windows apps activate with voice" = Force Deny.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Privacy/LetAppsActivateWithVoice" }
+      - { kind: admx, ref: "AppPrivacy.admx:LetAppsActivateWithVoice" }
+    tags: [privacy, voice, policy]
+    breaks: Assistants activated by a keyword ("Hey, ...").
+    i18n:
+      pt-BR:
+        name: Impedir que apps sejam ativados por voz
+        description: Política "Permitir que aplicativos do Windows sejam ativados por voz" = Forçar negação.
+        breaks: Assistentes ativados por palavra-chave ("Ei, ...").
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy
+        name: LetAppsActivateWithVoice
+        kind: dword
+        value: 2
+
+  - id: privacy.clipboard.disable-history
+    name: Turn off clipboard history
+    description: Policy that prevents Windows from keeping the clipboard history (Win+V).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowClipboardHistory" }
+      - { kind: admx, ref: "OSPolicy.admx:AllowClipboardHistory" }
+      - { kind: tool, ref: "privacysexy:clipboard-history" }
+    tags: [privacy, clipboard, policy]
+    breaks: Win+V only shows emojis/GIFs, without the history of copied items.
+    i18n:
+      pt-BR:
+        name: Desativar o histórico da área de transferência
+        description: Política que impede o Windows de guardar o histórico da área de transferência (Win+V).
+        breaks: Win+V passa a mostrar só emojis/GIFs, sem o histórico de itens copiados.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: AllowClipboardHistory
+        kind: dword
+        value: 0
+
+  - id: privacy.clipboard.disable-cloud-sync
+    name: Do not sync the clipboard across devices
+    description: Policy that prevents copied content from being sent to other devices on the same account.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Privacy/AllowCrossDeviceClipboard" }
+      - { kind: admx, ref: "OSPolicy.admx:AllowCrossDeviceClipboard" }
+    tags: [privacy, clipboard, cloud, policy]
+    breaks: Copying on one PC and pasting on another (or on the phone with SwiftKey).
+    i18n:
+      pt-BR:
+        name: Não sincronizar a área de transferência entre dispositivos
+        description: Política que impede o envio do conteúdo copiado para outros dispositivos da mesma conta.
+        breaks: Copiar num PC e colar em outro (ou no celular com o SwiftKey).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: AllowCrossDeviceClipboard
+        kind: dword
+        value: 0
+
+  - id: privacy.speech.disable-online
+    name: Turn off online speech recognition
+    description: >
+      Turns off online speech recognition for the user and applies the policy "Allow users to enable online
+      speech recognition services" = Disabled (voice is not sent to Microsoft).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: admx, ref: "Globalization.admx:AllowInputPersonalization" }
+      - { kind: msdocs, ref: "Policy CSP - Privacy/AllowInputPersonalization" }
+      - { kind: tool, ref: "winutil:WPFTweaksTelemetry" }
+    tags: [privacy, speech, policy]
+    breaks: Voice typing (Win+H) and voice access features that depend on the online service.
+    i18n:
+      pt-BR:
+        name: Desativar o reconhecimento de fala online
+        description: >
+          Desliga o reconhecimento de fala online do usuário e aplica a política "Permitir que usuários ativem
+          serviços de reconhecimento de fala online" = Desabilitada (a voz não é enviada à Microsoft).
+        breaks: Ditado por voz (Win+H) e controle por voz que dependem do serviço online.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy
+        name: HasAccepted
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\InputPersonalization
+        name: AllowInputPersonalization
+        kind: dword
+        value: 0
+
+  - id: privacy.typing.disable-insights
+    name: Turn off "Typing insights"
+    description: Turns off typing statistics (Settings > Time & language > Typing > Typing insights).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:typing-insights" }
+    tags: [privacy, typing]
+    i18n:
+      pt-BR:
+        name: Desativar os "insights de digitação"
+        description: Desliga as estatísticas de digitação (Configurações > Hora e idioma > Digitação > Insights de digitação).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\input\Settings
+        name: InsightsEnabled
+        kind: dword
+        value: 0
+
+  - id: privacy.handwriting.disable-data-sharing
+    name: Do not send handwriting data
+    description: >
+      Turns off sharing of handwriting personalization data and handwriting recognition error reporting
+      (the same values that the "Restrict Internet communication" policy turns on as a group, applied only
+      for these two items).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "privacysexy:handwriting" }
+      - { kind: tool, ref: "optimizerduck:DisableTelemetry" }
+    tags: [privacy, inking, policy]
+    i18n:
+      pt-BR:
+        name: Não enviar dados de escrita à mão
+        description: >
+          Desliga o compartilhamento de dados de personalização de escrita à mão e o relatório de erros de
+          reconhecimento de escrita à mão (os mesmos valores que a política "Restringir comunicação com a Internet"
+          liga em grupo, aplicados só para esses dois itens).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\HandwritingErrorReports
+        name: PreventHandwritingErrorReports
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\TabletPC
+        name: PreventHandwritingDataSharing
+        kind: dword
+        value: 1
+
+  - id: privacy.settings-sync.disable
+    name: Do not sync Windows settings with the account
+    description: >
+      Policy "Do not sync": theme, passwords, language and other preferences are no longer sent to the
+      Microsoft account, and the user cannot turn it back on.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_SettingSync/DisableSettingSync" }
+      - { kind: admx, ref: "SettingSync.admx:DisableSettingSync" }
+      - { kind: tool, ref: "privacysexy:setting-sync" }
+    tags: [privacy, cloud, sync, policy]
+    breaks: Preferences do not follow the user to another PC (or when reinstalling Windows).
+    i18n:
+      pt-BR:
+        name: Não sincronizar configurações do Windows com a conta
+        description: >
+          Política "Não sincronizar": tema, senhas, idioma e outras preferências deixam de ser enviados à conta
+          Microsoft, e o usuário não pode religar.
+        breaks: As preferências não acompanham o usuário em outro PC (nem ao reinstalar o Windows).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync
+        name: DisableSettingSync
+        kind: dword
+        value: 2
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\SettingSync
+        name: DisableSettingSyncUserOverride
+        kind: dword
+        value: 1
+
+  - id: privacy.find-my-device.disable
+    name: Turn off "Find my device"
+    description: Policy that turns off "Find my device" (periodic PC location reported to the Microsoft account).
+    risk: medium
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Experience/AllowFindMyDevice" }
+      - { kind: admx, ref: "FindMy.admx:FindMy_AllowFindMyDeviceConfig" }
+      - { kind: tool, ref: "win11debloat:Disable_Find_My_Device" }
+    tags: [privacy, location, policy]
+    breaks: Locating or locking a lost PC through the Microsoft account.
+    i18n:
+      pt-BR:
+        name: Desativar o "Encontrar meu dispositivo"
+        description: Política que desliga o "Encontrar meu dispositivo" (localização periódica do PC na conta Microsoft).
+        breaks: Localizar ou bloquear o PC perdido pela conta Microsoft.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\FindMyDevice
+        name: AllowFindMyDevice
+        kind: dword
+        value: 0
+
+  - id: privacy.messaging.disable-cloud-sync
+    name: Do not back up text messages to the cloud
+    description: Policy "Allow Message Service Cloud Sync" = Disabled.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Messaging/AllowMessageSync" }
+      - { kind: admx, ref: "Messaging.admx:AllowMessageSync" }
+    tags: [privacy, cloud, policy]
+    i18n:
+      pt-BR:
+        name: Não fazer backup de mensagens de texto na nuvem
+        description: Política "Permitir backup em nuvem de mensagens" = Desabilitada.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\Messaging
+        name: AllowMessageSync
+        kind: dword
+        value: 0
+
+  - id: privacy.search.disable-history
+    name: Do not keep the device search history
+    description: Turns off "Search history on this device" (Settings > Privacy & security > Search permissions).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_Search_History" }
+    tags: [privacy, search]
+    i18n:
+      pt-BR:
+        name: Não guardar o histórico de pesquisa do dispositivo
+        description: Desliga "Histórico de pesquisa neste dispositivo" (Configurações > Privacidade > Permissões de pesquisa).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings
+        name: IsDeviceSearchHistoryEnabled
+        kind: dword
+        value: 0

@@ -1,68 +1,69 @@
+using Debloater.Core.Localization;
 using YamlDotNet.Serialization;
 using Debloater.Core.Model;
 using Debloater.Core.Policies;
 
 namespace Debloater.Core.Profiles;
 
-/// <summary>Estado desejado de um tweak: aplicado ou não aplicado (revertido).</summary>
+/// <summary>Desired state of a tweak: applied or not applied (reverted).</summary>
 public enum DesiredState
 {
     Applied,
     NotApplied,
 }
 
-/// <summary>Um tweak citado explicitamente no perfil.</summary>
+/// <summary>A tweak listed explicitly in the profile.</summary>
 public sealed class ProfileEntry
 {
     public string Id { get; set; } = "";
 
-    /// <summary>applied (padrão) ou notApplied.</summary>
+    /// <summary>applied (default) or notApplied.</summary>
     public DesiredState Desired { get; set; } = DesiredState.Applied;
 }
 
 /// <summary>
-/// Regras que selecionam tweaks do catálogo (todos os selecionados ficam "aplicado"). Permitem
-/// perfis que acompanham o catálogo sem listar cada id.
+/// Rules that select catalog tweaks (every selected tweak becomes "applied"). They allow
+/// profiles that follow the catalog without listing every id.
 /// </summary>
 public sealed class ProfileRules
 {
-    /// <summary>Risco máximo incluído (inclusive).</summary>
+    /// <summary>Highest risk included (inclusive).</summary>
     public RiskLevel MaxRisk { get; set; } = RiskLevel.Low;
 
-    /// <summary>Prefixos de categoria (ex.: "Privacidade", "IA/Copilot e Recall"). Vazio = todas.</summary>
+    /// <summary>Category prefixes (English paths, e.g. "Privacy", "AI/Copilot and Recall"). Empty = all.</summary>
     public List<string> Categories { get; set; } = [];
 
-    /// <summary>Ids excluídos mesmo que casem com as regras.</summary>
+    /// <summary>Ids excluded even if they match the rules.</summary>
     public List<string> ExcludeIds { get; set; } = [];
 
-    /// <summary>Incluir tweaks não reversíveis (ex.: remoção de apps). Padrão: sim.</summary>
+    /// <summary>Include irreversible tweaks (e.g. app removal). Default: yes.</summary>
     public bool IncludeIrreversible { get; set; } = true;
 }
 
 /// <summary>
-/// Uma política ADMX configurada pelo perfil. Formato YAML:
+/// An ADMX policy configured by the profile. YAML format:
 /// <code>
 /// - { policy: "DataCollection.admx:AllowTelemetry", state: enabled, values: { AllowTelemetry: "0" } }
 /// - { policy: "Explorer.admx:NoX", state: disabled }
 /// - policy: Sample.admx:Hosts
 ///   state: enabled
-///   scope: machine             # opcional (políticas de Computador e Usuário)
-///   values: { Hosts: [a, b] }  # listas e multiText: sequência; list com explicitValue: mapa nome→valor
+///   scope: machine             # optional (Computer and User policies)
+///   values: { Hosts: [a, b] }  # lists and multiText: sequence; list with explicitValue: name→value map
 /// </code>
 /// </summary>
 public sealed class ProfilePolicyEntry
 {
-    /// <summary>"Arquivo.admx:Nome".</summary>
+    /// <summary>"File.admx:Name".</summary>
     public string Policy { get; set; } = "";
 
     public PolicyTargetState State { get; set; } = PolicyTargetState.Enabled;
 
     public PolicyScope? Scope { get; set; }
 
-    /// <summary>Id do elemento → texto, sequência de textos ou mapa nome→valor.</summary>
+    /// <summary>Element id → text, sequence of texts or name→value map.</summary>
     public Dictionary<string, object?>? Values { get; set; }
 
-    /// <summary>Converte para <see cref="PolicySetting"/> (mapas viram itens "nome=valor").</summary>
+    /// <summary>Converts to <see cref="PolicySetting"/> (maps become "name=value" items).</summary>
     public PolicySetting ToSetting()
     {
         var setting = new PolicySetting { Policy = Policy.Trim(), State = State, Scope = Scope };
@@ -81,7 +82,7 @@ public sealed class ProfilePolicyEntry
         return setting;
     }
 
-    /// <summary>Converte de <see cref="PolicySetting"/>: um valor vira texto; vários, sequência.</summary>
+    /// <summary>Converts from <see cref="PolicySetting"/>: one value becomes a text; several, a sequence.</summary>
     public static ProfilePolicyEntry FromSetting(PolicySetting s) => new()
     {
         Policy = s.Policy,
@@ -96,15 +97,16 @@ public sealed class ProfilePolicyEntry
 }
 
 /// <summary>
-/// Perfil: uma seleção de estados desejados. Formato YAML:
+/// Profile: a selection of desired states. YAML format:
 /// <code>
-/// name: Seguro
-/// description: Só ajustes de risco baixo.
-/// rules: { maxRisk: low, categories: [Privacidade] }   # opcional
-/// tweaks:                                               # opcional; prevalece sobre as regras
+/// name: Safe
+/// description: Only low-risk tweaks.
+/// i18n: { pt-BR: { name: Seguro, description: ... } }   # optional translations
+/// rules: { maxRisk: low, categories: [Privacy] }        # optional
+/// tweaks:                                               # optional; takes precedence over the rules
 ///   - { id: privacy.telemetry.feedback-requests, desired: applied }
 ///   - { id: ui.explorer.hide-file-extensions, desired: notApplied }
-/// policies:                                             # opcional; políticas ADMX (ver ProfilePolicyEntry)
+/// policies:                                             # optional; ADMX policies (see ProfilePolicyEntry)
 ///   - { policy: "DataCollection.admx:AllowTelemetry", state: enabled, values: { AllowTelemetry: "0" } }
 /// </code>
 /// </summary>
@@ -112,26 +114,46 @@ public sealed class Profile
 {
     public string Name { get; set; } = "";
     public string? Description { get; set; }
+
+    /// <summary>Translations keyed by language (e.g. "pt-BR": { name, description }); optional.</summary>
+    public Dictionary<string, ProfileText>? I18n { get; set; }
+
     public ProfileRules? Rules { get; set; }
     public List<ProfileEntry> Tweaks { get; set; } = [];
 
-    /// <summary>Políticas ADMX configuradas pelo perfil (opcional; null não é gravado no YAML).</summary>
+    /// <summary>ADMX policies configured by the profile (optional; null is not written to the YAML).</summary>
     public List<ProfilePolicyEntry>? Policies { get; set; }
 
-    /// <summary>Arquivo de origem (preenchido pelo carregador).</summary>
+    /// <summary>Source file (filled in by the loader).</summary>
     [YamlIgnore]
     public string? SourceFile { get; set; }
 
-    /// <summary>Perfil embutido (pasta catalog/profiles); somente leitura na interface.</summary>
+    /// <summary>Built-in profile (catalog/profiles folder); read-only in the interface.</summary>
     [YamlIgnore]
     public bool IsBuiltIn { get; set; }
+
+    /// <summary>Name in the current UI language (English fallback).</summary>
+    [YamlIgnore]
+    public string DisplayName => UiLanguage.Pick(Name, I18n, t => t.Name) ?? Name;
+
+    /// <summary>Description in the current UI language (English fallback).</summary>
+    [YamlIgnore]
+    public string? DisplayDescription => Description is null ? null : UiLanguage.Pick(Description, I18n, t => t.Description);
 
     public override string ToString() => Name;
 }
 
-/// <summary>Resultado de resolver um perfil contra o catálogo.</summary>
+/// <summary>Translated texts of a profile for one language.</summary>
+public sealed class ProfileText
+{
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+}
+
+/// <summary>Result of resolving a profile against the catalog.</summary>
 public sealed record ProfileResolution(IReadOnlyDictionary<string, DesiredState> Desired, IReadOnlyList<string> UnknownIds)
 {
-    /// <summary>Configurações de políticas do perfil (sem conferir contra o ADMX; ver <see cref="ProfileStore.ResolvePolicies"/>).</summary>
+    /// <summary>Policy settings of the profile (not checked against the ADMX; see <see cref="ProfileStore.ResolvePolicies"/>).</summary>
+
     public IReadOnlyList<PolicySetting> Policies { get; init; } = [];
 }

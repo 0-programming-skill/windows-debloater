@@ -1,0 +1,266 @@
+# Start menu and Search.
+category: Interface/Start and Search
+
+tweaks:
+  - id: ui.search.disable-web-search
+    name: Turn off web (Bing) results in Start search
+    description: Makes Start menu search look only on the PC, with no Bing suggestions or results.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_WindowsExplorer/DisableSearchBoxSuggestions" }
+      - { kind: admx, ref: "WindowsExplorer.admx:DisableSearchBoxSuggestions" }
+    tags: [search, bing, policy]
+    breaks: Web results and suggestions in Windows Search.
+    i18n:
+      pt-BR:
+        name: Desativar resultados da web (Bing) na pesquisa do Iniciar
+        description: Faz a pesquisa do menu Iniciar procurar apenas no PC, sem sugestões e resultados do Bing.
+        breaks: Resultados e sugestões da web na pesquisa do Windows.
+    actions:
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\Explorer
+        name: DisableSearchBoxSuggestions
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Search
+        name: BingSearchEnabled
+        kind: dword
+        value: 0
+
+  - id: ui.search.disable-highlights
+    name: Turn off search highlights
+    description: Removes the illustrations and featured content (holidays, trends) from the search box.
+    risk: low
+    confidence: community
+    tags: [search]
+    i18n:
+      pt-BR:
+        name: Desativar destaques da pesquisa
+        description: Remove as ilustrações e conteúdos em destaque (datas comemorativas, tendências) da caixa de pesquisa.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings
+        name: IsDynamicSearchBoxEnabled
+        kind: dword
+        value: 0
+
+  - id: ui.search.disable-cloud-search
+    name: Don't search cloud account content
+    description: Turns off searching content from the Microsoft account and the work or school account.
+    risk: low
+    confidence: community
+    tags: [search, cloud]
+    i18n:
+      pt-BR:
+        name: Não pesquisar conteúdo das contas na nuvem
+        description: Desativa a pesquisa de conteúdo da conta Microsoft e da conta corporativa/escolar.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings
+        name: IsMSACloudSearchEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings
+        name: IsAADCloudSearchEnabled
+        kind: dword
+        value: 0
+
+  - id: ui.search.taskbar-icon-only
+    name: Taskbar search as an icon only
+    description: Replaces the taskbar search box with an icon, saving space.
+    risk: low
+    confidence: community
+    tags: [search, taskbar]
+    i18n:
+      pt-BR:
+        name: Pesquisa da barra de tarefas apenas como ícone
+        description: Troca a caixa de pesquisa da barra de tarefas por um ícone, economizando espaço.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Search
+        name: SearchboxTaskbarMode
+        kind: dword
+        value: 1
+
+  - id: ui.start.no-recent-files
+    name: Don't show recent files in Start and jump lists
+    description: Turns off "Show recently opened items in Start, Jump Lists, and File Explorer".
+    risk: low
+    confidence: community
+    tags: [start, privacy]
+    breaks: Jump lists and the Recommended section no longer show recent files.
+    i18n:
+      pt-BR:
+        name: Não mostrar arquivos recentes no Iniciar e listas de atalhos
+        description: Desativa "Mostrar itens abertos recentemente no Iniciar, nas Listas de Atalhos e no Explorador de Arquivos".
+        breaks: Listas de atalhos (jump lists) e a seção Recomendados ficam sem arquivos recentes.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Start_TrackDocs
+        kind: dword
+        value: 0
+
+  - id: ui.start.more-pins
+    name: Start layout with more pinned items
+    description: Uses the "More pins" layout, shrinking the Recommended section.
+    risk: low
+    confidence: community
+    minBuild: 22621
+    tags: [start]
+    i18n:
+      pt-BR:
+        name: Layout do Iniciar com mais itens fixados
+        description: Usa o layout "Mais fixos", reduzindo a seção Recomendados.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Start_Layout
+        kind: dword
+        value: 1
+
+  - id: ui.search.disable-store-suggestions
+    name: Don't suggest Microsoft Store apps in search
+    description: >
+      Turns off the per-user Windows Search setting "IsStoreSuggestionsEnabled" (same family as
+      IsMSACloudSearchEnabled), which shows Store apps as suggestions. Found by reverse engineering on
+      26300: windowsudk.shellcommon.dll reads and writes the value in HKCU\...\SearchSettings; when the
+      value is absent, the default is on. When the Store is blocked by policy (RemoveWindowsStore, only on
+      editions that honor that policy), the option becomes read-only.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: re, ref: "26300/search-store-web-suggestions" }
+    minBuild: 26300
+    tags: [search, store, suggestions, ads]
+    breaks: Search stops suggesting Store apps; the Store itself keeps working normally.
+    i18n:
+      pt-BR:
+        name: Não sugerir apps da Microsoft Store na pesquisa
+        description: >
+          Desliga a configuração por usuário "IsStoreSuggestionsEnabled" da pesquisa do Windows (a mesma
+          família de IsMSACloudSearchEnabled), que mostra apps da Store como sugestões. Achado por
+          engenharia reversa no 26300: o windowsudk.shellcommon.dll lê e grava o valor em
+          HKCU\...\SearchSettings; sem o valor, o padrão é ligado. Quando a Store está bloqueada por política
+          (RemoveWindowsStore, só em edições que aceitam essa política), a opção fica somente leitura.
+        breaks: A pesquisa deixa de sugerir apps da Store; a Store continua funcionando normalmente.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings
+        name: IsStoreSuggestionsEnabled
+        kind: dword
+        value: 0
+
+  - id: ui.search.disable-web-suggestions
+    name: Don't show web suggestions in search
+    description: >
+      Turns off the per-user Windows Search setting "IsWebSuggestionsEnabled" (web suggestions while
+      typing). Found by reverse engineering on 26300 (windowsudk.shellcommon.dll,
+      HKCU\...\SearchSettings; when the value is absent, the default is on). Complements
+      ui.search.disable-web-search, which uses the policy and BingSearchEnabled.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: re, ref: "26300/search-store-web-suggestions" }
+    minBuild: 26300
+    tags: [search, bing, suggestions]
+    breaks: Web suggestions in the search box.
+    i18n:
+      pt-BR:
+        name: Não mostrar sugestões da web na pesquisa
+        description: >
+          Desliga a configuração por usuário "IsWebSuggestionsEnabled" da pesquisa do Windows (sugestões da
+          web enquanto se digita). Achado por engenharia reversa no 26300 (windowsudk.shellcommon.dll,
+          HKCU\...\SearchSettings; sem o valor, o padrão é ligado). Complementa
+          ui.search.disable-web-search, que usa a política e o BingSearchEnabled.
+        breaks: Sugestões da web na caixa de pesquisa.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings
+        name: IsWebSuggestionsEnabled
+        kind: dword
+        value: 0
+
+  - id: ui.start.hide-suggested-files
+    name: Don't show suggested files in Start
+    description: >
+      Turns off "Show suggested files" in the Recommended section of Start (Settings > Personalization >
+      Start). Found by reverse engineering on 26300: windowsudk.shellcommon.dll reads
+      HKCU\...\CurrentVersion\Start\ShowSuggestedFiles; when the value is absent, it follows the recent items
+      option.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: re, ref: "26300/start-show-suggested-files" }
+    minBuild: 26300
+    tags: [start, recommended, suggestions]
+    breaks: Suggested files no longer appear in Recommended.
+    i18n:
+      pt-BR:
+        name: Não mostrar arquivos sugeridos no Iniciar
+        description: >
+          Desliga "Mostrar arquivos sugeridos" da seção Recomendados do Iniciar (Configurações >
+          Personalização > Iniciar). Achado por engenharia reversa no 26300: o windowsudk.shellcommon.dll
+          lê HKCU\...\CurrentVersion\Start\ShowSuggestedFiles; sem o valor, segue a opção de itens recentes.
+        breaks: Arquivos sugeridos deixam de aparecer em Recomendados.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Start
+        name: ShowSuggestedFiles
+        kind: dword
+        value: 0
+
+  - id: ui.start.hide-recommended
+    name: Hide the Start "Recommended" section
+    description: >
+      Policy "Remove Recommended section from Start Menu" for the current user and for the PC. Policy CSP
+      documents the effect on all editions starting with 24H2; on older builds only on SE/Education.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Start/HideRecommendedSection" }
+      - { kind: admx, ref: "StartMenu.admx:HideRecommendedSection" }
+      - { kind: tool, ref: "win11debloat:Disable_Start_Recommended" }
+    minBuild: 22621
+    tags: [start, recommended, policy]
+    i18n:
+      pt-BR:
+        name: Ocultar a seção "Recomendados" do Iniciar
+        description: >
+          Política "Remover a seção Recomendados do menu Iniciar" para o usuário atual e para o PC. A Policy CSP
+          documenta o efeito em todas as edições a partir do 24H2; em builds mais antigos só no SE/Education.
+    actions:
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\Explorer
+        name: HideRecommendedSection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: HideRecommendedSection
+        kind: dword
+        value: 1
+
+  - id: ui.start.all-apps-list
+    name: Show Start "All apps" as a list
+    description: Shows the "All" section of the new Start menu as an alphabetical list instead of categories.
+    risk: low
+    confidence: community
+    minBuild: 26100
+    sources:
+      - { kind: tool, ref: "win11debloat:Start_All_Apps_List" }
+      - { kind: tool, ref: "sophia:StartLayout" }
+    tags: [start, preference]
+    i18n:
+      pt-BR:
+        name: 'Mostrar "Todos os aplicativos" do Iniciar em lista'
+        description: Mostra a seção "Todos" do novo menu Iniciar como lista alfabética, em vez de categorias.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Start
+        name: AllAppsViewMode
+        kind: dword
+        value: 2

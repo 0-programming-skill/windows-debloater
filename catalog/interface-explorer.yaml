@@ -1,13 +1,17 @@
-# Explorador de Arquivos e barra de tarefas.
-category: Interface/Explorador e barra de tarefas
+# File Explorer and taskbar.
+category: Interface/Explorer and taskbar
 
 tweaks:
   - id: ui.explorer.show-file-extensions
-    name: Mostrar extensões de arquivo
-    description: Exibe as extensões (.exe, .pdf, .docx...) de todos os arquivos. Ajuda a identificar arquivos maliciosos.
+    name: Show file extensions
+    description: Shows the extensions (.exe, .pdf, .docx...) of all files. Helps spot malicious files.
     risk: low
     confidence: community
-    tags: [explorer, seguranca]
+    tags: [explorer, security]
+    i18n:
+      pt-BR:
+        name: Mostrar extensões de arquivo
+        description: Exibe as extensões (.exe, .pdf, .docx...) de todos os arquivos. Ajuda a identificar arquivos maliciosos.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -16,11 +20,15 @@ tweaks:
         value: 0
 
   - id: ui.explorer.show-hidden-files
-    name: Mostrar arquivos ocultos
-    description: Exibe arquivos e pastas ocultos no Explorador de Arquivos.
+    name: Show hidden files
+    description: Shows hidden files and folders in File Explorer.
     risk: low
     confidence: community
     tags: [explorer]
+    i18n:
+      pt-BR:
+        name: Mostrar arquivos ocultos
+        description: Exibe arquivos e pastas ocultos no Explorador de Arquivos.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -29,11 +37,15 @@ tweaks:
         value: 1
 
   - id: ui.explorer.open-this-pc
-    name: Abrir o Explorador em "Este Computador"
-    description: O Explorador de Arquivos abre em "Este Computador" em vez de "Início".
+    name: Open File Explorer to "This PC"
+    description: File Explorer opens to "This PC" instead of "Home".
     risk: low
     confidence: community
     tags: [explorer]
+    i18n:
+      pt-BR:
+        name: Abrir o Explorador em "Este Computador"
+        description: O Explorador de Arquivos abre em "Este Computador" em vez de "Início".
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -42,11 +54,15 @@ tweaks:
         value: 1
 
   - id: ui.explorer.compact-mode
-    name: Modo compacto no Explorador
-    description: Reduz o espaçamento entre itens no Explorador de Arquivos.
+    name: Compact view in File Explorer
+    description: Reduces the spacing between items in File Explorer.
     risk: low
     confidence: community
     tags: [explorer]
+    i18n:
+      pt-BR:
+        name: Modo compacto no Explorador
+        description: Reduz o espaçamento entre itens no Explorador de Arquivos.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -55,13 +71,19 @@ tweaks:
         value: 1
 
   - id: ui.explorer.classic-context-menu
-    name: Menu de contexto clássico
+    name: Classic context menu
     description: >
-      Restaura o menu de contexto completo do Windows 10, sem precisar de "Mostrar mais opções".
-      Requer reiniciar o Explorador (ou sair e entrar) para ter efeito.
+      Restores the full Windows 10 context menu, without needing "Show more options".
+      Requires restarting File Explorer (or signing out and back in) to take effect.
     risk: low
     confidence: community
-    tags: [explorer, menu-de-contexto]
+    tags: [explorer, context-menu]
+    i18n:
+      pt-BR:
+        name: Menu de contexto clássico
+        description: >
+          Restaura o menu de contexto completo do Windows 10, sem precisar de "Mostrar mais opções".
+          Requer reiniciar o Explorador (ou sair e entrar) para ter efeito.
     actions:
       - type: registry
         path: HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32
@@ -70,12 +92,16 @@ tweaks:
         value: ""
 
   - id: ui.explorer.hide-gallery
-    name: Ocultar "Galeria" do painel de navegação
-    description: Remove o item Galeria do painel lateral do Explorador de Arquivos.
+    name: Hide "Gallery" from the navigation pane
+    description: Removes the Gallery item from the File Explorer side pane.
     risk: low
     confidence: community
     minBuild: 22621
     tags: [explorer]
+    i18n:
+      pt-BR:
+        name: Ocultar "Galeria" do painel de navegação
+        description: Remove o item Galeria do painel lateral do Explorador de Arquivos.
     actions:
       - type: registry
         path: HKCU\Software\Classes\CLSID\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}
@@ -84,11 +110,15 @@ tweaks:
         value: 0
 
   - id: ui.taskbar.align-left
-    name: Alinhar a barra de tarefas à esquerda
-    description: Coloca o botão Iniciar e os ícones da barra de tarefas à esquerda, como no Windows 10.
+    name: Align the taskbar to the left
+    description: Places the Start button and taskbar icons on the left, as in Windows 10.
     risk: low
     confidence: community
-    tags: [barra-de-tarefas]
+    tags: [taskbar]
+    i18n:
+      pt-BR:
+        name: Alinhar a barra de tarefas à esquerda
+        description: Coloca o botão Iniciar e os ícones da barra de tarefas à esquerda, como no Windows 10.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -97,11 +127,15 @@ tweaks:
         value: 0
 
   - id: ui.taskbar.hide-task-view
-    name: Ocultar o botão Visão de Tarefas
-    description: Remove o botão Visão de Tarefas da barra de tarefas (Win+Tab continua funcionando).
+    name: Hide the Task View button
+    description: Removes the Task View button from the taskbar (Win+Tab still works).
     risk: low
     confidence: community
-    tags: [barra-de-tarefas]
+    tags: [taskbar]
+    i18n:
+      pt-BR:
+        name: Ocultar o botão Visão de Tarefas
+        description: Remove o botão Visão de Tarefas da barra de tarefas (Win+Tab continua funcionando).
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -110,21 +144,31 @@ tweaks:
         value: 0
 
   - id: ui.taskbar.disable-widgets
-    name: Desativar o painel de Widgets
+    name: Disable the Widgets board
     description: >
-      Política "Desabilitar o Quadro de Widgets": o painel de Widgets (Win+W) não abre e o botão some
-      da barra de tarefas. Substitui a política antiga "Permitir widgets" (AllowNewsAndInterests), cujo
-      valor o Windows protege a partir do build 26300: a gravação é negada até para administrador (driver
-      UCPD), assim como a chave TaskbarDa do usuário. A Microsoft documenta esta política como Insider na
-      Policy CSP, mas o ADMX do sistema e o PolicyManager já a trazem desde o 24H2.
+      Policy "Disable Widgets Board": the Widgets board (Win+W) does not open and the button disappears
+      from the taskbar. Replaces the old "Allow widgets" policy (AllowNewsAndInterests), whose value
+      Windows protects starting with build 26300: writing it is denied even for administrators (UCPD
+      driver), as is the user's TaskbarDa key. Microsoft documents this policy as Insider-only in the
+      Policy CSP, but the system ADMX and PolicyManager have included it since 24H2.
     risk: low
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - NewsAndInterests/DisableWidgetsBoard" }
       - { kind: admx, ref: "NewsAndInterests.admx:DisableWidgetsBoard" }
     minBuild: 26100
-    tags: [barra-de-tarefas, widgets, politica, anuncios]
-    breaks: O painel de Widgets (Win+W) deixa de funcionar.
+    tags: [taskbar, widgets, policy, ads]
+    breaks: The Widgets board (Win+W) stops working.
+    i18n:
+      pt-BR:
+        name: Desativar o painel de Widgets
+        description: >
+          Política "Desabilitar o Quadro de Widgets": o painel de Widgets (Win+W) não abre e o botão some
+          da barra de tarefas. Substitui a política antiga "Permitir widgets" (AllowNewsAndInterests), cujo
+          valor o Windows protege a partir do build 26300: a gravação é negada até para administrador (driver
+          UCPD), assim como a chave TaskbarDa do usuário. A Microsoft documenta esta política como Insider na
+          Policy CSP, mas o ADMX do sistema e o PolicyManager já a trazem desde o 24H2.
+        breaks: O painel de Widgets (Win+W) deixa de funcionar.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Dsh
@@ -133,11 +177,11 @@ tweaks:
         value: 1
 
   - id: ui.taskbar.disable-widgets-legacy
-    name: Desativar Widgets (política antiga "Permitir widgets")
+    name: Disable Widgets (old "Allow widgets" policy)
     description: >
-      Política "Permitir widgets" = desabilitada (AllowNewsAndInterests = 0), para builds anteriores ao 24H2,
-      que não têm a política "Desabilitar o Quadro de Widgets". Em builds novos o Windows protege este
-      valor (driver UCPD) e a gravação é negada mesmo para administrador.
+      Policy "Allow widgets" = disabled (AllowNewsAndInterests = 0), for builds earlier than 24H2,
+      which lack the "Disable Widgets Board" policy. On newer builds Windows protects this
+      value (UCPD driver) and writing it is denied even for administrators.
     risk: low
     confidence: official
     sources:
@@ -145,8 +189,16 @@ tweaks:
       - { kind: admx, ref: "NewsAndInterests.admx:AllowNewsAndInterests" }
     minBuild: 22000
     maxBuild: 26099
-    tags: [barra-de-tarefas, widgets, politica, anuncios]
-    breaks: O painel de Widgets (Win+W) deixa de funcionar.
+    tags: [taskbar, widgets, policy, ads]
+    breaks: The Widgets board (Win+W) stops working.
+    i18n:
+      pt-BR:
+        name: Desativar Widgets (política antiga "Permitir widgets")
+        description: >
+          Política "Permitir widgets" = desabilitada (AllowNewsAndInterests = 0), para builds anteriores ao 24H2,
+          que não têm a política "Desabilitar o Quadro de Widgets". Em builds novos o Windows protege este
+          valor (driver UCPD) e a gravação é negada mesmo para administrador.
+        breaks: O painel de Widgets (Win+W) deixa de funcionar.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Dsh
@@ -155,12 +207,16 @@ tweaks:
         value: 0
 
   - id: ui.taskbar.end-task
-    name: Habilitar "Finalizar tarefa" no menu da barra de tarefas
-    description: Adiciona a opção "Finalizar tarefa" ao clicar com o botão direito num app na barra de tarefas.
+    name: Enable "End task" in the taskbar menu
+    description: Adds the "End task" option when right-clicking an app on the taskbar.
     risk: low
     confidence: community
     minBuild: 22631
-    tags: [barra-de-tarefas]
+    tags: [taskbar]
+    i18n:
+      pt-BR:
+        name: Habilitar "Finalizar tarefa" no menu da barra de tarefas
+        description: Adiciona a opção "Finalizar tarefa" ao clicar com o botão direito num app na barra de tarefas.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings
@@ -169,15 +225,20 @@ tweaks:
         value: 1
 
   - id: ui.explorer.hide-home
-    name: Ocultar "Início" no painel de navegação do Explorador
-    description: Remove o item "Início" (acesso rápido/recomendados) do painel de navegação do Explorador de Arquivos.
+    name: Hide "Home" in the File Explorer navigation pane
+    description: Removes the "Home" item (Quick access/recommended) from the File Explorer navigation pane.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "winutil:WPFTweaksRemoveHomeAndGallery" }
       - { kind: tool, ref: "win11debloat:Hide_Home_from_Explorer" }
-    tags: [explorer, navegacao]
-    breaks: Combine com ui.explorer.open-this-pc, ou o Explorador abre num item que não aparece mais no painel.
+    tags: [explorer, navigation]
+    breaks: Combine with ui.explorer.open-this-pc, or File Explorer opens to an item no longer shown in the pane.
+    i18n:
+      pt-BR:
+        name: Ocultar "Início" no painel de navegação do Explorador
+        description: Remove o item "Início" (acesso rápido/recomendados) do painel de navegação do Explorador de Arquivos.
+        breaks: Combine com ui.explorer.open-this-pc, ou o Explorador abre num item que não aparece mais no painel.
     actions:
       - type: registry
         path: HKCU\Software\Classes\CLSID\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}
@@ -186,14 +247,18 @@ tweaks:
         value: 0
 
   - id: ui.explorer.hide-recent-frequent
-    name: Não mostrar arquivos recentes e pastas frequentes no Explorador
-    description: Desliga "Mostrar arquivos usados recentemente" e "Mostrar pastas usadas com frequência" no Início do Explorador.
+    name: Don't show recent files and frequent folders in File Explorer
+    description: Turns off "Show recently used files" and "Show frequently used folders" in File Explorer Home.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "sophia:QuickAccessRecentFiles" }
       - { kind: tool, ref: "winhance:recent-frequent" }
-    tags: [explorer, privacidade]
+    tags: [explorer, privacy]
+    i18n:
+      pt-BR:
+        name: Não mostrar arquivos recentes e pastas frequentes no Explorador
+        description: Desliga "Mostrar arquivos usados recentemente" e "Mostrar pastas usadas com frequência" no Início do Explorador.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer
@@ -207,14 +272,18 @@ tweaks:
         value: 0
 
   - id: ui.explorer.detailed-file-operations
-    name: Mostrar detalhes ao copiar e mover arquivos
-    description: A janela de cópia/movimentação abre já no modo "Mais detalhes" (velocidade e gráfico).
+    name: Show details when copying and moving files
+    description: The copy/move dialog opens already in "More details" mode (speed and graph).
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "sophia:FileTransferDialog" }
       - { kind: tool, ref: "sophiapp:FileTransferDialog" }
-    tags: [explorer, preferencia]
+    tags: [explorer, preference]
+    i18n:
+      pt-BR:
+        name: Mostrar detalhes ao copiar e mover arquivos
+        description: A janela de cópia/movimentação abre já no modo "Mais detalhes" (velocidade e gráfico).
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\OperationStatusManager
@@ -223,13 +292,17 @@ tweaks:
         value: 1
 
   - id: ui.explorer.no-shortcut-suffix
-    name: Não acrescentar " - Atalho" ao criar atalhos
-    description: Novos atalhos ficam com o mesmo nome do arquivo de origem, sem o sufixo " - Atalho".
+    name: Don't append " - Shortcut" when creating shortcuts
+    description: New shortcuts keep the same name as the source file, without the " - Shortcut" suffix.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "sophia:ShortcutsSuffix" }
-    tags: [explorer, preferencia]
+    tags: [explorer, preference]
+    i18n:
+      pt-BR:
+        name: Não acrescentar " - Atalho" ao criar atalhos
+        description: Novos atalhos ficam com o mesmo nome do arquivo de origem, sem o sufixo " - Atalho".
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\NamingTemplates
@@ -238,15 +311,20 @@ tweaks:
         value: "%s.lnk"
 
   - id: ui.explorer.disable-autoplay
-    name: Desativar a Reprodução Automática
-    description: Desliga "Usar a Reprodução Automática para todas as mídias e dispositivos" para o usuário atual.
+    name: Turn off AutoPlay
+    description: Turns off "Use AutoPlay for all media and devices" for the current user.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "sophia:Autoplay" }
       - { kind: tool, ref: "winhance:autoplay" }
-    tags: [explorer, seguranca]
-    breaks: Ao conectar pendrives, câmeras e celulares não aparece mais o aviso de o que fazer.
+    tags: [explorer, security]
+    breaks: When connecting USB drives, cameras and phones, the prompt asking what to do no longer appears.
+    i18n:
+      pt-BR:
+        name: Desativar a Reprodução Automática
+        description: Desliga "Usar a Reprodução Automática para todas as mídias e dispositivos" para o usuário atual.
+        breaks: Ao conectar pendrives, câmeras e celulares não aparece mais o aviso de o que fazer.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers
@@ -255,17 +333,24 @@ tweaks:
         value: 1
 
   - id: ui.explorer.disable-autorun-policy
-    name: Desativar a Execução Automática em todas as unidades (política)
+    name: Turn off AutoRun on all drives (policy)
     description: >
-      Política "Desativar a Reprodução Automática" para todos os tipos de unidade (valor 255): nenhuma mídia
-      executa nada sozinha ao ser conectada. Medida de segurança contra pendrives maliciosos.
+      Policy "Turn off Autoplay" for all drive types (value 255): no media runs anything on its own when
+      connected. Security measure against malicious USB drives.
     risk: low
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - Autoplay/TurnOffAutoPlay" }
       - { kind: admx, ref: "AutoPlay.admx:Autorun" }
-    tags: [explorer, seguranca, politica]
-    breaks: Instaladores em CD/DVD não iniciam sozinhos; abra o setup manualmente.
+    tags: [explorer, security, policy]
+    breaks: CD/DVD installers don't start on their own; open the setup manually.
+    i18n:
+      pt-BR:
+        name: Desativar a Execução Automática em todas as unidades (política)
+        description: >
+          Política "Desativar a Reprodução Automática" para todos os tipos de unidade (valor 255): nenhuma mídia
+          executa nada sozinha ao ser conectada. Medida de segurança contra pendrives maliciosos.
+        breaks: Instaladores em CD/DVD não iniciam sozinhos; abra o setup manualmente.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
@@ -274,14 +359,18 @@ tweaks:
         value: 255
 
   - id: ui.desktop.show-this-pc
-    name: Mostrar "Este Computador" na área de trabalho
-    description: Mostra o ícone "Este Computador" na área de trabalho.
+    name: Show "This PC" on the desktop
+    description: Shows the "This PC" icon on the desktop.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "sophia:ThisPC" }
       - { kind: tool, ref: "winhance:desktop-icons" }
-    tags: [area-de-trabalho, preferencia]
+    tags: [desktop, preference]
+    i18n:
+      pt-BR:
+        name: Mostrar "Este Computador" na área de trabalho
+        description: Mostra o ícone "Este Computador" na área de trabalho.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel
@@ -290,14 +379,18 @@ tweaks:
         value: 0
 
   - id: ui.taskbar.hide-chat
-    name: Ocultar o botão de Chat/Teams da barra de tarefas
-    description: Remove o botão "Chat" (Teams pessoal) da barra de tarefas, nos builds que ainda o têm.
+    name: Hide the Chat/Teams button from the taskbar
+    description: Removes the "Chat" button (personal Teams) from the taskbar, on builds that still have it.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "win11debloat:Disable_Chat_Taskbar" }
       - { kind: tool, ref: "sophiapp:TaskbarChat" }
-    tags: [barra-de-tarefas, teams]
+    tags: [taskbar, teams]
+    i18n:
+      pt-BR:
+        name: Ocultar o botão de Chat/Teams da barra de tarefas
+        description: Remove o botão "Chat" (Teams pessoal) da barra de tarefas, nos builds que ainda o têm.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -306,14 +399,18 @@ tweaks:
         value: 0
 
   - id: ui.taskbar.never-combine
-    name: Nunca agrupar botões da barra de tarefas
-    description: Mostra cada janela como um botão separado, com rótulo ("Agrupar botões da barra de tarefas e ocultar rótulos" = Nunca).
+    name: Never combine taskbar buttons
+    description: Shows each window as a separate, labeled button ("Combine taskbar buttons and hide labels" = Never).
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "win11debloat:Combine_Taskbar_Never" }
       - { kind: tool, ref: "sophia:TaskbarCombine" }
-    tags: [barra-de-tarefas, preferencia]
+    tags: [taskbar, preference]
+    i18n:
+      pt-BR:
+        name: Nunca agrupar botões da barra de tarefas
+        description: Mostra cada janela como um botão separado, com rótulo ("Agrupar botões da barra de tarefas e ocultar rótulos" = Nunca).
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -322,13 +419,17 @@ tweaks:
         value: 2
 
   - id: ui.taskbar.show-seconds
-    name: Mostrar os segundos no relógio da barra de tarefas
-    description: Mostra os segundos no relógio da bandeja (usa um pouco mais de energia).
+    name: Show seconds in the taskbar clock
+    description: Shows seconds in the system tray clock (uses slightly more power).
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "sophia:SecondsInSystemClock" }
-    tags: [barra-de-tarefas, relogio, preferencia]
+    tags: [taskbar, clock, preference]
+    i18n:
+      pt-BR:
+        name: Mostrar os segundos no relógio da barra de tarefas
+        description: Mostra os segundos no relógio da bandeja (usa um pouco mais de energia).
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -337,14 +438,18 @@ tweaks:
         value: 1
 
   - id: ui.alt-tab.windows-only
-    name: Alt+Tab só com janelas (sem abas do Edge)
-    description: Faz o Alt+Tab mostrar só as janelas abertas, sem as abas do Microsoft Edge.
+    name: Alt+Tab shows windows only (no Edge tabs)
+    description: Makes Alt+Tab show only open windows, without Microsoft Edge tabs.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "win11debloat:Hide_Tabs_In_Alt_Tab" }
       - { kind: tool, ref: "winhance:alt-tab" }
-    tags: [multitarefa, edge, preferencia]
+    tags: [multitasking, edge, preference]
+    i18n:
+      pt-BR:
+        name: Alt+Tab só com janelas (sem abas do Edge)
+        description: Faz o Alt+Tab mostrar só as janelas abertas, sem as abas do Microsoft Edge.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -353,14 +458,18 @@ tweaks:
         value: 3
 
   - id: ui.snap.disable-layouts-flyout
-    name: Não mostrar os layouts de ajuste ao passar o mouse em Maximizar
-    description: Desliga o menu de layouts de ajuste (Snap Layouts) que aparece sobre o botão Maximizar.
+    name: Don't show snap layouts when hovering over Maximize
+    description: Turns off the snap layouts menu (Snap Layouts) that appears over the Maximize button.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "win11debloat:Disable_Snap_Layouts" }
       - { kind: tool, ref: "sophiapp:SnapLayouts" }
-    tags: [multitarefa, preferencia]
+    tags: [multitasking, preference]
+    i18n:
+      pt-BR:
+        name: Não mostrar os layouts de ajuste ao passar o mouse em Maximizar
+        description: Desliga o menu de layouts de ajuste (Snap Layouts) que aparece sobre o botão Maximizar.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -369,14 +478,18 @@ tweaks:
         value: 0
 
   - id: ui.snap.disable-snap-assist
-    name: Não sugerir janelas ao ajustar uma janela
-    description: Desliga "Ao ajustar uma janela, sugerir o que pode ser ajustado ao lado dela" (Assistência de Ajuste).
+    name: Don't suggest windows when snapping a window
+    description: Turns off "When I snap a window, suggest what I can snap next to it" (Snap Assist).
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "win11debloat:Disable_Snap_Assist" }
       - { kind: tool, ref: "sophia:SnapAssist" }
-    tags: [multitarefa, preferencia]
+    tags: [multitasking, preference]
+    i18n:
+      pt-BR:
+        name: Não sugerir janelas ao ajustar uma janela
+        description: Desliga "Ao ajustar uma janela, sugerir o que pode ser ajustado ao lado dela" (Assistência de Ajuste).
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -385,15 +498,20 @@ tweaks:
         value: 0
 
   - id: ui.snap.disable-snapping
-    name: Desativar o ajuste de janelas (Snap)
-    description: Desliga "Ajustar janelas" por completo (arrastar para as bordas não redimensiona mais). Vale depois de sair e entrar.
+    name: Disable window snapping (Snap)
+    description: Turns off "Snap windows" completely (dragging to the edges no longer resizes). Takes effect after signing out and back in.
     risk: low
     confidence: community
     sources:
       - { kind: tool, ref: "winutil:WPFToggleWindowSnapping" }
       - { kind: tool, ref: "win11debloat:Disable_Window_Snapping" }
-    tags: [multitarefa, preferencia]
-    breaks: Win+setas e arrastar a janela para a borda deixam de ajustar o tamanho.
+    tags: [multitasking, preference]
+    breaks: Win+arrow keys and dragging a window to the edge no longer resize it.
+    i18n:
+      pt-BR:
+        name: Desativar o ajuste de janelas (Snap)
+        description: Desliga "Ajustar janelas" por completo (arrastar para as bordas não redimensiona mais). Vale depois de sair e entrar.
+        breaks: Win+setas e arrastar a janela para a borda deixam de ajustar o tamanho.
     actions:
       - type: registry
         path: HKCU\Control Panel\Desktop
@@ -402,11 +520,11 @@ tweaks:
         value: "0"
 
   - id: ui.settings.hide-home
-    name: Ocultar a página "Início" das Configurações
+    name: Hide the Settings "Home" page
     description: >
-      Política "Visibilidade da Página de Configurações" = hide:home: o app Configurações abre direto em Sistema,
-      sem a página Início (que mostra promoções de Microsoft 365, OneDrive e Game Pass). Substitui qualquer lista
-      de páginas ocultas que já exista (a original é restaurada ao reverter).
+      Policy "Settings Page Visibility" = hide:home: the Settings app opens directly to System, without
+      the Home page (which shows Microsoft 365, OneDrive and Game Pass promotions). Replaces any existing
+      list of hidden pages (the original is restored on revert).
     risk: low
     confidence: official
     sources:
@@ -414,7 +532,14 @@ tweaks:
       - { kind: admx, ref: "ControlPanel.admx:SettingsPageVisibility" }
       - { kind: tool, ref: "win11debloat:Disable_Settings_Home" }
     minBuild: 22621
-    tags: [configuracoes, anuncios, politica]
+    tags: [settings, ads, policy]
+    i18n:
+      pt-BR:
+        name: Ocultar a página "Início" das Configurações
+        description: >
+          Política "Visibilidade da Página de Configurações" = hide:home: o app Configurações abre direto em Sistema,
+          sem a página Início (que mostra promoções de Microsoft 365, OneDrive e Game Pass). Substitui qualquer lista
+          de páginas ocultas que já exista (a original é restaurada ao reverter).
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
@@ -423,16 +548,21 @@ tweaks:
         value: "hide:home"
 
   - id: ui.lockscreen.disable
-    name: Pular a tela de bloqueio
-    description: Política "Não exibir a tela de bloqueio" (ao ligar ou bloquear, vai direto para a tela de entrada).
+    name: Skip the lock screen
+    description: Policy "Do not display the lock screen" (on startup or lock, goes straight to the sign-in screen).
     risk: low
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - ADMX_ControlPanelDisplay/CPL_Personalization_NoLockScreen" }
       - { kind: admx, ref: "ControlPanelDisplay.admx:CPL_Personalization_NoLockScreen" }
       - { kind: tool, ref: "winutil:WPFToggleDisableLockscreen" }
-    tags: [tela-de-bloqueio, preferencia, politica]
-    breaks: Spotlight, notificações e widgets da tela de bloqueio deixam de aparecer.
+    tags: [lock-screen, preference, policy]
+    breaks: Spotlight, notifications and widgets on the lock screen no longer appear.
+    i18n:
+      pt-BR:
+        name: Pular a tela de bloqueio
+        description: Política "Não exibir a tela de bloqueio" (ao ligar ou bloquear, vai direto para a tela de entrada).
+        breaks: Spotlight, notificações e widgets da tela de bloqueio deixam de aparecer.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\Personalization
@@ -441,15 +571,19 @@ tweaks:
         value: 1
 
   - id: ui.logon.no-acrylic-blur
-    name: Fundo nítido na tela de entrada (sem desfoque)
-    description: Política "Mostrar fundo limpo na tela de entrada", que desliga o efeito acrílico (desfoque) atrás da caixa de senha.
+    name: Clear sign-in screen background (no blur)
+    description: Policy "Show clear logon background", which turns off the acrylic (blur) effect behind the password box.
     risk: low
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - ADMX_Logon/DisableAcrylicBackgroundOnLogon" }
       - { kind: admx, ref: "Logon.admx:DisableAcrylicBackgroundOnLogon" }
       - { kind: tool, ref: "winutil:WPFToggleLoginBlur" }
-    tags: [tela-de-entrada, visual, politica]
+    tags: [sign-in-screen, visual, policy]
+    i18n:
+      pt-BR:
+        name: Fundo nítido na tela de entrada (sem desfoque)
+        description: Política "Mostrar fundo limpo na tela de entrada", que desliga o efeito acrílico (desfoque) atrás da caixa de senha.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
@@ -458,15 +592,19 @@ tweaks:
         value: 1
 
   - id: ui.logon.verbose-status
-    name: Mostrar mensagens detalhadas ao iniciar e desligar
-    description: Política "Exibir mensagens de status altamente detalhadas", que mostra o que o Windows está fazendo no boot, logon e desligamento.
+    name: Show detailed messages at startup and shutdown
+    description: Policy "Display highly detailed status messages", which shows what Windows is doing during boot, sign-in and shutdown.
     risk: low
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - ADMX_Logon/VerboseStatus" }
       - { kind: admx, ref: "Logon.admx:VerboseStatus" }
       - { kind: tool, ref: "winutil:WPFToggleVerboseLogon" }
-    tags: [diagnostico, preferencia, politica]
+    tags: [diagnostics, preference, policy]
+    i18n:
+      pt-BR:
+        name: Mostrar mensagens detalhadas ao iniciar e desligar
+        description: Política "Exibir mensagens de status altamente detalhadas", que mostra o que o Windows está fazendo no boot, logon e desligamento.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System

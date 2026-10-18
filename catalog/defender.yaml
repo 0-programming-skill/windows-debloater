@@ -1,19 +1,18 @@
-# Microsoft Defender. O programa NÃO contorna a Proteção contra Adulteração (Tamper Protection): com ela ligada,
-# o Windows ignora estas políticas, então os tweaks ficam "não se aplica" até o usuário desligá-la à mão.
-category: Segurança/Microsoft Defender
+# Microsoft Defender. The program does NOT bypass Tamper Protection: while it is on, Windows ignores these
+# policies, so the tweaks stay "not applicable" until the user turns it off manually.
+category: Security/Microsoft Defender
 
 tweaks:
   - id: security.defender.disable-realtime
-    name: Desativar a proteção em tempo real do Microsoft Defender
+    name: Turn off Microsoft Defender real-time protection
     description: >
-      Aplica as políticas oficiais do Defender que desligam a proteção em tempo real, o monitoramento de
-      comportamento, o monitoramento de arquivos e programas, a verificação de downloads e anexos e a verificação
-      de processos ao ligar a proteção. O antivírus continua instalado: verificações manuais e as atualizações de
-      definições seguem funcionando, e o Windows não ativa outro antivírus no lugar. ANTES: desligue você mesmo a
-      Proteção contra Adulteração em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar
-      configurações; com ela ligada, o Windows ignora estas políticas e o tweak fica "não se aplica". O programa
-      não desliga nem contorna a Proteção contra Adulteração. Use só se tiver outro antivírus ou souber o que está
-      fazendo.
+      Applies the official Defender policies that turn off real-time protection, behavior monitoring, file and
+      program activity monitoring, scanning of downloaded files and attachments, and process scanning when
+      real-time protection is enabled. The antivirus stays installed: manual scans and definition updates keep
+      working, and Windows does not activate another antivirus in its place. BEFORE: turn off Tamper Protection
+      yourself in Windows Security > Virus & threat protection > Manage settings; while it is on, Windows
+      ignores these policies and the tweak stays "not applicable". The program does not turn off or bypass
+      Tamper Protection. Use only if you have another antivirus or know what you are doing.
     risk: critical
     confidence: official
     sources:
@@ -30,18 +29,37 @@ tweaks:
       - { kind: tool, ref: "sophiapp:Defender" }
     references:
       - https://learn.microsoft.com/defender-endpoint/prevent-changes-to-security-settings-with-tamper-protection
-    tags: [defender, antivirus, seguranca, politica]
+    tags: [defender, antivirus, security, policy]
     breaks: >
-      O PC fica sem antivírus em tempo real: arquivos maliciosos baixados ou abertos não são bloqueados. A
-      Segurança do Windows mostra alertas de "proteção desativada pela organização".
+      The PC has no real-time antivirus: malicious files that are downloaded or opened are not blocked. Windows
+      Security shows "protection turned off by your organization" alerts.
     precondition:
       powershell: |
         $s = Get-MpComputerStatus -ErrorAction SilentlyContinue
         [bool]($s -and $s.IsTamperProtected -eq $false)
       reason: >
-        a Proteção contra Adulteração do Defender está ligada (ou o Defender não está ativo). Desligue-a você
-        mesmo em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar configurações e leia de novo
-        os estados; o programa não a desliga.
+        Defender Tamper Protection is on (or Defender is not active). Turn it off yourself in Windows Security >
+        Virus & threat protection > Manage settings and read the states again; the program does not turn it
+        off.
+    i18n:
+      pt-BR:
+        name: Desativar a proteção em tempo real do Microsoft Defender
+        description: >
+          Aplica as políticas oficiais do Defender que desligam a proteção em tempo real, o monitoramento de
+          comportamento, o monitoramento de arquivos e programas, a verificação de downloads e anexos e a verificação
+          de processos ao ligar a proteção. O antivírus continua instalado: verificações manuais e as atualizações de
+          definições seguem funcionando, e o Windows não ativa outro antivírus no lugar. ANTES: desligue você mesmo a
+          Proteção contra Adulteração em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar
+          configurações; com ela ligada, o Windows ignora estas políticas e o tweak fica "não se aplica". O programa
+          não desliga nem contorna a Proteção contra Adulteração. Use só se tiver outro antivírus ou souber o que está
+          fazendo.
+        breaks: >
+          O PC fica sem antivírus em tempo real: arquivos maliciosos baixados ou abertos não são bloqueados. A
+          Segurança do Windows mostra alertas de "proteção desativada pela organização".
+        reason: >
+          a Proteção contra Adulteração do Defender está ligada (ou o Defender não está ativo). Desligue-a você
+          mesmo em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar configurações e leia de novo
+          os estados; o programa não a desliga.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection
@@ -70,11 +88,12 @@ tweaks:
         value: 1
 
   - id: security.defender.disable-cloud-reporting
-    name: Não enviar dados e amostras ao Microsoft MAPS (Defender)
+    name: Do not send data and samples to Microsoft MAPS (Defender)
     description: >
-      Políticas do Defender "Ingressar no Microsoft MAPS" = Desabilitada e "Enviar amostras de arquivo" = Nunca
-      enviar: o Defender deixa de consultar a nuvem e de enviar arquivos suspeitos à Microsoft. Como no tweak de
-      tempo real, a Proteção contra Adulteração precisa ser desligada à mão antes; o programa não a desliga.
+      Defender policies "Join Microsoft MAPS" = Disabled and "Send file samples when further analysis is
+      required" = Never send: Defender stops querying the cloud and sending suspicious files to Microsoft. As
+      with the real-time tweak, Tamper Protection must be turned off manually first; the program does not turn
+      it off.
     risk: high
     confidence: official
     sources:
@@ -83,18 +102,31 @@ tweaks:
       - { kind: admx, ref: "WindowsDefender.admx:SpynetReporting" }
       - { kind: admx, ref: "WindowsDefender.admx:SubmitSamplesConsent" }
       - { kind: tool, ref: "privacysexy:defender-maps" }
-    tags: [defender, privacidade, nuvem, politica]
+    tags: [defender, privacy, cloud, policy]
     breaks: >
-      A proteção baseada em nuvem (detecção de ameaças novas em segundos e "Bloquear à primeira vista") deixa de
-      funcionar; a detecção passa a depender só das definições locais.
+      Cloud-delivered protection (detection of new threats within seconds and "Block at First Sight") stops
+      working; detection relies only on local definitions.
     precondition:
       powershell: |
         $s = Get-MpComputerStatus -ErrorAction SilentlyContinue
         [bool]($s -and $s.IsTamperProtected -eq $false)
       reason: >
-        a Proteção contra Adulteração do Defender está ligada (ou o Defender não está ativo). Desligue-a você
-        mesmo em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar configurações; o programa não
-        a desliga.
+        Defender Tamper Protection is on (or Defender is not active). Turn it off yourself in Windows Security >
+        Virus & threat protection > Manage settings; the program does not turn it off.
+    i18n:
+      pt-BR:
+        name: Não enviar dados e amostras ao Microsoft MAPS (Defender)
+        description: >
+          Políticas do Defender "Ingressar no Microsoft MAPS" = Desabilitada e "Enviar amostras de arquivo" = Nunca
+          enviar: o Defender deixa de consultar a nuvem e de enviar arquivos suspeitos à Microsoft. Como no tweak de
+          tempo real, a Proteção contra Adulteração precisa ser desligada à mão antes; o programa não a desliga.
+        breaks: >
+          A proteção baseada em nuvem (detecção de ameaças novas em segundos e "Bloquear à primeira vista") deixa de
+          funcionar; a detecção passa a depender só das definições locais.
+        reason: >
+          a Proteção contra Adulteração do Defender está ligada (ou o Defender não está ativo). Desligue-a você
+          mesmo em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar configurações; o programa não
+          a desliga.
     actions:
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet

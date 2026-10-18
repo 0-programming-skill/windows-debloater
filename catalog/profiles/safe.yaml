@@ -1,0 +1,15 @@
+# Built-in profile: only low-risk tweaks, from every category.
+name: Safe
+description: >
+  Only low-risk tweaks, in every category. A good starting point: nothing that usually breaks
+  functionality.
+i18n:
+  pt-BR:
+    name: Seguro
+    description: >
+      Somente ajustes de risco baixo, em todas as categorias. Bom ponto de partida: nada que costume
+      quebrar funcionalidades.
+rules:
+  maxRisk: low
+  # Removing apps cannot be reverted by the program: it stays out of the safe profile.
+  includeIrreversible: false

@@ -1,0 +1,75 @@
+# Windows optional features (DISM names).
+category: System/Optional features
+
+tweaks:
+  - id: features.smb1.disable
+    name: Disable SMB 1.0
+    description: Disables the obsolete and insecure SMB1 protocol (WannaCry). Already disabled on new installs.
+    risk: low
+    confidence: community
+    tags: [optional-feature, security, network]
+    breaks: Access to very old NAS devices and network printers that only speak SMB1.
+    i18n:
+      pt-BR:
+        name: Desativar o SMB 1.0
+        description: Desativa o protocolo SMB1, obsoleto e inseguro (WannaCry). Já vem desativado em instalações novas.
+        breaks: Acesso a NAS e impressoras de rede muito antigos que só falam SMB1.
+    actions:
+      - type: optionalFeature
+        name: SMB1Protocol
+        state: disabled
+
+  - id: features.powershell-v2.disable
+    name: Disable Windows PowerShell 2.0
+    description: >
+      Disables PowerShell 2.0, used in downgrade attacks to bypass script logging.
+      It was removed from Windows 11 starting in 2025; on those systems the tweak does not apply.
+    risk: low
+    confidence: community
+    tags: [optional-feature, security]
+    breaks: Very old scripts that require "powershell -version 2".
+    i18n:
+      pt-BR:
+        name: Desativar o Windows PowerShell 2.0
+        description: >
+          Desativa o PowerShell 2.0, usado em ataques de downgrade para contornar o registro de scripts.
+          Foi removido do Windows 11 a partir de 2025; nesses sistemas o tweak não se aplica.
+        breaks: Scripts muito antigos que exigem "powershell -version 2".
+    actions:
+      - type: optionalFeature
+        name: MicrosoftWindowsPowerShellV2Root
+        state: disabled
+
+  - id: features.work-folders.disable
+    name: Disable the Work Folders client
+    description: Disables the "Work Folders" client, used only with corporate servers.
+    risk: low
+    confidence: community
+    tags: [optional-feature]
+    breaks: Syncing with corporate Work Folders.
+    i18n:
+      pt-BR:
+        name: Desativar o cliente de Pastas de Trabalho
+        description: Desativa o cliente "Work Folders", usado apenas com servidores corporativos.
+        breaks: Sincronização com Pastas de Trabalho corporativas.
+    actions:
+      - type: optionalFeature
+        name: WorkFolders-Client
+        state: disabled
+
+  - id: features.media-player-legacy.disable
+    name: Disable legacy Windows Media Player
+    description: Disables the classic Windows Media Player ("MediaPlayback" feature). The new Media Player is not affected.
+    risk: low
+    confidence: community
+    tags: [optional-feature]
+    breaks: Apps that embed the classic Windows Media Player control.
+    i18n:
+      pt-BR:
+        name: Desativar o Windows Media Player legado
+        description: Desativa o Windows Media Player clássico (recurso "MediaPlayback"). O novo Media Player não é afetado.
+        breaks: Apps que embutem o controle do Windows Media Player clássico.
+    actions:
+      - type: optionalFeature
+        name: MediaPlayback
+        state: disabled

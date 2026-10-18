@@ -1,0 +1,13 @@
+# Built-in profile: everything up to high risk. Never includes critical-risk tweaks.
+name: Aggressive
+description: >
+  Everything up to high risk, in every category (includes removing apps, which the program cannot
+  revert). Critical-risk tweaks are never included by default: select them by hand if you want them.
+i18n:
+  pt-BR:
+    name: Agressivo
+    description: >
+      Tudo até risco alto, em todas as categorias (inclui remover apps, o que não é reversível pelo
+      programa). Ajustes de risco crítico nunca entram por padrão: selecione-os à mão, se quiser.
+rules:
+  maxRisk: high
