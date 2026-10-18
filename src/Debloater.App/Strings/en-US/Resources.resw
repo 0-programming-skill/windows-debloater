@@ -1127,4 +1127,31 @@ Supported on: {3}</value>
   <data name="TweaksPage_RequiresFeatureBar.Title" xml:space="preserve">
     <value>Hidden Windows feature</value>
   </data>
+  <data name="ApplyPage_ResultApplied" xml:space="preserve">
+    <value>Applied. State: {0}.</value>
+  </data>
+  <data name="ApplyPage_ResultReverted" xml:space="preserve">
+    <value>Reverted. State: {0}.</value>
+  </data>
+  <data name="ApplyPage_ResultPolicyApplied" xml:space="preserve">
+    <value>Policy set to {0}.</value>
+  </data>
+  <data name="ApplyPage_ResultPolicyReverted" xml:space="preserve">
+    <value>Original values restored.</value>
+  </data>
+  <data name="ApplyPage_BlockedIrreversible" xml:space="preserve">
+    <value>this tweak cannot be reverted by the program (e.g. a removed app; reinstall it from the Microsoft Store).</value>
+  </data>
+  <data name="ApplyPage_BlockedNoBackup" xml:space="preserve">
+    <value>no backup: the tweak was not applied by this program, so there is no original value to restore.</value>
+  </data>
+  <data name="ApplyPage_BlockedNoPolicyBackup" xml:space="preserve">
+    <value>no backup: the policy was not changed by this program, so there is no original value to restore.</value>
+  </data>
+  <data name="ApplyPage_PolicyTitle" xml:space="preserve">
+    <value>Policy → {0}: {1}</value>
+  </data>
+  <data name="ApplyPage_PolicyRevertTitle" xml:space="preserve">
+    <value>Revert policy: {0}</value>
+  </data>
 </root>

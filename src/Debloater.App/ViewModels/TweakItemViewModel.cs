@@ -47,6 +47,11 @@ public sealed partial class TweakItemViewModel : ObservableObject
 
     public Tweak Tweak { get; }
     public string Id => Tweak.Id;
+
+    /// <summary>UI Automation ids of the row's desired check box and state badge (UI tests).</summary>
+    public string DesiredAutomationId => "Desired_" + Tweak.Id;
+
+    public string StateAutomationId => "State_" + Tweak.Id;
     public string Name => Tweak.DisplayName;
     public string Description => Tweak.DisplayDescription.Trim();
 

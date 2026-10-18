@@ -1127,4 +1127,31 @@ Com suporte em: {3}</value>
   <data name="TweaksPage_RequiresFeatureBar.Title" xml:space="preserve">
     <value>Recurso oculto do Windows</value>
   </data>
+  <data name="ApplyPage_ResultApplied" xml:space="preserve">
+    <value>Aplicado. Estado: {0}.</value>
+  </data>
+  <data name="ApplyPage_ResultReverted" xml:space="preserve">
+    <value>Revertido. Estado: {0}.</value>
+  </data>
+  <data name="ApplyPage_ResultPolicyApplied" xml:space="preserve">
+    <value>Política definida como {0}.</value>
+  </data>
+  <data name="ApplyPage_ResultPolicyReverted" xml:space="preserve">
+    <value>Valores originais restaurados.</value>
+  </data>
+  <data name="ApplyPage_BlockedIrreversible" xml:space="preserve">
+    <value>este ajuste não pode ser revertido pelo programa (por exemplo, app removido; reinstale-o pela Microsoft Store).</value>
+  </data>
+  <data name="ApplyPage_BlockedNoBackup" xml:space="preserve">
+    <value>sem backup: o ajuste não foi aplicado por este programa, então não há valor original para restaurar.</value>
+  </data>
+  <data name="ApplyPage_BlockedNoPolicyBackup" xml:space="preserve">
+    <value>sem backup: a política não foi alterada por este programa, então não há valor original para restaurar.</value>
+  </data>
+  <data name="ApplyPage_PolicyTitle" xml:space="preserve">
+    <value>Política → {0}: {1}</value>
+  </data>
+  <data name="ApplyPage_PolicyRevertTitle" xml:space="preserve">
+    <value>Reverter política: {0}</value>
+  </data>
 </root>

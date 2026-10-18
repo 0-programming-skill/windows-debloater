@@ -83,6 +83,7 @@ public sealed partial class ApplyPage : Page
         CriticalNote.Visibility = hasCritical ? Visibility.Visible : Visibility.Collapsed;
         ElevationBar.IsOpen = !_app.IsElevated;
         ApplyText.Text = Loc.Format("ApplyPage_ApplyCount", ExecutableCount);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(ApplyButton, ApplyText.Text);
         UpdateApplyEnabled();
     }
 
@@ -123,11 +124,11 @@ public sealed partial class ApplyPage : Page
                 Background = Labels.Brush(color),
                 Child = new TextBlock { Text = Labels.RiskShort(c.Risk), Style = (Style)res["BadgeText"], Foreground = Labels.ForegroundOn(color) },
             });
-            title.Children.Add(new TextBlock { Text = c.Title, Style = (Style)res["BodyStrongTextBlockStyle"], TextWrapping = TextWrapping.Wrap, Opacity = c.IsBlocked ? 0.6 : 1 });
+            title.Children.Add(new TextBlock { Text = PolicyTitle(c), Style = (Style)res["BodyStrongTextBlockStyle"], TextWrapping = TextWrapping.Wrap, Opacity = c.IsBlocked ? 0.6 : 1 });
             text.Children.Add(title);
             text.Children.Add(new TextBlock { Text = $"{c.Policy.QualifiedName} · {string.Join(" › ", c.Policy.CategoryPath)}", Style = (Style)res["Caption"] });
             if (c.BlockedReason is not null)
-                text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_Blocked", c.BlockedReason), Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
+                text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_Blocked", c.IsRevert && c.Plan is null ? Loc.Get("ApplyPage_BlockedNoPolicyBackup") : c.BlockedReason), Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
             foreach (var w in c.Warnings.Where(w => w.Level == PolicyWarningLevel.Warning))
                 text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_Warning", w.Text), Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
             if (c.Preview.Count > 0)
@@ -189,7 +190,7 @@ public sealed partial class ApplyPage : Page
                 Style = (Style)Application.Current.Resources["Caption"],
             });
             if (c.BlockedReason is not null)
-                text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_Blocked", c.BlockedReason), Style = (Style)Application.Current.Resources["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCautionBrush"] });
+                text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_Blocked", BlockedText(c)), Style = (Style)Application.Current.Resources["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCautionBrush"] });
             if (c.Kind == ChangeKind.Apply && !string.IsNullOrWhiteSpace(c.Tweak.Breaks))
                 text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_MayBreak", c.Tweak.DisplayBreaks!.Trim()), Style = (Style)Application.Current.Resources["Caption"] });
             if (c.Kind == ChangeKind.Apply && !c.Tweak.Reversible)
@@ -199,6 +200,18 @@ public sealed partial class ApplyPage : Page
             panel.Children.Add(row);
         }
         return new Border { Style = (Style)Application.Current.Resources["Card"], Child = panel };
+    }
+
+    /// <summary>Localized reason (the planner's text is English).</summary>
+    private static string BlockedText(PlannedChange c) =>
+        !c.Tweak.Reversible ? Loc.Get("ApplyPage_BlockedIrreversible") : Loc.Get("ApplyPage_BlockedNoBackup");
+
+    private static string PolicyTitle(PlannedPolicyChange c)
+    {
+        var name = string.IsNullOrWhiteSpace(c.Policy.DisplayName) ? c.Policy.Name : c.Policy.DisplayName;
+        return c.IsRevert
+            ? Loc.Format("ApplyPage_PolicyRevertTitle", name)
+            : Loc.Format("ApplyPage_PolicyTitle", Labels.PolicyTargetState(c.Request.Setting!.State), name);
     }
 
     private void Confirm_Changed(object sender, RoutedEventArgs e) => UpdateApplyEnabled();
@@ -240,7 +253,8 @@ public sealed partial class ApplyPage : Page
             });
         }
         var word = CriticalWord;
-        var box = new TextBox { PlaceholderText = word, Header = Loc.Format("ApplyPage_TypeToContinue", word) };
+        var box = new TextBox { Header = Loc.Format("ApplyPage_TypeToContinue", word) };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(box, "CriticalWordBox");
         body.Children.Add(box);
 
         var dialog = new ContentDialog
@@ -307,7 +321,7 @@ public sealed partial class ApplyPage : Page
                 }
                 bool applying = change.Kind == ChangeKind.Apply;
                 RunText.Text = Loc.Format(applying ? "ApplyPage_RunApplying" : "ApplyPage_RunReverting", done + 1, total, change.Tweak.DisplayName);
-                log.Write(Loc.Format(applying ? "ApplyLog_Applying" : "ApplyLog_Reverting", change.Tweak.Id, change.Tweak.Risk));
+                log.Write(Loc.Format(applying ? "ApplyLog_Applying" : "ApplyLog_Reverting", change.Tweak.Id, Labels.RiskShort(change.Tweak.Risk)));
 
                 OperationResult result;
                 try
@@ -327,8 +341,18 @@ public sealed partial class ApplyPage : Page
                 foreach (var note in result.Notes) log.Write("  " + Loc.Format("ApplyLog_Note", note));
                 log.Write($"  {(result.Success ? Loc.Get("ApplyLog_Ok") : Loc.Get("ApplyLog_Failed"))}: {result.Message}");
                 if (result.StatusAfter is { } after && _app.Find(change.Tweak.Id) is { } vm) vm.Status = after;
-                if (result.Success) ok++; else failed++;
-                AddResult(result.Success ? "" : "", change.Tweak.DisplayName, result.Message + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : "")
+                if (result.Success)
+                {
+                    ok++;
+                    // The request is fulfilled: drop the explicit choice, otherwise a revert that brings back an
+                    // original Partial state would stay "pending" (and blocked, since the backup is gone).
+                    _app.SetDesired(change.Tweak.Id, null);
+                }
+                else failed++;
+                var summary = result.Success && result.StatusAfter is { } st
+                    ? Loc.Format(applying ? "ApplyPage_ResultApplied" : "ApplyPage_ResultReverted", Labels.State(st.State))
+                    : result.Message;
+                AddResult(result.Success ? "" : "", change.Tweak.DisplayName, summary + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : "")
                     + (result.Notes.Count > 0 ? " " + Loc.Format("ApplyPage_ResultNote", string.Join(" ", result.Notes)) : ""));
                 RunProgress.Value = ++done;
             }
@@ -346,7 +370,7 @@ public sealed partial class ApplyPage : Page
                 RunText.Text = Loc.Format(change.IsRevert ? "ApplyPage_RunRevertingPolicy" : "ApplyPage_RunConfiguringPolicy", done + 1, total, change.Policy.DisplayName);
                 log.Write(change.IsRevert
                     ? Loc.Format("ApplyLog_RevertingPolicy", name)
-                    : Loc.Format("ApplyLog_ConfiguringPolicy", change.Request.Setting, change.Risk));
+                    : Loc.Format("ApplyLog_ConfiguringPolicy", change.Request.Setting, Labels.RiskShort(change.Risk)));
 
                 PolicyOperationResult result;
                 try
@@ -371,8 +395,11 @@ public sealed partial class ApplyPage : Page
                 }
                 else failed++;
                 PolicyCatalog.Loaded?.Find(name)?.Refresh();
+                var policySummary = !result.Success ? result.Message
+                    : change.IsRevert ? Loc.Get("ApplyPage_ResultPolicyReverted")
+                    : Loc.Format("ApplyPage_ResultPolicyApplied", Labels.PolicyTargetState(change.Request.Setting!.State));
                 AddResult(result.Success ? "" : "", change.Policy.DisplayName,
-                    result.Message + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : ""));
+                    policySummary + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : ""));
                 RunProgress.Value = ++done;
             }
             log.Write(Loc.Format("ApplyLog_Done", ok, failed, total - done));
@@ -399,6 +426,9 @@ public sealed partial class ApplyPage : Page
         var text = new TextBlock { TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
         text.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = title + ": ", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
         text.Inlines.Add(new Microsoft.UI.Xaml.Documents.Run { Text = message });
+        // A TextBlock built from Inlines exposes no name to UI Automation (screen readers): set it explicitly.
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(text, title + ": " + message);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(text, "ApplyResult");
         Grid.SetColumn(text, 1);
         row.Children.Add(text);
         Results.Children.Add(row);

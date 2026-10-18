@@ -9,7 +9,7 @@
             <TextBlock x:Uid="ProfilesPage_Title" Style="{StaticResource TitleTextBlockStyle}" />
             <TextBlock x:Uid="ProfilesPage_Subtitle" Style="{StaticResource Caption}" />
 
-            <InfoBar x:Name="Info" IsOpen="False" />
+            <InfoBar x:Name="Info" AutomationProperties.AutomationId="ProfilesInfo" IsOpen="False" />
 
             <Border Style="{StaticResource Card}">
                 <StackPanel Spacing="8">

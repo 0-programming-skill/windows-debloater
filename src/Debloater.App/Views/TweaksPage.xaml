@@ -40,7 +40,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <CheckBox IsChecked="{x:Bind DesiredChecked, Mode=OneWay}" Click="Desired_Click" Tag="{x:Bind Id}" IsEnabled="{x:Bind CanChoose, Mode=OneWay}"
+                        <CheckBox IsChecked="{x:Bind DesiredChecked, Mode=OneWay}" AutomationProperties.AutomationId="{x:Bind DesiredAutomationId}" Click="Desired_Click" Tag="{x:Bind Id}" IsEnabled="{x:Bind CanChoose, Mode=OneWay}"
                                   MinWidth="0" VerticalAlignment="Center"
                                   x:Uid="TweaksPage_DesiredCheck" />
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -53,7 +53,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                             <Border x:Uid="TweaksPage_StateBadge" Style="{StaticResource BadgeBorder}" Background="{x:Bind StateBrush, Mode=OneWay}" MinWidth="96">
-                                <TextBlock Style="{StaticResource BadgeText}" Text="{x:Bind StateText, Mode=OneWay}" Foreground="{x:Bind StateForeground, Mode=OneWay}" />
+                                <TextBlock Style="{StaticResource BadgeText}" Text="{x:Bind StateText, Mode=OneWay}" AutomationProperties.AutomationId="{x:Bind StateAutomationId}" Foreground="{x:Bind StateForeground, Mode=OneWay}" />
                             </Border>
                             <Border Style="{StaticResource BadgeBorder}" Background="{x:Bind RiskBrush}" ToolTipService.ToolTip="{x:Bind RiskTip}">
                                 <TextBlock Style="{StaticResource BadgeText}" Text="{x:Bind RiskText}" Foreground="{x:Bind RiskForeground}" />
@@ -120,7 +120,7 @@
                 <Button x:Name="ClearButton" x:Uid="TweaksPage_ClearButton" Click="Clear_Click">
                     <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE894;" FontSize="14" /><TextBlock x:Uid="TweaksPage_ClearText" /></StackPanel>
                 </Button>
-                <Button x:Name="ReviewButton" Style="{StaticResource AccentButtonStyle}" Click="Review_Click">
+                <Button x:Name="ReviewButton" AutomationProperties.AutomationId="TweaksReviewButton" Style="{StaticResource AccentButtonStyle}" Click="Review_Click">
                     <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE73E;" FontSize="14" /><TextBlock x:Name="ReviewText" /></StackPanel>
                 </Button>
             </StackPanel>
@@ -136,7 +136,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <AutoSuggestBox x:Name="SearchBox" x:Uid="TweaksPage_SearchBox" QueryIcon="Find"
+            <AutoSuggestBox x:Name="SearchBox" x:Uid="TweaksPage_SearchBox" AutomationProperties.AutomationId="TweaksSearch" QueryIcon="Find"
                             TextChanged="Search_TextChanged" />
             <DropDownButton x:Name="StateFilterButton" Grid.Column="1">
                 <DropDownButton.Flyout><MenuFlyout x:Name="StateMenu" Placement="Bottom" /></DropDownButton.Flyout>

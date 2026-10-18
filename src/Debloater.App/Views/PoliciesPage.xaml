@@ -25,7 +25,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <AutoSuggestBox x:Name="SearchBox" x:Uid="PoliciesPage_SearchBox" QueryIcon="Find" TextChanged="Search_TextChanged" />
+            <AutoSuggestBox x:Name="SearchBox" x:Uid="PoliciesPage_SearchBox" AutomationProperties.AutomationId="PoliciesSearch" QueryIcon="Find" TextChanged="Search_TextChanged" />
             <ToggleButton x:Name="ConfiguredToggle" x:Uid="PoliciesPage_ConfiguredToggle" Grid.Column="1" Click="Filter_Changed" />
             <ToggleButton x:Name="PendingToggle" x:Uid="PoliciesPage_PendingToggle" Grid.Column="2" Click="Filter_Changed" />
             <TextBlock x:Name="CountText" Grid.Column="3" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="8,0" />
@@ -47,7 +47,7 @@
 
             <Border Grid.Column="1" Style="{StaticResource Card}" Padding="4">
                 <Grid>
-                    <ListView x:Name="List" SelectionMode="Single" SelectionChanged="List_SelectionChanged">
+                    <ListView x:Name="List" AutomationProperties.AutomationId="PoliciesList" SelectionMode="Single" SelectionChanged="List_SelectionChanged">
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="vm:PolicyItem">
                                 <Grid ColumnSpacing="8" Padding="0,6">
@@ -81,7 +81,7 @@
                         <TextBlock x:Name="DName" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Border x:Name="DStateBadge" Style="{StaticResource BadgeBorder}" HorizontalAlignment="Left">
-                                <TextBlock x:Name="DState" Style="{StaticResource BadgeText}" />
+                                <TextBlock x:Name="DState" AutomationProperties.AutomationId="PolicyState" Style="{StaticResource BadgeText}" />
                             </Border>
                             <Border x:Name="DRiskBadge" Style="{StaticResource BadgeBorder}" HorizontalAlignment="Left">
                                 <TextBlock x:Name="DRisk" Style="{StaticResource BadgeText}" />
@@ -92,21 +92,21 @@
                         <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="12" Margin="0,8,0,0">
                             <StackPanel Spacing="10">
                                 <TextBlock x:Uid="PoliciesPage_Configure" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <RadioButtons x:Name="StateRadios" x:Uid="PoliciesPage_StateRadios" MaxColumns="1" SelectionChanged="State_Changed" />
+                                <RadioButtons x:Name="StateRadios" AutomationProperties.AutomationId="PolicyStateRadios" x:Uid="PoliciesPage_StateRadios" MaxColumns="1" SelectionChanged="State_Changed" />
                                 <ComboBox x:Name="ScopeBox" x:Uid="PoliciesPage_ScopeBox" SelectionChanged="Scope_Changed" Visibility="Collapsed" MinWidth="260" />
                                 <ContentControl x:Name="ElementsHost" HorizontalContentAlignment="Stretch" />
                                 <TextBlock x:Uid="PoliciesPage_Preview" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <TextBlock x:Name="PreviewText" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <TextBlock x:Name="PreviewText" AutomationProperties.AutomationId="PolicyPreview" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                 <TextBlock x:Name="ErrorsText" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Visibility="Collapsed" />
                                 <StackPanel x:Name="WarningsHost" Spacing="4" />
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button x:Name="AddPendingButton" Style="{StaticResource AccentButtonStyle}" Click="AddPending_Click" />
+                                    <Button x:Name="AddPendingButton" AutomationProperties.AutomationId="PolicyAddPending" Style="{StaticResource AccentButtonStyle}" Click="AddPending_Click" />
                                     <Button x:Name="RemovePendingButton" x:Uid="PoliciesPage_RemovePendingButton" Click="RemovePending_Click" />
-                                    <Button x:Name="RevertButton" x:Uid="PoliciesPage_RevertButton" Click="Revert_Click" />
+                                    <Button x:Name="RevertButton" AutomationProperties.AutomationId="PolicyRevert" x:Uid="PoliciesPage_RevertButton" Click="Revert_Click" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <TextBlock x:Name="PendingInfo" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                                    <HyperlinkButton x:Name="GoApplyLink" x:Uid="PoliciesPage_GoApplyLink" Click="GoApply_Click" Padding="4,0" Visibility="Collapsed" />
+                                    <HyperlinkButton x:Name="GoApplyLink" AutomationProperties.AutomationId="PolicyGoApply" x:Uid="PoliciesPage_GoApplyLink" Click="GoApply_Click" Padding="4,0" Visibility="Collapsed" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>

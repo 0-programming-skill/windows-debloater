@@ -69,25 +69,64 @@ public static class RestorePoint
         }
         catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
         {
-            return new RestorePointResult(false, $"Failed to create the restore point: {ex.Message}");
+            // With System Protection off, Windows 11 throws COMException 0x80070422 (ERROR_SERVICE_DISABLED)
+            // with an empty message instead of returning 1058.
+            if (ex.HResult == unchecked((int)0x80070422)) return new RestorePointResult(false, Describe(1058));
+            var detail = string.IsNullOrWhiteSpace(ex.Message) ? $"0x{ex.HResult:X8}" : ex.Message.Trim();
+            return new RestorePointResult(false, $"Failed to create the restore point: {detail}");
         }
 
-        if (code != 0)
+        if (code != 0) return new RestorePointResult(false, Describe(code));
+
+        // The new point can take a few seconds to show up in the SystemRestore list after the call returns.
+        var deadline = DateTime.UtcNow + ListingWait;
+        while (true)
         {
-            var hint = code == 1058
-                ? " System Protection seems to be turned off (turn it on in System Properties > System Protection)."
-                : "";
-            return new RestorePointResult(false, $"Windows refused the restore point (code {code}).{hint}");
+            var after = LatestUtc();
+            if (after is not null && (before is null || after > before))
+                return new RestorePointResult(true, $"Restore point created ({after.Value.ToLocalTime():g}).");
+            if (DateTime.UtcNow >= deadline) break;
+            Thread.Sleep(3000);
         }
 
-        var after = LatestUtc();
-        if (after is not null && (before is null || after > before))
-            return new RestorePointResult(true, $"Restore point created ({after.Value.ToLocalTime():g}).");
-
-        // Success without a new point: Windows frequency limit (one every 24 h).
-        var when = before is null ? "" : $" The most recent one is from {before.Value.ToLocalTime():g}.";
+        // Success without a new point. Windows' frequency limit (one every 24 h by default) only explains it when
+        // a recent point exists; otherwise say what is known instead of guessing.
+        var frequency = CreationFrequency();
+        if (before is not null && DateTime.UtcNow - before.Value < frequency)
+        {
+            return new RestorePointResult(false,
+                $"Windows did not create a new point: it allows at most one every {FormatInterval(frequency)}. " +
+                $"The most recent one is from {before.Value.ToLocalTime():g} and is still available for restoring.");
+        }
         return new RestorePointResult(false,
-            "Windows did not create a new point: it allows at most one every 24 hours." + when +
-            " That existing point is still available for restoring.");
+            "Windows accepted the restore point request, but the new point is not listed yet. " +
+            "Check System Restore before relying on it.");
+    }
+
+    /// <summary>How long to wait for the new point to appear in the list.</summary>
+    private static readonly TimeSpan ListingWait = TimeSpan.FromSeconds(60);
+
+    /// <summary>SystemRestorePointCreationFrequency (minutes; default 1440 = 24 h). Only read, never changed.</summary>
+    private static TimeSpan CreationFrequency()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore");
+            if (key?.GetValue("SystemRestorePointCreationFrequency") is int minutes && minutes >= 0)
+                return TimeSpan.FromMinutes(minutes);
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) { }
+        return TimeSpan.FromHours(24);
+    }
+
+    private static string FormatInterval(TimeSpan t) =>
+        t.TotalHours >= 1 && t.TotalHours % 1 == 0 ? $"{t.TotalHours:0} hours" : $"{t.TotalMinutes:0} minutes";
+
+    private static string Describe(uint code)
+    {
+        var hint = code == 1058
+            ? " System Protection seems to be turned off (turn it on in System Properties > System Protection)."
+            : "";
+        return $"Windows refused the restore point (code {code}).{hint}";
     }
 }

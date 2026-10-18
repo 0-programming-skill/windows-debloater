@@ -17,6 +17,9 @@ public sealed class InventoryRow(InventoryItem item)
     public string PropertiesText => string.Join(" · ", Item.Properties.Select(p => $"{p.Key}: {p.Value}")
         .Concat(Item.Info?.Select(p => $"{p.Key}: {p.Value}") ?? []));
     public bool IsCatalogued => Item.IsCatalogued;
+
+    /// <summary>Name that UI Automation (screen readers) reads for the list item.</summary>
+    public override string ToString() => Title;
     public string TweaksText => Loc.Format("Inventory_Tweaks", string.Join(", ", Item.TweakIds));
     public string BadgeText => IsCatalogued ? Loc.Get("Inventory_Catalogued") : Loc.Get("Inventory_NotCatalogued");
 

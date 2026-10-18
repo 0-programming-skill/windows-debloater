@@ -83,6 +83,7 @@ public sealed partial class ProfilesPage : Page
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         var load = new Button { Content = Loc.Get("ProfilesPage_Load"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(load, "LoadProfile_" + p.Name);
         load.Click += async (_, _) =>
         {
             var msg = await _app.ApplyProfileToSelectionAsync(p);
@@ -90,6 +91,7 @@ public sealed partial class ProfilesPage : Page
             if (_app.PendingCount > 0)
             {
                 var review = new Button { Content = Loc.Get("TweaksPage_Review") };
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(review, "ProfilesReviewButton");
                 review.Click += (_, _) => App.Window.Navigate("apply");
                 Info.ActionButton = review;
             }

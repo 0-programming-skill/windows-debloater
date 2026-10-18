@@ -41,6 +41,9 @@ public sealed class PolicyItem
     public Visibility PendingVisibility => PendingText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
     public string DisplayName => string.IsNullOrWhiteSpace(Policy.DisplayName) ? Policy.Name : Policy.DisplayName;
+
+    /// <summary>Name that UI Automation (screen readers) reads for the list item.</summary>
+    public override string ToString() => DisplayName;
     public string CategoryText { get; }
     public string SearchText { get; }
     public string StateText => Labels.AdmxState(State);
