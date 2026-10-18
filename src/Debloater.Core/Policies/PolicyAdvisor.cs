@@ -87,11 +87,13 @@ public static partial class PolicyAdvisor
         void Info(string text) => list.Add(new PolicyWarning(PolicyWarningLevel.Info, text));
 
         var family = EditionFamily(env.EditionId);
-        if (family == "Home")
+        // Avisos de edição/build só importam quando algo vai ser gravado (Não configurada só apaga).
+        bool writes = target != PolicyTargetState.NotConfigured;
+        if (family == "Home" && writes)
             Warn("Windows Home não processa oficialmente Políticas de Grupo: muitas funcionam pelo registro, outras são ignoradas.");
 
         // supportedOn (texto do ADML).
-        var sup = policy.SupportedOn ?? "";
+        var sup = writes ? policy.SupportedOn ?? "" : "";
         if (sup.Length > 0)
         {
             if (OnlyWord().IsMatch(sup) && !ModernWindows().IsMatch(sup))
@@ -112,7 +114,7 @@ public static partial class PolicyAdvisor
         }
 
         // Policy CSP (documentação Microsoft Learn).
-        if (csp is not null)
+        if (csp is not null && writes)
         {
             if (csp.Editions.Count > 0 && family is not ("Server" or "")
                 && !csp.Editions.Any(e => e.StartsWith(family, StringComparison.OrdinalIgnoreCase)))
@@ -137,6 +139,17 @@ public static partial class PolicyAdvisor
         if (scope == PolicyScope.User)
             Info("Escopo Usuário: grava no HKCU da conta que executa o programa (como administrador, a conta elevada).");
         return list;
+    }
+
+    /// <summary>Índice "Arquivo.admx:Nome" → política da CSP, pelo mapeamento ADMX da documentação.</summary>
+    public static Dictionary<string, CspPolicy> IndexCspByAdmx(IEnumerable<CspPolicy> csp)
+    {
+        var index = new Dictionary<string, CspPolicy>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in csp)
+            foreach (var m in p.GpMappings ?? [])
+                if (m.AdmxFile is not null && m.Name is not null)
+                    index.TryAdd(m.AdmxFile + ":" + m.Name, p);
+        return index;
     }
 
     /// <summary>(chave, nome) que a política grava; nome null = a chave inteira (list).</summary>

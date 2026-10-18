@@ -25,6 +25,12 @@ internal static partial class Program
           Debloater.Cli admx show   <[Arquivo.admx:]Nome> [--admx-dir DIR]
           Debloater.Cli admx export <arquivo.json> [--with-state] [--admx-dir DIR]
 
+          Debloater.Cli policy show   <[Arquivo.admx:]Nome> [--scope machine|user] [--state S [--value id=valor]...]
+          Debloater.Cli policy set    <[Arquivo.admx:]Nome> --state enabled|disabled|notconfigured
+                                      [--value id=valor]... [--scope machine|user] [--dry-run] [--max-risk high]
+          Debloater.Cli policy revert <[Arquivo.admx:]Nome>
+          Debloater.Cli policy backups
+
           Debloater.Cli reference annotate [--write] [--force] [--admx-dir DIR] [--csp FILE]
 
           Debloater.Cli fingerprint create <saida.json.gz> [--root C:\] [--binaries default|all|none]
@@ -50,7 +56,14 @@ internal static partial class Program
                          raízes; none = sem varredura de binários.
         --md / --json    (fingerprint diff) grava o relatório Markdown / JSON (com a lista "candidates").
         --top N          (fingerprint diff) candidatos na tabela do Markdown (padrão: 100).
-        apply/revert exigem um prompt de administrador. Os demais comandos são somente leitura.
+        policy           configura uma política ADMX gravando direto no registro (HKLM/HKCU\...\Policies),
+                         com backup do valor original em %ProgramData%\Debloater\backups\policies. --value
+                         repete-se por item (list/multiText); list com nome=valor: --value Id=nome=valor.
+                         Enum aceita o valor, o nome exibido ou #índice; boolean true/false. --dry-run só
+                         mostra a prévia. Risco alto (segurança/Update/Defender) exige --max-risk high.
+                         Não altera o Registry.pol: o gpedit.msc não mostra o que foi gravado.
+        apply/revert/policy set/policy revert exigem um prompt de administrador. Os demais comandos são
+        somente leitura.
 
         selftest         SÓ PARA VM DESCARTÁVEL: para cada tweak, lê o estado, aplica, confere (Applied),
                          re-aplica (o backup original deve ficar intacto), reverte e confere que cada ação
@@ -90,6 +103,7 @@ internal static partial class Program
                 "revert" => await RevertAsync(parsed),
                 "inventory" => await InventoryAsync(parsed),
                 "admx" => Admx(parsed),
+                "policy" => Policy(parsed),
                 "reference" => Reference(parsed),
                 "selftest" => await SelfTestAsync(parsed),
                 "fingerprint" => await FingerprintAsync(parsed),
@@ -304,6 +318,10 @@ internal static partial class Program
         public string BinaryMode { get; private set; } = "default";
         public string? MdOut { get; private set; }
         public int Top { get; private set; } = 100;
+        public string? PolicyState { get; private set; }
+        public List<string> Values { get; } = [];
+        public string? Scope { get; private set; }
+        public bool DryRun { get; private set; }
 
         public static Args Parse(string[] args)
         {
@@ -329,7 +347,14 @@ internal static partial class Program
                     case "--restore-point": a.RestorePoint = true; break;
                     case "--i-know-this-is-not-a-vm": a.NotAVmOverride = true; break;
                     case "--phase": a.Phase = Next().ToLowerInvariant(); break;
-                    case "--state": a.StateFile = Path.GetFullPath(Next()); break;
+                    case "--state":
+                        // Em 'policy', --state é o estado desejado; no selftest, o arquivo de estado das fases.
+                        if (a.Command == "policy") a.PolicyState = Next();
+                        else a.StateFile = Path.GetFullPath(Next());
+                        break;
+                    case "--value": a.Values.Add(Next()); break;
+                    case "--scope": a.Scope = Next(); break;
+                    case "--dry-run": a.DryRun = true; break;
                     case "--label": a.Label = Next(); break;
                     case "--root": a.Root = Path.GetFullPath(Next()); break;
                     case "--binaries": a.BinaryMode = Next().ToLowerInvariant(); break;

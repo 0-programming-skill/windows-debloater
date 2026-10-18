@@ -266,6 +266,9 @@ public class PolicyAdvisorTests
         Assert.Contains(w, t => t.Contains("obsoleta"));
         Assert.Contains(w, t => t.Contains("gpedit.msc continua"));
 
+        // Não configurada só apaga: avisos de edição/build não se aplicam.
+        Assert.Empty(PolicyAdvisor.Warnings(Policy(), csp, Env("Core"), PolicyTargetState.NotConfigured, PolicyScope.Machine));
+
         var pro = new CspPolicy { Area = "A", Name = "N", Page = "p", Editions = ["Pro", "Enterprise"] };
         Assert.DoesNotContain(PolicyAdvisor.Warnings(Policy(), pro, Env(), PolicyTargetState.Enabled, PolicyScope.Machine),
             x => x.Level == PolicyWarningLevel.Warning);
