@@ -36,3 +36,6 @@ ghidra-out/
 
 # Comparação de cobertura (tools/coverage): cache dos arquivos das outras ferramentas
 tools/coverage/.cache/
+
+# C�pias de trabalho dos agentes
+.claude/
