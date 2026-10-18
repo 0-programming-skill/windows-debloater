@@ -15,6 +15,7 @@ public sealed class FingerprintSide
     public string Root { get; set; } = "";
     public bool Live { get; set; }
     public bool Elevated { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? MachineName { get; set; }
     public DateTime CreatedUtc { get; set; }
     public string BinaryMode { get; set; } = "";
@@ -171,6 +172,10 @@ public sealed class FingerprintDiffResult
     public List<PolicyChange> Policies { get; set; } = [];
     public List<InventoryChange> Inventory { get; set; } = [];
     public List<BinaryChange> Binaries { get; set; } = [];
+
+    /// <summary>Preenchido quando o filtro de privacidade foi aplicado (<see cref="FingerprintPrivacy"/>).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FingerprintPrivacyInfo? Privacy { get; set; }
 }
 
 /// <summary>
@@ -604,9 +609,7 @@ public static partial class FingerprintDiff
                 noise = ElevationNoise;
             // O PC comparado pode já ter tweaks aplicados: mudança num alvo do catálogo não é necessariamente do build.
             if (noise is null && e.TweakIds.Count > 0 && (e.Change == DiffChange.Changed || e.Kind == InventoryKinds.Appx && e.Change == DiffChange.Added))
-                noise = e.Change == DiffChange.Changed
-                    ? "alvo de tweak do catálogo: o estado pode ter sido mudado no PC, não pelo build"
-                    : "app que o catálogo remove: provavelmente removido no PC antigo";
+                noise = e.Change == DiffChange.Changed ? CatalogTargetNoise : CatalogAppNoise;
             result.Inventory.Add(new InventoryChange
             {
                 Kind = e.Kind, Id = e.Id, Change = e.Change, DisplayName = e.DisplayName,
@@ -657,6 +660,8 @@ public static partial class FingerprintDiff
     private static partial Regex MachineSpecificRegex();
 
     internal const string ElevationNoise = "pode ser só elevação (sem administrador, tarefas com ACL restrita não aparecem)";
+    internal const string CatalogTargetNoise = "alvo de tweak do catálogo: o estado pode ter sido mudado no PC, não pelo build";
+    internal const string CatalogAppNoise = "app que o catálogo remove: provavelmente removido no PC antigo";
 
     private static readonly HashSet<string> MicrosoftPublishers = new(StringComparer.OrdinalIgnoreCase) { "8wekyb3d8bbwe", "cw5n1h2txyewy" };
 

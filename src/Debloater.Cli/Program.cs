@@ -34,7 +34,7 @@ internal static partial class Program
           Debloater.Cli reference annotate [--write] [--force] [--admx-dir DIR] [--csp FILE]
 
           Debloater.Cli fingerprint create <saida.json.gz> [--root C:\] [--binaries default|all|none]
-          Debloater.Cli fingerprint diff <antigo.json.gz> <novo.json.gz> [--md R.md] [--json R.json] [--top 100]
+          Debloater.Cli fingerprint diff <antigo.json.gz> <novo.json.gz> [--md R.md] [--json R.json] [--top 100] [--no-privacy]
 
           Debloater.Cli selftest [--id ID]... [--category X] [--max-risk R] [--include-irreversible]
                                  [--json RELATORIO.json] [--backup-dir DIR] [--restore-point] [--verbose]
@@ -56,6 +56,9 @@ internal static partial class Program
                          raízes; none = sem varredura de binários.
         --md / --json    (fingerprint diff) grava o relatório Markdown / JSON (com a lista "candidates").
         --top N          (fingerprint diff) candidatos na tabela do Markdown (padrão: 100).
+        --no-privacy     (fingerprint diff) desliga o filtro de privacidade (ligado por padrão; --privacy
+                         liga): omite itens de terceiros/hardware/instalados à parte, o que só existia no
+                         PC antigo sem evidência de ser do Windows e o nome das máquinas.
         policy           configura uma política ADMX gravando direto no registro (HKLM/HKCU\...\Policies),
                          com backup do valor original em %ProgramData%\Debloater\backups\policies. --value
                          repete-se por item (list/multiText); list com nome=valor: --value Id=nome=valor.
@@ -318,6 +321,7 @@ internal static partial class Program
         public string BinaryMode { get; private set; } = "default";
         public string? MdOut { get; private set; }
         public int Top { get; private set; } = 100;
+        public bool Privacy { get; private set; } = true;
         public string? PolicyState { get; private set; }
         public List<string> Values { get; } = [];
         public string? Scope { get; private set; }
@@ -359,6 +363,8 @@ internal static partial class Program
                     case "--root": a.Root = Path.GetFullPath(Next()); break;
                     case "--binaries": a.BinaryMode = Next().ToLowerInvariant(); break;
                     case "--md": a.MdOut = Path.GetFullPath(Next()); break;
+                    case "--privacy": a.Privacy = true; break;
+                    case "--no-privacy": a.Privacy = false; break;
                     case "--top":
                         var top = Next();
                         a.Top = int.TryParse(top, out var t) && t > 0 ? t : throw new ArgumentException($"--top inválido '{top}'.");

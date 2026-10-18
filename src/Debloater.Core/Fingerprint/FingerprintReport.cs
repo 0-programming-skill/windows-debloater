@@ -47,6 +47,15 @@ public static class FingerprintReport
             foreach (var w in d.Warnings) sb.AppendLine($"- {w}");
             sb.AppendLine();
         }
+        var privacy = d.Privacy;
+        if (privacy is not null)
+        {
+            sb.AppendLine($"**Privacidade:** filtro ligado (`--no-privacy` desliga). {privacy.Total.ToString("N0", Pt)} item(ns) omitido(s): " +
+                          "itens de terceiros/hardware/instalados à parte (dos dois lados), o que só existia no PC de origem sem evidência de ser do Windows " +
+                          "(binários, serviços, drivers, tarefas, apps, capacidades, cadeias e referências a binários antigos) e o nome das máquinas. " +
+                          "As contagens acima são anteriores ao filtro.");
+            sb.AppendLine();
+        }
 
         // ---- candidatos ----
         var open = d.Candidates.Where(c => c.CoveredBy.Count == 0).Take(top).ToList();
@@ -85,6 +94,7 @@ public static class FingerprintReport
         sb.AppendLine($"## Políticas ADMX removidas ({removedPolicies.Count})");
         sb.AppendLine();
         if (removedPolicies.Count == 0) sb.AppendLine("Nenhuma.");
+        Omitted(sb, privacy, FingerprintPrivacyInfo.Policies, "política(s) de modelos ADMX que só existiam no PC de origem");
         foreach (var g in removedPolicies.GroupBy(p => p.Note).OrderBy(g => g.Key is null ? 0 : 1))
         {
             if (g.Key is not null) sb.AppendLine($"- _{g.Key}_: {string.Join(", ", g.Select(p => p.Policy.File).Distinct(StringComparer.OrdinalIgnoreCase).Select(Code))} ({g.Count()} políticas)");
@@ -111,7 +121,8 @@ public static class FingerprintReport
         foreach (var kind in InventoryKinds.All)
         {
             var items = d.Inventory.Where(i => i.Kind == kind).ToList();
-            if (items.Count == 0) continue;
+            var omitted = privacy?.Get(FingerprintPrivacyInfo.Inventory(kind)) ?? 0;
+            if (items.Count == 0 && omitted == 0) continue;
             sb.AppendLine($"### {KindTitle(kind)}");
             sb.AppendLine();
             foreach (var change in new[] { DiffChange.Added, DiffChange.Removed, DiffChange.Changed })
@@ -141,6 +152,11 @@ public static class FingerprintReport
                 sb.AppendLine("</details>");
                 sb.AppendLine();
             }
+            if (omitted > 0)
+            {
+                sb.AppendLine($"_{omitted.ToString("N0", Pt)} item(ns) de terceiros/hardware ou que só existiam no PC de origem foram omitidos (privacidade)._");
+                sb.AppendLine();
+            }
         }
 
         // ---- binários ----
@@ -154,6 +170,7 @@ public static class FingerprintReport
             foreach (var b in list.Take(MaxRowsPerList))
                 sb.AppendLine($"- {Code(b.Path)} {b.NewVersion ?? b.OldVersion}{(b.Curated ? " ★" : "")}");
             More(sb, list.Count);
+            if (change == DiffChange.Removed) Omitted(sb, privacy, FingerprintPrivacyInfo.Binaries, "binário(s) que só existiam no PC de origem (fora de `Windows\\SystemApps`)");
             sb.AppendLine();
         }
         var versions = d.Binaries.Where(b => b.Change == DiffChange.Changed).ToList();
@@ -183,6 +200,11 @@ public static class FingerprintReport
             sb.AppendLine("|---|---|---:|---|");
             foreach (var c in removed)
                 sb.AppendLine($"| {Code(Short(c.Value, 120))} | {c.Kind} | {c.Score} | {Esc(BinaryText(c))} |");
+        }
+        if (privacy?.Get(FingerprintPrivacyInfo.RemovedStrings) is > 0)
+        {
+            sb.AppendLine();
+            Omitted(sb, privacy, FingerprintPrivacyInfo.RemovedStrings, "cadeia(s) de binários que não existem no build novo");
         }
         sb.AppendLine();
 
@@ -232,6 +254,12 @@ public static class FingerprintReport
 
     private static string Origin(FingerprintSide s) =>
         $"{(s.Live ? "em execução" : "offline")} ({s.Root}), {(s.Elevated ? "elevado" : "sem elevação")}, {s.CreatedUtc:yyyy-MM-dd}";
+
+    private static void Omitted(StringBuilder sb, FingerprintPrivacyInfo? privacy, string key, string what)
+    {
+        var n = privacy?.Get(key) ?? 0;
+        if (n > 0) sb.AppendLine($"- _{n.ToString("N0", Pt)} {what} foram omitidos (privacidade)._");
+    }
 
     private static void More(StringBuilder sb, int total)
     {

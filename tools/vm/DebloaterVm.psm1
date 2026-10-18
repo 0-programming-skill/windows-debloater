@@ -117,7 +117,7 @@ function New-DebloaterUnattendXml {
         Gera o texto do autounattend.xml para instalar o Windows 11 sem interação numa VM Hyper-V Gen 2.
     .DESCRIPTION
         windowsPE: idioma/teclado, LabConfig (BypassTPMCheck, BypassSecureBootCheck, BypassCPUCheck,
-        BypassRAMCheck, BypassStorageCheck: CPUs mais antigas não estão na lista do Windows 11),
+        BypassRAMCheck, BypassStorageCheck: para hosts com CPU fora da lista do Windows 11),
         apaga o disco 0 e cria EFI/MSR/Windows (GPT), seleciona a edição pelo nome da imagem.
         specialize: nome do computador, fuso, LocalAccountTokenFilterPolicy=1 (token completo de
         administrador em logons remotos de contas locais; a VM é descartável) e BypassNRO.

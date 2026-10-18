@@ -15,7 +15,7 @@ internal static partial class Program
         {
             "create" => await FingerprintCreateAsync(a),
             "diff" => FingerprintDiffCommand(a),
-            _ => Fail("Uso: fingerprint create <saida.json.gz> [--root C:\\] [--binaries default|all|none] | fingerprint diff <antigo> <novo> [--md R.md] [--json R.json] [--top N]"),
+            _ => Fail("Uso: fingerprint create <saida.json.gz> [--root C:\\] [--binaries default|all|none] | fingerprint diff <antigo> <novo> [--md R.md] [--json R.json] [--top N] [--no-privacy]"),
         };
     }
 
@@ -48,12 +48,13 @@ internal static partial class Program
 
     private static int FingerprintDiffCommand(Args a)
     {
-        if (a.Positional.Count < 3) return Fail("Uso: fingerprint diff <antigo> <novo> [--md R.md] [--json R.json] [--top N]");
+        if (a.Positional.Count < 3) return Fail("Uso: fingerprint diff <antigo> <novo> [--md R.md] [--json R.json] [--top N] [--no-privacy]");
         var sw = Stopwatch.StartNew();
         var oldFp = FingerprintStore.Load(a.Positional[1]);
         var newFp = FingerprintStore.Load(a.Positional[2]);
         var catalog = CatalogLoader.LoadDirectory(a.CatalogDir);
         var diff = FingerprintDiff.Compare(oldFp, newFp, catalog.Tweaks);
+        if (a.Privacy) FingerprintPrivacy.Apply(diff, oldFp, newFp);
 
         if (a.MdOut is not null)
         {
@@ -68,6 +69,9 @@ internal static partial class Program
 
         Console.WriteLine($"Build {diff.Old.Build} → {diff.New.Build}");
         foreach (var w in diff.Warnings) Console.WriteLine($"  aviso: {w}");
+        Console.WriteLine(diff.Privacy is { } p
+            ? $"  privacidade: ligada, {p.Total} item(ns) omitido(s) ({string.Join(", ", p.Omitted.Select(o => $"{o.Key}={o.Value}"))}); --no-privacy desliga"
+            : "  privacidade: desligada (--no-privacy)");
         foreach (var (k, v) in diff.Counts) Console.WriteLine($"  {k,-34} {v,8:N0}");
         Console.WriteLine();
         Console.WriteLine($"Top {Math.Min(25, diff.Candidates.Count)} candidatos:");

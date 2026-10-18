@@ -451,6 +451,100 @@ public class FingerprintDiffTests
         }
     }
 
+    private static (WindowsFingerprint Old, WindowsFingerprint New, List<Tweak> Catalog) PrivacyScenario()
+    {
+        var (old, neu, catalog) = Scenario();
+        old.Binaries.Files.Add(Bin(@"Windows\System32\vendorsvc.exe", "8.1.0.0", "DisableVendorThing"));
+        old.Binaries.Files.Add(Bin(@"Windows\SystemApps\MicrosoftWindows.1.Old_cw5n1h2txyewy\Old.View.dll", "2604.1.0.0"));
+        var svcs = old.Inventory!.Sections.Single(s => s.Kind == InventoryKinds.Services);
+        var inBox = Item(InventoryKinds.Services, "InBoxGone", ("start", "manual"), ("imagePath", @"%SystemRoot%\System32\svchost.exe -k netsvcs -p"));
+        inBox.Info = new(StringComparer.Ordinal) { ["serviceDll"] = @"%SystemRoot%\System32\newai.dll" };
+        svcs.Items.Add(inBox);
+        svcs.Items.Add(Item(InventoryKinds.Services, "HwVendorSvc", ("start", "automatic"), ("imagePath", @"%SystemRoot%\System32\vendorsvc.exe")));
+        svcs.Items.Add(Item(InventoryKinds.Services, "OpaqueSvc", ("start", "manual"), ("imagePath", @"%SystemRoot%\System32\svchost.exe -k netsvcs -p")));
+        old.Inventory.Sections.Add(new InventorySection
+        {
+            Kind = InventoryKinds.Tasks,
+            Items =
+            [
+                Item(InventoryKinds.Tasks, @"\Microsoft\Windows\Gone\T", ("enabled", "true")),
+                Item(InventoryKinds.Tasks, @"\Microsoft\Office\Office Feature Updates", ("enabled", "true")),
+                Item(InventoryKinds.Tasks, @"\VendorUpdater", ("enabled", "true")),
+            ],
+        });
+        old.Inventory.Sections.Single(s => s.Kind == InventoryKinds.Appx).Items.AddRange(
+        [
+            Item(InventoryKinds.Appx, "Microsoft.SomeDevTool", ("framework", "false"), ("publisher", "8wekyb3d8bbwe")),
+            Item(InventoryKinds.Appx, "MicrosoftWindows.1.Old", ("framework", "false"), ("publisher", "cw5n1h2txyewy")),
+            Item(InventoryKinds.Appx, "Vendor.ChatApp", ("framework", "false"), ("publisher", "abc123")),
+        ]);
+        old.Inventory.Sections.Add(new InventorySection { Kind = InventoryKinds.Autoruns, Items = [Item(InventoryKinds.Autoruns, @"HKCU\...\Run\VendorTray", ("command", "x.exe"))] });
+        neu.Inventory!.Sections.Add(new InventorySection { Kind = InventoryKinds.Tasks, Items = [] });
+        neu.Inventory.Sections.Add(new InventorySection { Kind = InventoryKinds.Autoruns, Items = [] });
+        old.Policies.Add(new FingerprintPolicy { File = "vendor.admx", Name = "VendorPolicy", Class = "Machine", Key = @"Software\Policies\Vendor", Values = [@"Software\Policies\Vendor\X"] });
+        return (old, neu, catalog);
+    }
+
+    [Fact]
+    public void Privacy_OmitsThirdPartyAndOldOnlyItems_KeepsWindows()
+    {
+        var (old, neu, catalog) = PrivacyScenario();
+        var raw = FingerprintDiff.Compare(old, neu, catalog);
+        Assert.Contains(raw.Inventory, i => i.Id == "HwVendorSvc");          // sem filtro, tudo aparece
+        Assert.Contains(raw.Binaries, b => b.Path.EndsWith("vendorsvc.exe"));
+        Assert.Equal("PC", raw.Old.MachineName);
+
+        var d = FingerprintPrivacy.Apply(FingerprintDiff.Compare(old, neu, catalog), old, neu);
+        var ids = d.Inventory.Select(i => i.Id).ToHashSet();
+        // Do Windows: serviço cujo binário continua no build novo, tarefa \Microsoft\Windows, pacote do sistema.
+        Assert.Contains("InBoxGone", ids);
+        Assert.Contains(@"\Microsoft\Windows\Gone\T", ids);
+        Assert.Contains("MicrosoftWindows.1.Old", ids);
+        Assert.Contains("Same", ids);                                        // alterado: existe nos dois lados
+        // Terceiros/hardware/instalados à parte, ou sem evidência de serem do Windows: fora.
+        foreach (var gone in new[] { "VendorSvc", "vendor", "HwVendorSvc", "OpaqueSvc", @"\Microsoft\Office\Office Feature Updates", @"\VendorUpdater",
+                                     "Microsoft.SomeDevTool", "Vendor.ChatApp", @"HKCU\...\Run\VendorTray" })
+            Assert.DoesNotContain(gone, ids);
+
+        Assert.DoesNotContain(d.Binaries, b => b.Change == DiffChange.Removed && !b.Path.StartsWith(@"Windows\SystemApps\"));
+        Assert.Contains(d.Binaries, b => b.Change == DiffChange.Removed && b.Path.EndsWith("Old.View.dll"));
+        Assert.Contains(d.Binaries, b => b.Change == DiffChange.Added);       // o lado novo não muda
+        Assert.DoesNotContain(d.RemovedStrings, c => c.Value == "DisableVendorThing");
+        Assert.Empty(d.Candidates.Single(c => c.Value == "ShowMovedThing").OldBinaries!);   // old.dll não existe no novo
+        Assert.DoesNotContain(d.Policies, p => p.Policy.File == "vendor.admx");
+        Assert.Null(d.Old.MachineName);
+        Assert.Null(d.New.MachineName);
+
+        var p = Assert.IsType<FingerprintPrivacyInfo>(d.Privacy);
+        Assert.Equal(3, p.Get(FingerprintPrivacyInfo.Inventory(InventoryKinds.Services)));
+        Assert.Equal(1, p.Get(FingerprintPrivacyInfo.Inventory(InventoryKinds.Drivers)));
+        Assert.Equal(2, p.Get(FingerprintPrivacyInfo.Inventory(InventoryKinds.Tasks)));
+        Assert.Equal(2, p.Get(FingerprintPrivacyInfo.Inventory(InventoryKinds.Appx)));
+        Assert.Equal(1, p.Get(FingerprintPrivacyInfo.Inventory(InventoryKinds.Autoruns)));
+        Assert.Equal(1, p.Get(FingerprintPrivacyInfo.Policies));
+        Assert.Equal(3, p.Get(FingerprintPrivacyInfo.Binaries));             // old.dll, vendorsvc.exe, vendor.sys
+        Assert.True(p.Get(FingerprintPrivacyInfo.RemovedStrings) >= 1);
+        Assert.True(p.Get(FingerprintPrivacyInfo.OldBinaryReferences) >= 1);
+    }
+
+    [Fact]
+    public void Privacy_Report_MentionsOmissions_AndHidesNames()
+    {
+        var (old, neu, catalog) = PrivacyScenario();
+        var plain = FingerprintReport.ToMarkdown(FingerprintDiff.Compare(old, neu, catalog));
+        Assert.Contains("HwVendorSvc", plain);
+        Assert.Contains("vendorsvc.exe", plain);
+        Assert.DoesNotContain("**Privacidade:**", plain);
+
+        var md = FingerprintReport.ToMarkdown(FingerprintPrivacy.Apply(FingerprintDiff.Compare(old, neu, catalog), old, neu));
+        foreach (var hidden in new[] { "HwVendorSvc", "VendorSvc", "vendorsvc.exe", "VendorUpdater", "Vendor.ChatApp", "SomeDevTool", "VendorTray", "vendor.admx", "DisableVendorThing", "old.dll" })
+            Assert.DoesNotContain(hidden, md);
+        Assert.Contains("**Privacidade:** filtro ligado", md);
+        Assert.Contains("foram omitidos (privacidade)", md);
+        Assert.Contains("InBoxGone", md);
+        Assert.Contains("### Inicialização automática", md);                 // a seção fica, só com a nota
+    }
+
     [Fact]
     public void Report_EscapesTableCells()
     {
