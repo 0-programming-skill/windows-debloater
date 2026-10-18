@@ -10,7 +10,13 @@
     <ProjectReference Include="..\Debloater.Core\Debloater.Core.csproj" />
   </ItemGroup>
 
-  <!-- O catálogo e as referências são copiados para a saída: <exe>\catalog\**\*.yaml, <exe>\reference\*.json -->
+  <!-- Localized CLI text: Strings.resx (English, neutral) + Strings.pt-BR.resx (satellite pt-BR\Debloater.Cli.resources.dll). -->
+  <PropertyGroup>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <SatelliteResourceLanguages>pt-BR</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- The catalog and the references are copied to the output: <exe>\catalog\**\*.yaml, <exe>\reference\*.json -->
   <ItemGroup>
     <None Include="..\..\catalog\**\*.yaml" LinkBase="catalog" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\reference\*.json" LinkBase="reference" CopyToOutputDirectory="PreserveNewest" />

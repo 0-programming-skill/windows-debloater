@@ -12,10 +12,11 @@ using Microsoft.UI.Xaml.Navigation;
 
 namespace Debloater.App.Views;
 
-/// <summary>Revisão das mudanças pendentes, confirmações por risco e execução com log.</summary>
+/// <summary>Review of the pending changes, confirmations by risk and execution with a log.</summary>
 public sealed partial class ApplyPage : Page
 {
-    private const string CriticalWord = "CONFIRMO";
+    /// <summary>Word the user must type to apply critical-risk tweaks (CONFIRM / CONFIRMO).</summary>
+    private static string CriticalWord => Loc.Get("ApplyPage_CriticalWord");
 
     private readonly AppState _app = App.State;
     private IReadOnlyList<PlannedChange> _plan = [];
@@ -63,10 +64,10 @@ public sealed partial class ApplyPage : Page
         bool empty = _plan.Count == 0 && _policyPlan.Count == 0;
 
         SummaryText.Text = _app.IsScanning && _app.LastScan is null
-            ? "Aguardando a leitura do estado atual..."
-            : $"{apply} para aplicar, {revert} para reverter"
-              + (policies > 0 ? $", {policies} política(s) ADMX" : "")
-              + (blocked > 0 ? $", {blocked} que não podem ser executadas (veja o motivo)." : ".");
+            ? Loc.Get("ApplyPage_WaitingScan")
+            : Loc.Format("ApplyPage_Summary", apply, revert)
+              + (policies > 0 ? Loc.Format("ApplyPage_SummaryPolicies", policies) : "")
+              + (blocked > 0 ? Loc.Format("ApplyPage_SummaryBlocked", blocked) : ".");
         EmptyPanel.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
         OptionsPanel.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
 
@@ -81,7 +82,7 @@ public sealed partial class ApplyPage : Page
         if (!hasHigh) HighConfirm.IsChecked = false;
         CriticalNote.Visibility = hasCritical ? Visibility.Visible : Visibility.Collapsed;
         ElevationBar.IsOpen = !_app.IsElevated;
-        ApplyText.Text = $"Aplicar {ExecutableCount} mudança(s)";
+        ApplyText.Text = Loc.Format("ApplyPage_ApplyCount", ExecutableCount);
         UpdateApplyEnabled();
     }
 
@@ -91,14 +92,14 @@ public sealed partial class ApplyPage : Page
         ApplyButton.IsEnabled = _app.IsElevated && !_running && !_app.IsScanning && ExecutableCount > 0 && highOk;
     }
 
-    /// <summary>Grupo "Políticas (ADMX)": cada mudança com risco, avisos e a prévia exata do registro.</summary>
+    /// <summary>"Policies (ADMX)" group: each change with risk, warnings and the exact registry preview.</summary>
     private static UIElement BuildPolicyGroup(IReadOnlyList<PlannedPolicyChange> changes)
     {
         var res = Application.Current.Resources;
         var panel = new StackPanel { Spacing = 10 };
         var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        header.Children.Add(new TextBlock { Text = "Políticas (ADMX)", Style = (Style)res["BodyStrongTextBlockStyle"], VerticalAlignment = VerticalAlignment.Center });
-        header.Children.Add(new TextBlock { Text = $"{changes.Count} mudança(s) · gravação direta no registro (não aparece no gpedit.msc)", Style = (Style)res["Caption"], VerticalAlignment = VerticalAlignment.Center });
+        header.Children.Add(new TextBlock { Text = Loc.Get("ApplyPage_PoliciesGroup"), Style = (Style)res["BodyStrongTextBlockStyle"], VerticalAlignment = VerticalAlignment.Center });
+        header.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_PoliciesGroupText", changes.Count), Style = (Style)res["Caption"], VerticalAlignment = VerticalAlignment.Center });
         panel.Children.Add(header);
 
         foreach (var c in changes)
@@ -126,9 +127,9 @@ public sealed partial class ApplyPage : Page
             text.Children.Add(title);
             text.Children.Add(new TextBlock { Text = $"{c.Policy.QualifiedName} · {string.Join(" › ", c.Policy.CategoryPath)}", Style = (Style)res["Caption"] });
             if (c.BlockedReason is not null)
-                text.Children.Add(new TextBlock { Text = "Não será executado: " + c.BlockedReason, Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
+                text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_Blocked", c.BlockedReason), Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
             foreach (var w in c.Warnings.Where(w => w.Level == PolicyWarningLevel.Warning))
-                text.Children.Add(new TextBlock { Text = "Atenção: " + w.Text, Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
+                text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_Warning", w.Text), Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
             if (c.Preview.Count > 0)
                 text.Children.Add(new TextBlock
                 {
@@ -157,7 +158,7 @@ public sealed partial class ApplyPage : Page
             Background = Labels.Brush(color),
             Child = new TextBlock { Text = Labels.Risk(risk), Style = (Style)Application.Current.Resources["BadgeText"], Foreground = Labels.ForegroundOn(color) },
         });
-        header.Children.Add(new TextBlock { Text = $"{changes.Count} mudança(s)", Style = (Style)Application.Current.Resources["Caption"], VerticalAlignment = VerticalAlignment.Center });
+        header.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_ChangeCount", changes.Count), Style = (Style)Application.Current.Resources["Caption"], VerticalAlignment = VerticalAlignment.Center });
         panel.Children.Add(header);
 
         foreach (var c in changes)
@@ -174,25 +175,25 @@ public sealed partial class ApplyPage : Page
             };
             row.Children.Add(icon);
             var text = new StackPanel();
-            var kind = c.Kind == ChangeKind.Apply ? "Aplicar" : "Reverter";
+            var kind = c.Kind == ChangeKind.Apply ? Loc.Get("ApplyPage_KindApply") : Loc.Get("ApplyPage_KindRevert");
             text.Children.Add(new TextBlock
             {
-                Text = $"{kind}: {c.Tweak.Name}",
+                Text = $"{kind}: {c.Tweak.DisplayName}",
                 Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"],
                 TextWrapping = TextWrapping.Wrap,
                 Opacity = c.IsBlocked ? 0.6 : 1,
             });
             text.Children.Add(new TextBlock
             {
-                Text = $"Estado atual: {Labels.State(c.CurrentState)} · {c.Tweak.Category} · {c.Tweak.Id}",
+                Text = Loc.Format("ApplyPage_CurrentState", Labels.State(c.CurrentState)) + $" · {App.State.DisplayCategory(c.Tweak.Category)} · {c.Tweak.Id}",
                 Style = (Style)Application.Current.Resources["Caption"],
             });
             if (c.BlockedReason is not null)
-                text.Children.Add(new TextBlock { Text = "Não será executado: " + c.BlockedReason, Style = (Style)Application.Current.Resources["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCautionBrush"] });
+                text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_Blocked", c.BlockedReason), Style = (Style)Application.Current.Resources["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCautionBrush"] });
             if (c.Kind == ChangeKind.Apply && !string.IsNullOrWhiteSpace(c.Tweak.Breaks))
-                text.Children.Add(new TextBlock { Text = "Pode quebrar: " + c.Tweak.Breaks!.Trim(), Style = (Style)Application.Current.Resources["Caption"] });
+                text.Children.Add(new TextBlock { Text = Loc.Format("ApplyPage_MayBreak", c.Tweak.DisplayBreaks!.Trim()), Style = (Style)Application.Current.Resources["Caption"] });
             if (c.Kind == ChangeKind.Apply && !c.Tweak.Reversible)
-                text.Children.Add(new TextBlock { Text = "Não reversível pelo programa.", Style = (Style)Application.Current.Resources["Caption"] });
+                text.Children.Add(new TextBlock { Text = Loc.Get("ApplyPage_NotReversible"), Style = (Style)Application.Current.Resources["Caption"] });
             Grid.SetColumn(text, 1);
             row.Children.Add(text);
             panel.Children.Add(row);
@@ -218,41 +219,42 @@ public sealed partial class ApplyPage : Page
         CancelButton.IsEnabled = false;
     }
 
-    // ---------------- execução ----------------
+    // ---------------- execution ----------------
 
     private async Task<bool> ConfirmCriticalAsync(List<PlannedChange> critical)
     {
         var body = new StackPanel { Spacing = 8 };
         body.Children.Add(new TextBlock
         {
-            Text = "Os ajustes abaixo têm risco CRÍTICO e podem deixar funções essenciais do Windows inoperantes:",
+            Text = Loc.Get("ApplyPage_CriticalIntro"),
             TextWrapping = TextWrapping.Wrap,
         });
         foreach (var c in critical)
         {
-            body.Children.Add(new TextBlock { Text = $"{(c.Kind == ChangeKind.Apply ? "Aplicar" : "Reverter")}: {c.Tweak.Name}", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+            body.Children.Add(new TextBlock { Text = $"{(c.Kind == ChangeKind.Apply ? Loc.Get("ApplyPage_KindApply") : Loc.Get("ApplyPage_KindRevert"))}: {c.Tweak.DisplayName}", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
             body.Children.Add(new TextBlock
             {
-                Text = "Pode quebrar: " + (string.IsNullOrWhiteSpace(c.Tweak.Breaks) ? "(não informado no catálogo)" : c.Tweak.Breaks!.Trim()),
+                Text = Loc.Format("ApplyPage_MayBreak", string.IsNullOrWhiteSpace(c.Tweak.Breaks) ? Loc.Get("ApplyPage_BreaksNotSpecified") : c.Tweak.DisplayBreaks!.Trim()),
                 TextWrapping = TextWrapping.Wrap,
                 Style = (Style)Application.Current.Resources["Caption"],
             });
         }
-        var box = new TextBox { PlaceholderText = CriticalWord, Header = $"Para continuar, digite {CriticalWord}:" };
+        var word = CriticalWord;
+        var box = new TextBox { PlaceholderText = word, Header = Loc.Format("ApplyPage_TypeToContinue", word) };
         body.Children.Add(box);
 
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = "Confirmar ajustes de risco crítico",
+            Title = Loc.Get("ApplyPage_CriticalTitle"),
             Content = new ScrollViewer { Content = body, MaxHeight = 420 },
-            PrimaryButtonText = "Aplicar mesmo assim",
-            CloseButtonText = "Cancelar",
+            PrimaryButtonText = Loc.Get("ApplyPage_ApplyAnyway"),
+            CloseButtonText = Loc.Get("Common_Cancel"),
             DefaultButton = ContentDialogButton.Close,
             IsPrimaryButtonEnabled = false,
             RequestedTheme = App.Window.Content is FrameworkElement fe ? fe.ActualTheme : ElementTheme.Default,
         };
-        box.TextChanged += (_, _) => dialog.IsPrimaryButtonEnabled = box.Text.Trim() == CriticalWord;
+        box.TextChanged += (_, _) => dialog.IsPrimaryButtonEnabled = box.Text.Trim() == word;
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
@@ -280,18 +282,18 @@ public sealed partial class ApplyPage : Page
         using var log = new OperationLog();
         void Log(string line) => DispatcherQueue.TryEnqueue(() => LogBox.Text += line + Environment.NewLine);
         log.LineWritten += Log;
-        log.Write($"Sessão iniciada: {changes.Count} ajuste(s) e {policyChanges.Count} política(s). {_app.System}");
-        if (log.Error is not null) LogBox.Text += $"(não foi possível gravar o arquivo de log: {log.Error}){Environment.NewLine}";
+        log.Write(Loc.Format("ApplyLog_SessionStarted", changes.Count, policyChanges.Count, _app.System));
+        if (log.Error is not null) LogBox.Text += Loc.Format("ApplyLog_FileError", log.Error) + Environment.NewLine;
 
         try
         {
             if (RestorePointToggle.IsOn)
             {
-                RunText.Text = "Criando ponto de restauração...";
-                log.Write("Criando ponto de restauração...");
-                var rp = await RestorePoint.CreateAsync("Windows Debloater: antes de aplicar ajustes");
+                RunText.Text = Loc.Get("ApplyLog_CreatingRestorePoint");
+                log.Write(Loc.Get("ApplyLog_CreatingRestorePoint"));
+                var rp = await RestorePoint.CreateAsync(Loc.Get("ApplyPage_RestorePointName"));
                 log.Write(rp.Message);
-                AddResult(rp.Created ? "" : "", "Ponto de restauração", rp.Message);
+                AddResult(rp.Created ? "" : "", Loc.Get("ApplyPage_RestorePoint"), rp.Message);
             }
 
             var engine = _app.Engine;
@@ -300,18 +302,18 @@ public sealed partial class ApplyPage : Page
             {
                 if (_cts.IsCancellationRequested)
                 {
-                    log.Write("Interrompido pelo usuário.");
+                    log.Write(Loc.Get("ApplyLog_Interrupted"));
                     break;
                 }
-                var verb = change.Kind == ChangeKind.Apply ? "Aplicando" : "Revertendo";
-                RunText.Text = $"{verb} {done + 1} de {total}: {change.Tweak.Name}";
-                log.Write($"{verb} {change.Tweak.Id} (risco {change.Tweak.Risk})...");
+                bool applying = change.Kind == ChangeKind.Apply;
+                RunText.Text = Loc.Format(applying ? "ApplyPage_RunApplying" : "ApplyPage_RunReverting", done + 1, total, change.Tweak.DisplayName);
+                log.Write(Loc.Format(applying ? "ApplyLog_Applying" : "ApplyLog_Reverting", change.Tweak.Id, change.Tweak.Risk));
 
                 OperationResult result;
                 try
                 {
                     var tweak = change.Tweak;
-                    // O engine roda em segundo plano: alguns handlers chamam processos (DISM, PowerShell).
+                    // The engine runs in the background: some handlers start processes (DISM, PowerShell).
                     result = change.Kind == ChangeKind.Apply
                         ? await Task.Run(() => engine.ApplyAsync(tweak, RiskLevel.Critical))
                         : await Task.Run(() => engine.RevertAsync(tweak));
@@ -321,29 +323,30 @@ public sealed partial class ApplyPage : Page
                     result = new OperationResult(change.Tweak.Id, false, ex.Message, [ex.Message]);
                 }
 
-                foreach (var err in result.Errors) log.Write("  erro: " + err);
-                foreach (var note in result.Notes) log.Write("  aviso: " + note);
-                log.Write($"  {(result.Success ? "OK" : "FALHA")}: {result.Message}");
+                foreach (var err in result.Errors) log.Write("  " + Loc.Format("ApplyLog_Error", err));
+                foreach (var note in result.Notes) log.Write("  " + Loc.Format("ApplyLog_Note", note));
+                log.Write($"  {(result.Success ? Loc.Get("ApplyLog_Ok") : Loc.Get("ApplyLog_Failed"))}: {result.Message}");
                 if (result.StatusAfter is { } after && _app.Find(change.Tweak.Id) is { } vm) vm.Status = after;
                 if (result.Success) ok++; else failed++;
-                AddResult(result.Success ? "" : "", change.Tweak.Name, result.Message + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : "")
-                    + (result.Notes.Count > 0 ? " Aviso: " + string.Join(" ", result.Notes) : ""));
+                AddResult(result.Success ? "" : "", change.Tweak.DisplayName, result.Message + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : "")
+                    + (result.Notes.Count > 0 ? " " + Loc.Format("ApplyPage_ResultNote", string.Join(" ", result.Notes)) : ""));
                 RunProgress.Value = ++done;
             }
 
-            // Políticas ADMX: gravação direta no registro, com backup do original (backups\policies).
+            // ADMX policies: written directly to the registry, with a backup of the original (backups\policies).
             var policyEngine = _app.PolicyEngine;
             foreach (var change in policyChanges)
             {
                 if (_cts.IsCancellationRequested)
                 {
-                    log.Write("Interrompido pelo usuário.");
+                    log.Write(Loc.Get("ApplyLog_Interrupted"));
                     break;
                 }
                 var name = change.Policy.QualifiedName;
-                var verb = change.IsRevert ? "Revertendo política" : "Configurando política";
-                RunText.Text = $"{verb} {done + 1} de {total}: {change.Policy.DisplayName}";
-                log.Write(change.IsRevert ? $"{verb} {name}..." : $"{verb} {change.Request.Setting} (risco {change.Risk})...");
+                RunText.Text = Loc.Format(change.IsRevert ? "ApplyPage_RunRevertingPolicy" : "ApplyPage_RunConfiguringPolicy", done + 1, total, change.Policy.DisplayName);
+                log.Write(change.IsRevert
+                    ? Loc.Format("ApplyLog_RevertingPolicy", name)
+                    : Loc.Format("ApplyLog_ConfiguringPolicy", change.Request.Setting, change.Risk));
 
                 PolicyOperationResult result;
                 try
@@ -359,8 +362,8 @@ public sealed partial class ApplyPage : Page
                     result = new PolicyOperationResult(name, false, ex.Message, [ex.Message]);
                 }
 
-                foreach (var err in result.Errors) log.Write("  erro: " + err);
-                log.Write($"  {(result.Success ? "OK" : "FALHA")}: {result.Message}");
+                foreach (var err in result.Errors) log.Write("  " + Loc.Format("ApplyLog_Error", err));
+                log.Write($"  {(result.Success ? Loc.Get("ApplyLog_Ok") : Loc.Get("ApplyLog_Failed"))}: {result.Message}");
                 if (result.Success)
                 {
                     ok++;
@@ -372,8 +375,8 @@ public sealed partial class ApplyPage : Page
                     result.Message + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : ""));
                 RunProgress.Value = ++done;
             }
-            log.Write($"Concluído: {ok} com sucesso, {failed} com falha, {total - done} não executado(s).");
-            RunText.Text = $"Concluído: {ok} com sucesso, {failed} com falha. Log: {log.FilePath}";
+            log.Write(Loc.Format("ApplyLog_Done", ok, failed, total - done));
+            RunText.Text = Loc.Format("ApplyPage_Done", ok, failed, log.FilePath);
         }
         finally
         {
@@ -382,7 +385,7 @@ public sealed partial class ApplyPage : Page
             CancelButton.Visibility = Visibility.Collapsed;
         }
 
-        // Relê todos os estados (outros ajustes podem ter sido afetados) e recalcula o pendente.
+        // Re-read every state (other tweaks may have been affected) and recompute what is pending.
         await _app.ScanAsync();
         Rebuild();
     }

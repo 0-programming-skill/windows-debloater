@@ -1,3 +1,4 @@
+using Debloater.App.Helpers;
 using Debloater.App.ViewModels;
 using Debloater.Core.Inventory;
 using Microsoft.UI.Xaml;
@@ -6,7 +7,7 @@ using Microsoft.UI.Xaml.Navigation;
 
 namespace Debloater.App.Views;
 
-/// <summary>Inventário por tipo, com busca e filtro "não catalogado".</summary>
+/// <summary>Inventory by kind, with search and a "not catalogued" filter.</summary>
 public sealed partial class InventoryPage : Page
 {
     private static string _kind = InventoryKinds.Services;
@@ -33,7 +34,7 @@ public sealed partial class InventoryPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e) => App.State.CatalogReloaded -= Catalog_Reloaded;
 
-    // O catálogo pode chegar depois do inventário: refaz o cruzamento (sem coletar de novo).
+    // The catalog may arrive after the inventory: redo the cross-reference (without collecting again).
     private async void Catalog_Reloaded(object? sender, EventArgs e) => await LoadAsync(false);
 
     private async Task LoadAsync(bool refresh)
@@ -46,7 +47,7 @@ public sealed partial class InventoryPage : Page
         }
         catch (Exception ex)
         {
-            CountText.Text = "Falha ao coletar o inventário: " + ex.Message;
+            CountText.Text = Loc.Format("InventoryPage_Failed", ex.Message);
             LoadingPanel.Visibility = Visibility.Collapsed;
             return;
         }
@@ -76,8 +77,8 @@ public sealed partial class InventoryPage : Page
             .ToList();
         List.ItemsSource = rows;
         int catalogued = section.Items.Count(i => i.IsCatalogued);
-        var text = $"{rows.Count} exibido(s) · {section.Items.Count} no total · {catalogued} catalogado(s)";
-        if (!section.Available) text += " · indisponível";
+        var text = Loc.Format("InventoryPage_Count", rows.Count, section.Items.Count, catalogued);
+        if (!section.Available) text += " · " + Loc.Get("InventoryPage_Unavailable");
         if (!string.IsNullOrWhiteSpace(section.Note)) text += " · " + section.Note;
         CountText.Text = text;
     }

@@ -14,9 +14,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock Text="Inventário" Style="{StaticResource TitleTextBlockStyle}" />
-            <TextBlock Style="{StaticResource Caption}"
-                       Text="Tudo o que existe neste PC, de cada tipo, e quais ajustes do catálogo mexem em cada item. Itens não catalogados são candidatos a ajustes novos." />
+            <TextBlock x:Uid="InventoryPage_Title" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock x:Uid="InventoryPage_Subtitle" Style="{StaticResource Caption}" />
         </StackPanel>
 
         <SelectorBar x:Name="Kinds" Grid.Row="1" SelectionChanged="Kinds_SelectionChanged" />
@@ -28,11 +27,11 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Buscar por nome ou propriedade" QueryIcon="Find" TextChanged="Search_TextChanged" />
-            <ToggleButton x:Name="UncataloguedToggle" Grid.Column="1" Content="Só não catalogados" Click="Filter_Changed" />
+            <AutoSuggestBox x:Name="SearchBox" x:Uid="InventoryPage_SearchBox" QueryIcon="Find" TextChanged="Search_TextChanged" />
+            <ToggleButton x:Name="UncataloguedToggle" x:Uid="InventoryPage_UncataloguedToggle" Grid.Column="1" Click="Filter_Changed" />
             <TextBlock x:Name="CountText" Grid.Column="2" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="8,0" TextWrapping="Wrap" />
             <Button Grid.Column="3" Click="Refresh_Click">
-                <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE72C;" FontSize="14" /><TextBlock Text="Atualizar" /></StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE72C;" FontSize="14" /><TextBlock x:Uid="Common_RefreshText" /></StackPanel>
             </Button>
         </Grid>
 
@@ -62,7 +61,7 @@
                 </ListView>
                 <StackPanel x:Name="LoadingPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                     <ProgressRing IsActive="True" />
-                    <TextBlock Text="Enumerando serviços, drivers, tarefas, apps, recursos, capacidades e autoruns..." Style="{StaticResource Caption}" />
+                    <TextBlock x:Uid="InventoryPage_Loading" Style="{StaticResource Caption}" />
                 </StackPanel>
             </Grid>
         </Border>

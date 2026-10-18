@@ -10,10 +10,10 @@ using Microsoft.UI.Xaml.Navigation;
 
 namespace Debloater.App.Views;
 
-/// <summary>Página principal: todos os ajustes com estado real, risco, confiança e o estado desejado.</summary>
+/// <summary>Main page: every tweak with its real state, risk, confidence and the desired state.</summary>
 public sealed partial class TweaksPage : Page
 {
-    // Filtros persistem entre navegações.
+    // Filters persist across navigations.
     private static readonly HashSet<TweakState> States = [];
     private static readonly HashSet<RiskLevel> Risks = [];
     private static readonly HashSet<Confidence> Confidences = [];
@@ -28,9 +28,9 @@ public sealed partial class TweaksPage : Page
     {
         InitializeComponent();
         List.ItemsSource = _filtered;
-        BuildMenu(StateMenu, StateFilterButton, "Estado", Enum.GetValues<TweakState>(), States, Labels.State);
-        BuildMenu(RiskMenu, RiskFilterButton, "Risco", Enum.GetValues<RiskLevel>(), Risks, Labels.RiskShort);
-        BuildMenu(ConfidenceMenu, ConfidenceFilterButton, "Confiança", Enum.GetValues<Confidence>(), Confidences, c => Labels.Confidence(c));
+        BuildMenu(StateMenu, StateFilterButton, Loc.Get("TweaksPage_StateFilter"), Enum.GetValues<TweakState>(), States, Labels.State);
+        BuildMenu(RiskMenu, RiskFilterButton, Loc.Get("TweaksPage_RiskFilter"), Enum.GetValues<RiskLevel>(), Risks, Labels.RiskShort);
+        BuildMenu(ConfidenceMenu, ConfidenceFilterButton, Loc.Get("TweaksPage_ConfidenceFilter"), Enum.GetValues<Confidence>(), Confidences, c => Labels.Confidence(c));
         SearchBox.Text = _search;
         DiffToggle.IsChecked = _onlyDiffering;
     }
@@ -38,7 +38,7 @@ public sealed partial class TweaksPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         _category = e.Parameter as string is { Length: > 0 } c ? c : null;
-        TitleText.Text = _category is null ? "Ajustes" : _category.Replace("/", " › ");
+        TitleText.Text = _category is null ? Loc.Get("TweaksPage_AllTweaks") : _app.DisplayCategory(_category).Replace("/", " › ");
         _app.PropertyChanged += App_PropertyChanged;
         _app.ScanCompleted += App_Refreshed;
         _app.CatalogReloaded += App_Refreshed;
@@ -65,7 +65,7 @@ public sealed partial class TweaksPage : Page
     private void App_DesiredChanged(object? sender, EventArgs e)
     {
         UpdateReviewButton();
-        // Com "só o que difere" ligado, a lista depende da seleção; sem ele, não reordena a cada clique.
+        // With "only what differs" on, the list depends on the selection; without it, do not reorder on every click.
         if (_onlyDiffering) ApplyFilter();
     }
 
@@ -75,13 +75,13 @@ public sealed partial class TweaksPage : Page
         ScanProgress.IsIndeterminate = _app.ScanTotal == 0;
         ScanProgress.Maximum = Math.Max(1, _app.ScanTotal);
         ScanProgress.Value = _app.ScanDone;
-        ScanText.Text = $"Lendo o estado atual neste PC... {_app.ScanDone} de {_app.ScanTotal}";
+        ScanText.Text = Loc.Format("TweaksPage_Scanning", _app.ScanDone, _app.ScanTotal);
     }
 
     private void UpdateReviewButton()
     {
         int n = _app.PendingCount;
-        ReviewText.Text = n == 0 ? "Revisar mudanças" : $"Revisar {n} mudança(s)";
+        ReviewText.Text = n == 0 ? Loc.Get("TweaksPage_Review") : Loc.Format("TweaksPage_ReviewCount", n);
         ClearButton.IsEnabled = _app.Desired.Count > 0;
     }
 
@@ -100,15 +100,15 @@ public sealed partial class TweaksPage : Page
         _filtered.Clear();
         foreach (var i in items) _filtered.Add(i);
 
-        int total = _app.Tweaks.Count(t => _category is null || Core.Profiles.ProfileStore.CategoryMatches(t.Category, _category));
+        int total = _app.Tweaks.Count(t => _category is null || Core.Profiles.ProfileStore.CategoryMatches(t.Tweak.Category, _category));
         SubtitleText.Text = items.Count == total
-            ? $"{total} ajuste(s){LastScanText()}"
-            : $"{items.Count} de {total} ajuste(s) com os filtros atuais{LastScanText()}";
+            ? Loc.Format("TweaksPage_Count", total) + LastScanText()
+            : Loc.Format("TweaksPage_FilteredCount", items.Count, total) + LastScanText();
         EmptyText.Visibility = items.Count == 0 && !_app.IsScanning ? Visibility.Visible : Visibility.Collapsed;
         UpdateReviewButton();
     }
 
-    private string LastScanText() => _app.LastScan is { } t ? $" · estado lido às {t:HH:mm:ss}" : "";
+    private string LastScanText() => _app.LastScan is { } t ? " · " + Loc.Format("TweaksPage_LastScan", t.ToString("HH:mm:ss")) : "";
 
     private void BuildMenu<T>(MenuFlyout menu, DropDownButton button, string label, IEnumerable<T> values, HashSet<T> selected, Func<T, string> text)
     {
@@ -125,7 +125,7 @@ public sealed partial class TweaksPage : Page
             menu.Items.Add(item);
         }
         menu.Items.Add(new MenuFlyoutSeparator());
-        var clear = new MenuFlyoutItem { Text = "Limpar filtro" };
+        var clear = new MenuFlyoutItem { Text = Loc.Get("TweaksPage_ClearFilter") };
         clear.Click += (_, _) =>
         {
             selected.Clear();
@@ -149,7 +149,7 @@ public sealed partial class TweaksPage : Page
         ApplyFilter();
     }
 
-    /// <summary>Clique na caixa "desejado": vira uma escolha explícita (aplicado ou não aplicado).</summary>
+    /// <summary>Click on the "desired" box: becomes an explicit choice (applied or not applied).</summary>
     private void Desired_Click(object sender, RoutedEventArgs e)
     {
         if (sender is CheckBox { Tag: string id } cb && _app.Find(id) is { } vm)
@@ -165,7 +165,7 @@ public sealed partial class TweaksPage : Page
 
     private void Review_Click(object sender, RoutedEventArgs e) => App.Window.Navigate("apply");
 
-    /// <summary>Usado só pelo modo --screenshot: abre o primeiro item para mostrar os detalhes.</summary>
+    /// <summary>Only used by the --screenshot mode: expands the first item to show its details.</summary>
     public void ExpandFirstForScreenshot()
     {
         if (List.TryGetElement(0) is Expander ex) ex.IsExpanded = true;

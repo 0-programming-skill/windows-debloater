@@ -11,8 +11,8 @@ using Microsoft.UI.Xaml.Navigation;
 namespace Debloater.App.Views;
 
 /// <summary>
-/// Navegador de todas as políticas ADMX com estado atual e editor (como o gpedit): estado desejado,
-/// valores dos elementos, prévia exata do registro, avisos de edição/build e "adicionar às pendentes".
+/// Browser of every ADMX policy with its current state and an editor (like gpedit): desired state,
+/// element values, exact registry preview, edition/build warnings and "add to pending changes".
 /// </summary>
 public sealed partial class PoliciesPage : Page
 {
@@ -33,7 +33,15 @@ public sealed partial class PoliciesPage : Page
         public override string ToString() => $"{Node.Name.Replace('∕', '/')} ({Node.Count})";
     }
 
-    public PoliciesPage() => InitializeComponent();
+    public PoliciesPage()
+    {
+        InitializeComponent();
+        StateRadios.Items.Add(Labels.PolicyTargetState(PolicyTargetState.NotConfigured));
+        StateRadios.Items.Add(Labels.PolicyTargetState(PolicyTargetState.Enabled));
+        StateRadios.Items.Add(Labels.PolicyTargetState(PolicyTargetState.Disabled));
+        ScopeBox.Items.Add(Labels.AdmxClassText(AdmxClass.Machine));
+        ScopeBox.Items.Add(Labels.AdmxClassText(AdmxClass.User));
+    }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
@@ -45,7 +53,7 @@ public sealed partial class PoliciesPage : Page
 
     private void App_DesiredChanged(object? sender, EventArgs e)
     {
-        // Pendências mudaram (aqui, no Aplicar ou por um perfil): atualiza os textos sem perder a seleção.
+        // Pending changes changed (here, on Apply or by a profile): update the texts without losing the selection.
         if (_current is not null) UpdatePendingInfo();
     }
 
@@ -60,17 +68,15 @@ public sealed partial class PoliciesPage : Page
         catch (Exception ex)
         {
             LoadingPanel.Visibility = Visibility.Collapsed;
-            SubtitleText.Text = "Não foi possível ler os modelos administrativos: " + ex.Message;
+            SubtitleText.Text = Loc.Format("PoliciesPage_LoadFailed", ex.Message);
             return;
         }
         LoadingPanel.Visibility = Visibility.Collapsed;
-        SubtitleText.Text = $"{_catalog.Items.Count} políticas de {_catalog.FileCount} arquivo(s) em {_catalog.Directory}, com o estado atual neste PC. "
-            + "Escolha o estado e os valores e adicione às mudanças pendentes. A gravação é direta no registro (como WinUtil/O&O): "
-            + "o gpedit.msc não mostra essas mudanças, e uma GPO de domínio pode sobrescrevê-las."
-            + (_catalog.CspLoaded ? "" : " (Referência da Policy CSP não encontrada: sem links da documentação nem avisos de edição.)");
+        SubtitleText.Text = Loc.Format("PoliciesPage_Summary", _catalog.Items.Count, _catalog.FileCount, _catalog.Directory)
+            + (_catalog.CspLoaded ? "" : " " + Loc.Get("PoliciesPage_NoCsp"));
 
         Tree.RootNodes.Clear();
-        var all = new TreeViewNode { Content = "Todas as políticas", IsExpanded = true };
+        var all = new TreeViewNode { Content = Loc.Get("PoliciesPage_AllPolicies"), IsExpanded = true };
         Tree.RootNodes.Add(all);
         foreach (var node in _catalog.Tree) Tree.RootNodes.Add(MakeNode(node));
         ApplyFilter();
@@ -86,8 +92,8 @@ public sealed partial class PoliciesPage : Page
     private string PendingTextFor(PolicyItem item) => _app.GetPolicyRequest(item.QualifiedName) switch
     {
         null => "",
-        { Setting: null } => "Pendente: reverter ao original",
-        { Setting: { } s } => $"Pendente: {PolicySetting.StateText(s.State)}" + (s.Scope is { } sc && item.Policy.Class == AdmxClass.Both ? $" ({PolicySetting.ScopeText(sc)})" : ""),
+        { Setting: null } => Loc.Get("PoliciesPage_PendingRevert"),
+        { Setting: { } s } => Loc.Format("PoliciesPage_Pending", Labels.PolicyTargetState(s.State)) + (s.Scope is { } sc && item.Policy.Class == AdmxClass.Both ? $" ({PolicySetting.ScopeText(sc)})" : ""),
     };
 
     private void ApplyFilter()
@@ -112,7 +118,7 @@ public sealed partial class PoliciesPage : Page
             List.ScrollIntoView(selected);
         }
         int configured = _catalog.Items.Count(i => i.IsConfigured);
-        CountText.Text = $"{list.Count} exibida(s) · {configured} configurada(s) neste PC · {_app.PolicyRequests.Count} pendente(s)";
+        CountText.Text = Loc.Format("PoliciesPage_Count", list.Count, configured, _app.PolicyRequests.Count);
     }
 
     private void Tree_ItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
@@ -140,7 +146,7 @@ public sealed partial class PoliciesPage : Page
         await LoadAsync(true);
     }
 
-    // ---------------- detalhes e editor ----------------
+    // ---------------- details and editor ----------------
 
     private void List_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -168,9 +174,9 @@ public sealed partial class PoliciesPage : Page
         DRisk.Foreground = Labels.ForegroundOn(riskColor);
         DScopes.Text = p.ScopesText;
         DRegistry.Text = p.RegistryText;
-        DMeta.Text = $"Nome: {p.QualifiedName}\nClasse: {p.ClassText}\nCategoria: {p.CategoryText}\nCom suporte em: {p.SupportedOnText}";
+        DMeta.Text = Loc.Format("PoliciesPage_Meta", p.QualifiedName, p.ClassText, p.CategoryText, p.SupportedOnText);
         DCsp.Visibility = p.CspVisibility;
-        DCsp.Content = "Documentação: " + p.CspText;
+        DCsp.Content = Loc.Format("PoliciesPage_Documentation", p.CspText);
         DCsp.NavigateUri = p.CspUri;
         DExplain.Text = p.ExplainText;
     }
@@ -188,7 +194,7 @@ public sealed partial class PoliciesPage : Page
             {
                 var (state, current) = _app.PolicyEngine.ReadCurrent(policy, PolicySetting.DefaultScope(policy.Class));
                 initial = current;
-                // Classe Both: se só o HKCU estiver configurado, o editor começa por ele. ("Valores próprios" viram Habilitada.)
+                // Class Both: if only HKCU is configured, the editor starts with it. ("Custom values" become Enabled.)
                 if (state == AdmxPolicyState.NotConfigured && policy.Class == AdmxClass.Both)
                 {
                     var (userState, userCurrent) = _app.PolicyEngine.ReadCurrent(policy, PolicyScope.User);
@@ -254,7 +260,7 @@ public sealed partial class PoliciesPage : Page
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
         {
-            PreviewText.Text = "Não foi possível ler o registro: " + ex.Message;
+            PreviewText.Text = Loc.Format("PoliciesPage_RegistryReadFailed", ex.Message);
             AddPendingButton.IsEnabled = false;
             return;
         }
@@ -262,7 +268,7 @@ public sealed partial class PoliciesPage : Page
         if (plan.IsValid)
         {
             var lines = plan.Describe().ToList();
-            PreviewText.Text = lines.Count == 0 ? "(nada a mudar: o registro já está assim)" : string.Join(Environment.NewLine, lines);
+            PreviewText.Text = lines.Count == 0 ? Loc.Get("PoliciesPage_NothingToChange") : string.Join(Environment.NewLine, lines);
         }
         else PreviewText.Text = "—";
         ErrorsText.Visibility = plan.IsValid ? Visibility.Collapsed : Visibility.Visible;
@@ -276,7 +282,7 @@ public sealed partial class PoliciesPage : Page
         var pending = _app.GetPolicyRequest(_current.QualifiedName);
         bool samePending = pending?.Setting is { } ps && ps.SameAs(setting, _current.Policy.Class);
         AddPendingButton.IsEnabled = plan.IsValid && plan.HasEffect && !samePending;
-        AddPendingButton.Content = pending is null ? "Adicionar às mudanças pendentes" : "Atualizar mudança pendente";
+        AddPendingButton.Content = pending is null ? Loc.Get("PoliciesPage_AddPending") : Loc.Get("PoliciesPage_UpdatePending");
         UpdatePendingInfo();
     }
 
@@ -310,10 +316,10 @@ public sealed partial class PoliciesPage : Page
         RevertButton.IsEnabled = pending is not { Setting: null };
         PendingInfo.Text = pending switch
         {
-            null when hasBackup => "Esta política foi alterada por este programa: há backup do valor original.",
+            null when hasBackup => Loc.Get("PoliciesPage_HasBackup"),
             null => "",
-            { Setting: null } => "Pendente: reverter ao valor original (backup).",
-            _ => "Mudança pendente: " + PolicySetting.StateText(pending.Setting!.State) + ".",
+            { Setting: null } => Loc.Get("PoliciesPage_PendingRevertBackup"),
+            _ => Loc.Format("PoliciesPage_PendingChange", Labels.PolicyTargetState(pending.Setting!.State)),
         };
         GoApplyLink.Visibility = pending is null ? Visibility.Collapsed : Visibility.Visible;
         _current.PendingText = PendingTextFor(_current);
@@ -321,7 +327,7 @@ public sealed partial class PoliciesPage : Page
 
     private void RefreshListRow()
     {
-        // As linhas usam x:Bind de uma vez; reatribui a lista para mostrar o texto de pendência atualizado.
+        // Rows use one-time x:Bind; reassign the list to show the updated pending text.
         ApplyFilter();
     }
 
@@ -351,7 +357,7 @@ public sealed partial class PoliciesPage : Page
 
     private void GoApply_Click(object sender, RoutedEventArgs e) => App.Window.Navigate("apply");
 
-    /// <summary>--screenshot: mostra o editor de uma política com elementos (Coleta de Dados), sem gravar nada.</summary>
+    /// <summary>--screenshot: shows the editor of a policy with elements (Data Collection), without writing anything.</summary>
     internal async Task SelectForScreenshotAsync()
     {
         if (_catalog is null) _catalog = await PolicyCatalog.GetAsync();

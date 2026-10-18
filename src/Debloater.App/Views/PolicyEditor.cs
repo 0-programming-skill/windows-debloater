@@ -1,4 +1,5 @@
 using System.Globalization;
+using Debloater.App.Helpers;
 using Debloater.Core.Admx;
 using Debloater.Core.Policies;
 using Microsoft.UI.Xaml;
@@ -7,9 +8,9 @@ using Microsoft.UI.Xaml.Controls;
 namespace Debloater.App.Views;
 
 /// <summary>
-/// Editores dos elementos de uma política, gerados a partir da apresentação do ADML (na ordem do
-/// gpedit): NumberBox para decimal (com mínimo/máximo), CheckBox para boolean, ComboBox para enum,
-/// TextBox (ou ComboBox editável com sugestões) para text, caixa de várias linhas para multiText e list.
+/// Editors for the elements of a policy, generated from the ADML presentation (in gpedit order):
+/// NumberBox for decimal (with minimum/maximum), CheckBox for boolean, ComboBox for enum,
+/// TextBox (or an editable ComboBox with suggestions) for text, a multi-line box for multiText and list.
 /// </summary>
 internal sealed class PolicyEditor
 {
@@ -31,16 +32,16 @@ internal sealed class PolicyEditor
             if (policy.Elements.FirstOrDefault(e => e.Id == control.RefId) is { } el && placed.Add(el.Id))
                 Add(el, initial);
         }
-        // Elementos sem controle na apresentação (ADML incompleto) aparecem no fim, com o id como rótulo.
+        // Elements without a control in the presentation (incomplete ADML) appear at the end, with the id as label.
         foreach (var el in policy.Elements.Where(e => !placed.Contains(e.Id))) Add(el, initial);
     }
 
-    /// <summary>Painel com os editores (vazio se a política não tem elementos).</summary>
+    /// <summary>Panel with the editors (empty if the policy has no elements).</summary>
     public StackPanel View { get; }
 
     public bool HasElements => _editors.Count > 0;
 
-    /// <summary>Disparado a cada alteração de valor.</summary>
+    /// <summary>Raised on every value change.</summary>
     public event Action? Changed;
 
     public bool IsEnabled
@@ -52,7 +53,7 @@ internal sealed class PolicyEditor
         }
     }
 
-    /// <summary>Valores atuais dos editores (id → valores), no formato de <see cref="PolicySetting.Values"/>.</summary>
+    /// <summary>Current values of the editors (id → values), in the <see cref="PolicySetting.Values"/> format.</summary>
     public Dictionary<string, List<string>> Values()
     {
         var result = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -103,7 +104,7 @@ internal sealed class PolicyEditor
                 read = () => double.IsNaN(box.Value) || box.Value < 0
                     ? []
                     : [((ulong)Math.Round(box.Value)).ToString(CultureInfo.InvariantCulture)];
-                hint = $"Entre {min} e {max}." + (el.StoreAsText ? " Gravado como texto (REG_SZ)." : "");
+                hint = Loc.Format("PolicyEditor_NumberRange", min, max) + (el.StoreAsText ? " " + Loc.Get("PolicyEditor_StoredAsText") : "");
                 break;
             }
 
@@ -156,7 +157,7 @@ internal sealed class PolicyEditor
                     control = box;
                     read = () => box.Text.Length == 0 ? [] : [box.Text];
                 }
-                hint = $"Até {maxLength} caracteres." + (el.Expandable ? " Aceita variáveis de ambiente (REG_EXPAND_SZ)." : "");
+                hint = Loc.Format("PolicyEditor_MaxLength", maxLength) + (el.Expandable ? " " + Loc.Get("PolicyEditor_Expandable") : "");
                 break;
             }
 
@@ -181,19 +182,19 @@ internal sealed class PolicyEditor
                     .Select(l => el.Type == "list" ? l.Trim() : l)
                     .Where(l => l.Length > 0).ToList();
                 if (el.Type == "multiText")
-                    hint = "Uma linha por item." + (el.MaxStrings is > 0 ? $" No máximo {el.MaxStrings} linhas." : "");
+                    hint = Loc.Get("PolicyEditor_OneLinePerItem") + (el.MaxStrings is > 0 ? " " + Loc.Format("PolicyEditor_MaxLines", el.MaxStrings) : "");
                 else
                 {
-                    hint = el.ExplicitValue ? "Um item por linha, no formato nome=valor." : "Um item por linha.";
+                    hint = el.ExplicitValue ? Loc.Get("PolicyEditor_OneItemPerLineNameValue") : Loc.Get("PolicyEditor_OneItemPerLine");
                     if (el.Additive)
-                        hint += " Lista aditiva: itens que já estão no registro e você apagar daqui continuam lá; para limpar a lista, use Desabilitada ou Não configurada.";
-                    hint += $" Gravada em {el.Key}.";
+                        hint += " " + Loc.Get("PolicyEditor_Additive");
+                    hint += " " + Loc.Format("PolicyEditor_WrittenTo", el.Key);
                 }
                 break;
             }
 
             default:
-                View.Children.Add(new TextBlock { Text = $"Elemento '{el.Id}' de tipo '{el.Type}' não é editável.", Style = Style("Caption") });
+                View.Children.Add(new TextBlock { Text = Loc.Format("PolicyEditor_NotEditable", el.Id, el.Type), Style = Style("Caption") });
                 return;
         }
 

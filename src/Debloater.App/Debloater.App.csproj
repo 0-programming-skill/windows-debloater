@@ -11,13 +11,15 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
-    <!-- "dotnet build" da solução usa AnyCPU: o app é x64 por padrão (use -p:Platform=ARM64 para ARM). -->
+    <!-- "dotnet build" of the solution uses AnyCPU: the app is x64 by default (use -p:Platform=ARM64 for ARM). -->
     <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
     <PlatformTarget>$(Platform)</PlatformTarget>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' And '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <Product>Windows Debloater</Product>
+    <!-- Base language of the resources (Strings/en-US); Strings/pt-BR is the translation. -->
+    <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,7 +31,7 @@
     <ProjectReference Include="..\Debloater.Core\Debloater.Core.csproj" />
   </ItemGroup>
 
-  <!-- Catálogo, perfis e referências copiados para a saída, como na CLI. -->
+  <!-- Catalog, profiles and references copied to the output, as in the CLI. -->
   <ItemGroup>
     <None Include="..\..\catalog\**\*.yaml" LinkBase="catalog" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\reference\*.json" LinkBase="reference" CopyToOutputDirectory="PreserveNewest" />

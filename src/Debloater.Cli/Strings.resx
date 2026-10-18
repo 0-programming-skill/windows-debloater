@@ -1,0 +1,596 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Usage" xml:space="preserve">
+    <value>Debloater.Cli - testing and automation for the tweak catalog
+
+Usage:
+  Debloater.Cli list     [--category X] [--catalog DIR]
+  Debloater.Cli status   [--category X] [--catalog DIR] [--verbose]
+  Debloater.Cli apply    &lt;id...&gt; [--max-risk low|medium|high|critical] [--catalog DIR]
+  Debloater.Cli revert   &lt;id...&gt; [--catalog DIR]
+  Debloater.Cli validate [--catalog DIR] [--reference [--admx-dir DIR] [--csp FILE] [--warnings-out FILE]]
+
+  Debloater.Cli inventory [--kind K[,K...]] [--uncatalogued] [--json]
+  Debloater.Cli inventory snapshot &lt;file.json&gt; [--kind K]
+  Debloater.Cli inventory diff &lt;old.json&gt; &lt;new.json&gt; [--json]
+
+  Debloater.Cli admx list   [--search TEXT] [--configured] [--admx-dir DIR]
+  Debloater.Cli admx show   &lt;[File.admx:]Name&gt; [--admx-dir DIR]
+  Debloater.Cli admx export &lt;file.json&gt; [--with-state] [--admx-dir DIR]
+
+  Debloater.Cli policy show   &lt;[File.admx:]Name&gt; [--scope machine|user] [--state S [--value id=value]...]
+  Debloater.Cli policy set    &lt;[File.admx:]Name&gt; --state enabled|disabled|notconfigured
+                              [--value id=value]... [--scope machine|user] [--dry-run] [--max-risk high]
+  Debloater.Cli policy revert &lt;[File.admx:]Name&gt;
+  Debloater.Cli policy backups
+
+  Debloater.Cli reference annotate [--write] [--force] [--admx-dir DIR] [--csp FILE]
+
+  Debloater.Cli fingerprint create &lt;out.json.gz&gt; [--root C:\] [--binaries default|all|none]
+  Debloater.Cli fingerprint diff &lt;old.json.gz&gt; &lt;new.json.gz&gt; [--md R.md] [--json R.json] [--top 100] [--no-privacy]
+
+  Debloater.Cli selftest [--id ID]... [--category X] [--max-risk R] [--include-irreversible]
+                         [--json REPORT.json] [--backup-dir DIR] [--restore-point] [--verbose]
+                         [--phase full|apply-only|verify|revert] [--state STATE.json] [--label LABEL]
+                         [--i-know-this-is-not-a-vm]
+
+--lang L         (any command) interface language: en, en-US, pt, pt-BR or auto (default: auto = the
+                 Windows display language). Also selects the ADML language of admx/policy/validate.
+--category X     filters by category prefix, as an identifier or as displayed (e.g. privacy,
+                 "System/Scheduled tasks").
+--max-risk       maximum risk accepted by 'apply' (default: medium). High/Critical require an explicit opt-in.
+--catalog DIR    catalog folder (default: 'catalog' next to the executable).
+--kind K         services, drivers, tasks, appx, features, capabilities, autoruns.
+--admx-dir DIR   PolicyDefinitions folder (default: C:\Windows\PolicyDefinitions). Accepts the latest
+                 Administrative Templates package downloaded from Microsoft.
+--csp FILE       Policy CSP reference (default: reference/msdocs-policy-csp.json in the repository).
+fingerprint      fingerprint of an installation (inventory, ADMX, registry/policy strings in binaries)
+                 and diff between builds, with new tweak candidates. Read-only.
+--root DIR       (fingerprint create) installation root (default: C:\). Another folder = mounted image
+                 (offline: only the file-based parts).
+--binaries M     (fingerprint create) default = curated list of relevant binaries; all = every PE under
+                 the roots; none = no binary scan.
+--md / --json    (fingerprint diff) writes the Markdown / JSON report (with the "candidates" list). No
+                 report is written unless a path is given (keep reports out of git, e.g. under .claude/docs/).
+--top N          (fingerprint diff) candidates in the Markdown table (default: 100).
+--no-privacy     (fingerprint diff) turns off the privacy filter (on by default; --privacy turns it on):
+                 omits third-party/hardware/separately installed items, what only existed on the old PC
+                 without evidence of being part of Windows, and the machine names.
+policy           configures an ADMX policy by writing directly to the registry (HKLM/HKCU\...\Policies),
+                 backing up the original value in %ProgramData%\Debloater\backups\policies. --value
+                 repeats per item (list/multiText); list with name=value: --value Id=name=value.
+                 Enum accepts the value, the display name or #index; boolean true/false. --dry-run only
+                 shows the preview. High risk (security/Update/Defender) requires --max-risk high.
+                 Does not change Registry.pol: gpedit.msc does not show what was written.
+apply/revert/policy set/policy revert require an administrator prompt. The other commands are
+read-only.
+
+selftest         DISPOSABLE VM ONLY: for each tweak, reads the state, applies, checks (Applied),
+                 re-applies (the original backup must stay intact), reverts and checks that each action
+                 went back to its previous value. Refuses to run outside a Hyper-V guest unless
+                 --i-know-this-is-not-a-vm is passed. Requires administrator. Default: all tweaks,
+                 all risks; irreversible ones (appx) only with --include-irreversible.
+--id ID          tweak to test (repeatable or comma-separated).
+--json FILE      (selftest) writes the JSON report, updated after each tweak.
+--backup-dir DIR (selftest) backup folder (default: %ProgramData%\Debloater\backups).
+--restore-point  (selftest) creates a restore point first and records the result.
+--phase P        (selftest) phased persistence test: apply-only applies and writes the state file;
+                 verify re-reads the state and reports which tweaks Windows undid (repeatable, with
+                 --label, e.g. after a reboot and after waiting); revert reverts and compares with
+                 the original state. Default: full (whole cycle at once).
+--state FILE     (selftest) phase state file (default: %ProgramData%\Debloater\selftest-state.json).
+--label TEXT     (selftest --phase verify) label of the check (default: verify-&lt;n&gt;).</value>
+  </data>
+  <data name="PolicyUsage" xml:space="preserve">
+    <value>Usage:
+  policy show   &lt;[File.admx:]Name&gt; [--scope machine|user] [--state S [--value id=value]...]
+  policy set    &lt;[File.admx:]Name&gt; --state enabled|disabled|notconfigured [--value id=value]...
+                [--scope machine|user] [--dry-run] [--max-risk high] [--backup-dir DIR]
+  policy revert &lt;[File.admx:]Name&gt; [--backup-dir DIR]
+  policy backups [--backup-dir DIR]</value>
+  </data>
+  <data name="Err_UnknownCommand" xml:space="preserve">
+    <value>Unknown command '{0}'.</value>
+  </data>
+  <data name="Validate_Catalog" xml:space="preserve">
+    <value>Catalog: {0}</value>
+  </data>
+  <data name="Validate_Summary" xml:space="preserve">
+    <value>{0} file(s), {1} valid tweak(s), {2} error(s), {3} warning(s).</value>
+  </data>
+  <data name="Validate_WarningCount" xml:space="preserve">
+    <value>{0} warning(s) (they do not affect the result).</value>
+  </data>
+  <data name="Err_UnsupportedLanguage" xml:space="preserve">
+    <value>Unsupported language '{0}' (expected: en, en-US, pt, pt-BR or auto).</value>
+  </data>
+  <data name="Label_ErrorUpper" xml:space="preserve">
+    <value>ERROR</value>
+  </data>
+  <data name="Label_WarningUpper" xml:space="preserve">
+    <value>WARNING</value>
+  </data>
+  <data name="Label_Warning" xml:space="preserve">
+    <value>warning</value>
+  </data>
+  <data name="Label_Error" xml:space="preserve">
+    <value>error</value>
+  </data>
+  <data name="Label_Note" xml:space="preserve">
+    <value>note</value>
+  </data>
+  <data name="List_Total" xml:space="preserve">
+    <value>{0} tweak(s).</value>
+  </data>
+  <data name="NoTweakMatches" xml:space="preserve">
+    <value>No tweak matches the filter.</value>
+  </data>
+  <data name="Apply_NotReversible" xml:space="preserve">
+    <value>! {0}: NOT reversible by the program.</value>
+  </data>
+  <data name="Apply_MayAffect" xml:space="preserve">
+    <value>! {0}: may affect: {1}</value>
+  </data>
+  <data name="Apply_UseMaxRisk" xml:space="preserve">
+    <value>Use --max-risk {0} to confirm.</value>
+  </data>
+  <data name="Catalog_HasErrors" xml:space="preserve">
+    <value>Catalog has {0} error(s); run 'validate'. First error: {1}</value>
+  </data>
+  <data name="Select_NeedId" xml:space="preserve">
+    <value>Provide at least one tweak id.</value>
+  </data>
+  <data name="Select_IdsNotFound" xml:space="preserve">
+    <value>Id(s) not found: {0}</value>
+  </data>
+  <data name="Risk_Low" xml:space="preserve">
+    <value>low</value>
+  </data>
+  <data name="Risk_Medium" xml:space="preserve">
+    <value>medium</value>
+  </data>
+  <data name="Risk_High" xml:space="preserve">
+    <value>HIGH</value>
+  </data>
+  <data name="Risk_Critical" xml:space="preserve">
+    <value>CRITICAL</value>
+  </data>
+  <data name="Args_NeedsValue" xml:space="preserve">
+    <value>'{0}' requires a value.</value>
+  </data>
+  <data name="Args_InvalidTop" xml:space="preserve">
+    <value>Invalid --top '{0}'.</value>
+  </data>
+  <data name="Args_InvalidMaxRisk" xml:space="preserve">
+    <value>Invalid --max-risk '{0}' (low|medium|high|critical).</value>
+  </data>
+  <data name="Args_UnknownOption" xml:space="preserve">
+    <value>Unknown option '{0}'.</value>
+  </data>
+  <data name="Admx_Usage" xml:space="preserve">
+    <value>Usage: admx list [--search TEXT] [--configured] | admx show &lt;[File.admx:]Name&gt; | admx export &lt;file.json&gt; [--with-state]</value>
+  </data>
+  <data name="Admx_NoFiles" xml:space="preserve">
+    <value>No .admx in {0}. {1}</value>
+  </data>
+  <data name="AdmxState_NotConfigured" xml:space="preserve">
+    <value>Not configured</value>
+  </data>
+  <data name="AdmxState_Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="AdmxState_Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="AdmxState_Custom" xml:space="preserve">
+    <value>Custom values</value>
+  </data>
+  <data name="Admx_ListSummary" xml:space="preserve">
+    <value>{0} policy(ies) listed out of {1} in {2} file(s) ({3}; languages: {4}).</value>
+  </data>
+  <data name="Admx_ReadWarnings" xml:space="preserve">
+    <value>{0} read warning(s); first: {1}</value>
+  </data>
+  <data name="AdmxShow_Usage" xml:space="preserve">
+    <value>Usage: admx show &lt;[File.admx:]Name&gt;</value>
+  </data>
+  <data name="AdmxExport_Usage" xml:space="preserve">
+    <value>Usage: admx export &lt;file.json&gt; [--with-state]</value>
+  </data>
+  <data name="AdmxExport_Done" xml:space="preserve">
+    <value>{0} policy(ies) from {1} file(s) exported to {2}.</value>
+  </data>
+  <data name="Policy_NotFound" xml:space="preserve">
+    <value>Policy '{0}' not found. Use 'admx list --search {0}'.</value>
+  </data>
+  <data name="Field_DisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="Field_Class" xml:space="preserve">
+    <value>Class</value>
+  </data>
+  <data name="Field_Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Field_SupportedOn" xml:space="preserve">
+    <value>Supported on</value>
+  </data>
+  <data name="Field_Key" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="Field_Value" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="Field_Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Field_Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Field_Risk" xml:space="preserve">
+    <value>Risk</value>
+  </data>
+  <data name="Field_Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="Field_State" xml:space="preserve">
+    <value>State {0}</value>
+  </data>
+  <data name="Field_Current" xml:space="preserve">
+    <value>Current {0}</value>
+  </data>
+  <data name="Field_EnabledList" xml:space="preserve">
+    <value>Enabled list</value>
+  </data>
+  <data name="Field_DisabledList" xml:space="preserve">
+    <value>Disabled list</value>
+  </data>
+  <data name="Elem_Header" xml:space="preserve">
+    <value>Element {0} '{1}'</value>
+  </data>
+  <data name="Elem_OtherKey" xml:space="preserve">
+    <value> (key {0})</value>
+  </data>
+  <data name="Elem_Checked" xml:space="preserve">
+    <value>checked={0} unchecked={1}</value>
+  </data>
+  <data name="Elem_ListKey" xml:space="preserve">
+    <value>→ key {0}</value>
+  </data>
+  <data name="Elem_Prefix" xml:space="preserve">
+    <value> (prefix "{0}")</value>
+  </data>
+  <data name="Elem_NameValue" xml:space="preserve">
+    <value> (name=value)</value>
+  </data>
+  <data name="Elem_Additive" xml:space="preserve">
+    <value> (additive)</value>
+  </data>
+  <data name="Elem_AsText" xml:space="preserve">
+    <value> (text)</value>
+  </data>
+  <data name="Elem_MaxChars" xml:space="preserve">
+    <value>max. {0} characters</value>
+  </data>
+  <data name="Elem_Lines" xml:space="preserve">
+    <value>, {0} lines</value>
+  </data>
+  <data name="Elem_Expandable" xml:space="preserve">
+    <value> (expandable)</value>
+  </data>
+  <data name="Elem_Required" xml:space="preserve">
+    <value>required</value>
+  </data>
+  <data name="Elem_Default" xml:space="preserve">
+    <value>default {0}</value>
+  </data>
+  <data name="Elem_Boolean" xml:space="preserve">
+    <value>  (checked = {0}, unchecked = {1})</value>
+  </data>
+  <data name="Fp_Usage" xml:space="preserve">
+    <value>Usage: fingerprint create &lt;out.json.gz&gt; [--root C:\] [--binaries default|all|none] | fingerprint diff &lt;old&gt; &lt;new&gt; [--md R.md] [--json R.json] [--top N] [--no-privacy]</value>
+  </data>
+  <data name="FpCreate_Usage" xml:space="preserve">
+    <value>Usage: fingerprint create &lt;out.json.gz&gt; [--root C:\] [--binaries default|all|none]</value>
+  </data>
+  <data name="FpDiff_Usage" xml:space="preserve">
+    <value>Usage: fingerprint diff &lt;old&gt; &lt;new&gt; [--md R.md] [--json R.json] [--top N] [--no-privacy]</value>
+  </data>
+  <data name="Fp_Created" xml:space="preserve">
+    <value>Fingerprint: {0} ({1:N0} KB)</value>
+  </data>
+  <data name="Fp_Os" xml:space="preserve">
+    <value>Windows {0} {1} {2} | root {3} | {4} | {5}</value>
+  </data>
+  <data name="Fp_Live" xml:space="preserve">
+    <value>live</value>
+  </data>
+  <data name="Fp_Offline" xml:space="preserve">
+    <value>offline</value>
+  </data>
+  <data name="Fp_Elevated" xml:space="preserve">
+    <value>elevated</value>
+  </data>
+  <data name="Fp_NotElevated" xml:space="preserve">
+    <value>not elevated</value>
+  </data>
+  <data name="Fp_Counts" xml:space="preserve">
+    <value>inventory: {0} items | ADMX: {1} policies | binaries ({2}): {3} PE, {4:N0} strings + {5:N0} near names, {6} error(s)</value>
+  </data>
+  <data name="Fp_Timings" xml:space="preserve">
+    <value>timings (ms): {0}</value>
+  </data>
+  <data name="Fp_Total" xml:space="preserve">
+    <value>Total: {0:N1} s</value>
+  </data>
+  <data name="FpDiff_Markdown" xml:space="preserve">
+    <value>Markdown report: {0}</value>
+  </data>
+  <data name="FpDiff_Json" xml:space="preserve">
+    <value>JSON report: {0}</value>
+  </data>
+  <data name="FpDiff_PrivacyOn" xml:space="preserve">
+    <value>privacy: on, {0} item(s) omitted ({1}); --no-privacy turns it off</value>
+  </data>
+  <data name="FpDiff_PrivacyOff" xml:space="preserve">
+    <value>privacy: off (--no-privacy)</value>
+  </data>
+  <data name="FpDiff_Top" xml:space="preserve">
+    <value>Top {0} candidates:</value>
+  </data>
+  <data name="Inv_UnknownSub" xml:space="preserve">
+    <value>Unknown subcommand 'inventory {0}' (use: snapshot, diff, or none).</value>
+  </data>
+  <data name="Inv_InvalidKind" xml:space="preserve">
+    <value>Invalid --kind: {0} (known: {1}).</value>
+  </data>
+  <data name="Inv_CatalogErrors" xml:space="preserve">
+    <value>Warning: catalog has {0} error(s); cross-reference is partial.</value>
+  </data>
+  <data name="Inv_UnavailableUpper" xml:space="preserve">
+    <value>UNAVAILABLE</value>
+  </data>
+  <data name="Inv_Unavailable" xml:space="preserve">
+    <value>unavailable</value>
+  </data>
+  <data name="Inv_Catalogued" xml:space="preserve">
+    <value>catalogued</value>
+  </data>
+  <data name="Inv_NotCatalogued" xml:space="preserve">
+    <value>not catalogued</value>
+  </data>
+  <data name="Inv_Summary" xml:space="preserve">
+    <value>Summary:</value>
+  </data>
+  <data name="Inv_SummaryUncatalogued" xml:space="preserve">
+    <value>Summary (above, only the uncatalogued ones):</value>
+  </data>
+  <data name="Inv_SectionSummary" xml:space="preserve">
+    <value>{0,6} item(s) | catalogued {1,4} | not catalogued {2,6}</value>
+  </data>
+  <data name="InvSnapshot_Usage" xml:space="preserve">
+    <value>Usage: inventory snapshot &lt;file.json&gt;</value>
+  </data>
+  <data name="InvSnapshot_Saved" xml:space="preserve">
+    <value>Snapshot saved to {0} (build {1}, {2} items).</value>
+  </data>
+  <data name="InvDiff_Usage" xml:space="preserve">
+    <value>Usage: inventory diff &lt;old.json&gt; &lt;new.json&gt;</value>
+  </data>
+  <data name="InvDiff_Header" xml:space="preserve">
+    <value>Differences: build {0} → {1}</value>
+  </data>
+  <data name="InvDiff_None" xml:space="preserve">
+    <value>No differences.</value>
+  </data>
+  <data name="Policy_Ambiguous" xml:space="preserve">
+    <value>'{0}' is ambiguous: {1}. Use File.admx:Name.</value>
+  </data>
+  <data name="Policy_NeedState" xml:space="preserve">
+    <value>Specify --state enabled|disabled|notconfigured.</value>
+  </data>
+  <data name="Policy_InvalidState" xml:space="preserve">
+    <value>Invalid --state '{0}' (enabled|disabled|notconfigured).</value>
+  </data>
+  <data name="Policy_InvalidScope" xml:space="preserve">
+    <value>Invalid --scope '{0}' (machine|user).</value>
+  </data>
+  <data name="Policy_InvalidValue" xml:space="preserve">
+    <value>--value '{0}' must be id=value (ids: {1}).</value>
+  </data>
+  <data name="Policy_NothingToChange" xml:space="preserve">
+    <value>(nothing to change: the registry already matches)</value>
+  </data>
+  <data name="Policy_EnabledDefault" xml:space="preserve">
+    <value>1 (default)</value>
+  </data>
+  <data name="Policy_DisabledDeletes" xml:space="preserve">
+    <value>(deletes the value)</value>
+  </data>
+  <data name="Policy_NoBackup" xml:space="preserve">
+    <value>none</value>
+  </data>
+  <data name="Policy_Preview" xml:space="preserve">
+    <value>Preview of {0}:</value>
+  </data>
+  <data name="PolicySet_Header" xml:space="preserve">
+    <value>{0}  (risk {1})</value>
+  </data>
+  <data name="Policy_DryRun" xml:space="preserve">
+    <value>--dry-run: nothing was written.</value>
+  </data>
+  <data name="Policy_RiskTooHigh" xml:space="preserve">
+    <value>x Risk {0} is above the allowed level ({1}). Use --max-risk {2} to confirm.</value>
+  </data>
+  <data name="PolicyBackups_Item" xml:space="preserve">
+    <value>{0} value(s), since {1:yyyy-MM-dd HH:mm}</value>
+  </data>
+  <data name="PolicyBackups_Total" xml:space="preserve">
+    <value>{0} policy(ies) with a backup in {1}.</value>
+  </data>
+  <data name="Ref_AdmxLoaded" xml:space="preserve">
+    <value>ADMX: {0} policies from {1} file(s) in {2}.</value>
+  </data>
+  <data name="Ref_AdmxMissing" xml:space="preserve">
+    <value>ADMX: folder {0} not found; ADMX check disabled.</value>
+  </data>
+  <data name="Ref_CspLoaded" xml:space="preserve">
+    <value>Policy CSP: {0} policies from {1} pages ({2}).</value>
+  </data>
+  <data name="Ref_CspMissing" xml:space="preserve">
+    <value>Policy CSP: reference not found (run tools/Debloater.RefGen); CSP check disabled.</value>
+  </data>
+  <data name="Ref_FindingWarning" xml:space="preserve">
+    <value>WARN</value>
+  </data>
+  <data name="Ref_FindingInfo" xml:space="preserve">
+    <value>info</value>
+  </data>
+  <data name="Ref_InfosHidden" xml:space="preserve">
+    <value>({0} informational; use --verbose to see them)</value>
+  </data>
+  <data name="Ref_NotDeclared" xml:space="preserve">
+    <value>(not declared)</value>
+  </data>
+  <data name="Ref_SuggestedConfidence" xml:space="preserve">
+    <value>Suggested confidence: {0}</value>
+  </data>
+  <data name="Ref_DeclaredConfidence" xml:space="preserve">
+    <value>Declared confidence: {0}</value>
+  </data>
+  <data name="Ref_FindingCounts" xml:space="preserve">
+    <value>{0} warning(s), {1} informational: {2}</value>
+  </data>
+  <data name="Ref_FindingsWritten" xml:space="preserve">
+    <value>Findings written to {0}.</value>
+  </data>
+  <data name="RefAnnotate_Usage" xml:space="preserve">
+    <value>Usage: reference annotate [--write] [--force] [--catalog DIR] [--admx-dir DIR] [--csp FILE]</value>
+  </data>
+  <data name="Ref_NoRepoRoot" xml:space="preserve">
+    <value>Repository root not found; specify --catalog &lt;repository catalog folder&gt;.</value>
+  </data>
+  <data name="Ref_InvalidCatalog" xml:space="preserve">
+    <value>Invalid catalog; run 'validate'. First error: {0}</value>
+  </data>
+  <data name="Ref_NeedBoth" xml:space="preserve">
+    <value>annotate requires both references (ADMX and Policy CSP).</value>
+  </data>
+  <data name="Ref_FileUpdated" xml:space="preserve">
+    <value>{0}: {1} tweak(s) updated</value>
+  </data>
+  <data name="Ref_FileToUpdate" xml:space="preserve">
+    <value>{0}: {1} tweak(s) to update</value>
+  </data>
+  <data name="Ref_Suggestion" xml:space="preserve">
+    <value>Suggestion: {0}</value>
+  </data>
+  <data name="Ref_Annotated" xml:space="preserve">
+    <value>{0} tweak(s) annotated in {1}.</value>
+  </data>
+  <data name="Ref_WouldAnnotate" xml:space="preserve">
+    <value>{0} tweak(s) would be annotated. Run with --write to save{1}.</value>
+  </data>
+  <data name="Ref_KeepExisting" xml:space="preserve">
+    <value> (tweaks that already have 'confidence' are kept; --force overwrites them)</value>
+  </data>
+  <data name="Ref_InvalidAfterAnnotate" xml:space="preserve">
+    <value>ATTENTION: the catalog became invalid after annotating: {0}</value>
+  </data>
+  <data name="St_InvalidPhase" xml:space="preserve">
+    <value>Invalid --phase '{0}' (full|apply-only|verify|revert).</value>
+  </data>
+  <data name="St_Refused" xml:space="preserve">
+    <value>REFUSED: selftest applies and reverts ALL selected tweaks and may only run in a disposable Hyper-V VM.</value>
+  </data>
+  <data name="St_Detection" xml:space="preserve">
+    <value>Detection: {0}</value>
+  </data>
+  <data name="St_RefusedHint" xml:space="preserve">
+    <value>If you are sure this machine is disposable, use --i-know-this-is-not-a-vm.</value>
+  </data>
+  <data name="St_NotVmWarning" xml:space="preserve">
+    <value>WARNING: this does not look like a Hyper-V VM ({0}); continuing because of --i-know-this-is-not-a-vm.</value>
+  </data>
+  <data name="St_NeedAdmin" xml:space="preserve">
+    <value>selftest requires administrator (apply and revert change HKLM, services, tasks and features).</value>
+  </data>
+  <data name="St_Selected" xml:space="preserve">
+    <value>{0} tweak(s) selected; max risk {1}; irreversible {2}; backups in {3}</value>
+  </data>
+  <data name="St_Included" xml:space="preserve">
+    <value>included</value>
+  </data>
+  <data name="St_Skipped" xml:space="preserve">
+    <value>skipped</value>
+  </data>
+  <data name="St_ApplyOnly" xml:space="preserve">
+    <value>apply-only phase: applies without reverting; state in {0}. Next: --phase verify (repeatable) and --phase revert.</value>
+  </data>
+  <data name="St_RestorePoint" xml:space="preserve">
+    <value>Restore point: {0} - {1} ({2} ms)</value>
+  </data>
+  <data name="St_Created" xml:space="preserve">
+    <value>created</value>
+  </data>
+  <data name="St_NotCreated" xml:space="preserve">
+    <value>not created</value>
+  </data>
+  <data name="St_RebootPending" xml:space="preserve">
+    <value> [reboot pending]</value>
+  </data>
+  <data name="St_Report" xml:space="preserve">
+    <value>Report: {0}</value>
+  </data>
+  <data name="St_StateNotFound" xml:space="preserve">
+    <value>State file not found: {0}. Run 'selftest --phase apply-only' first.</value>
+  </data>
+  <data name="St_StateEmpty" xml:space="preserve">
+    <value>Empty state file: {0}.</value>
+  </data>
+  <data name="St_StateIsFull" xml:space="preserve">
+    <value>The state file is from a full selftest, not from --phase apply-only.</value>
+  </data>
+  <data name="St_StateReverted" xml:space="preserve">
+    <value>This state file has already gone through the revert phase.</value>
+  </data>
+  <data name="St_State" xml:space="preserve">
+    <value>State: {0} (phases: {1})</value>
+  </data>
+  <data name="St_VerifyStart" xml:space="preserve">
+    <value>Persistence check '{0}'...</value>
+  </data>
+  <data name="St_PersistenceFor" xml:space="preserve">
+    <value>Persistence ({0}): {1}</value>
+  </data>
+  <data name="St_RevertProgress" xml:space="preserve">
+    <value>[{0}/{1}] revert {2} ...</value>
+  </data>
+  <data name="St_ActionDetail" xml:space="preserve">
+    <value>{0}:{1}  before={2}  applied={3}{4}  reverted={5}</value>
+  </data>
+  <data name="St_Summary" xml:space="preserve">
+    <value>Summary: {0}</value>
+  </data>
+  <data name="St_Persistence" xml:space="preserve">
+    <value>Persistence: {0}</value>
+  </data>
+  <data name="St_RevertedSince" xml:space="preserve">
+    <value>{0} (since {1}): {2}</value>
+  </data>
+  <data name="St_RebootWarning" xml:space="preserve">
+    <value>Attention: the test left a reboot pending (optional features).</value>
+  </data>
+</root>

@@ -4,7 +4,7 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Abre sem elevação (modo somente leitura); o app oferece reiniciar como administrador. -->
+        <!-- Starts without elevation (read-only mode); the app offers to restart as administrator. -->
         <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>

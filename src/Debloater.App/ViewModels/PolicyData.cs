@@ -9,7 +9,7 @@ using Microsoft.UI.Xaml.Media;
 
 namespace Debloater.App.ViewModels;
 
-/// <summary>Uma política ADMX com o estado atual neste PC e a página da Policy CSP (se houver).</summary>
+/// <summary>An ADMX policy with its current state on this PC and its Policy CSP page (if any).</summary>
 public sealed class PolicyItem
 {
     public PolicyItem(AdmxPolicy policy, IReadOnlyList<AdmxScopeState> scopes, CspPolicy? csp)
@@ -29,14 +29,14 @@ public sealed class PolicyItem
     public AdmxPolicyState State { get; private set; }
     public RiskLevel Risk { get; }
 
-    /// <summary>Relê o estado no registro (depois de aplicar/reverter).</summary>
+    /// <summary>Re-reads the state from the registry (after apply/revert).</summary>
     public void Refresh()
     {
         Scopes = AdmxPolicyStateReader.Read(Policy);
         State = AdmxPolicyStateReader.Combined(Scopes);
     }
 
-    /// <summary>Texto curto da mudança pendente ("→ Habilitada", "→ reverter"), preenchido pela página antes de exibir.</summary>
+    /// <summary>Short text of the pending change ("Pending: Enabled"), filled in by the page before display.</summary>
     public string PendingText { get; set; } = "";
     public Visibility PendingVisibility => PendingText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
@@ -60,12 +60,12 @@ public sealed class PolicyItem
                 _ => "HKLM/HKCU",
             };
             var lines = new List<string> { $"{hives}\\{Policy.Key}" + (Policy.ValueName is null ? "" : $"\\{Policy.ValueName}") };
-            if (Policy.EnabledValue is not null) lines.Add($"Habilitada = {Policy.EnabledValue}");
-            if (Policy.DisabledValue is not null) lines.Add($"Desabilitada = {Policy.DisabledValue}");
+            if (Policy.EnabledValue is not null) lines.Add(Loc.Format("PolicyRegistry_EnabledValue", Policy.EnabledValue));
+            if (Policy.DisabledValue is not null) lines.Add(Loc.Format("PolicyRegistry_DisabledValue", Policy.DisabledValue));
             foreach (var el in Policy.Elements)
-                lines.Add($"Elemento {el.Type} '{el.Label ?? el.Id}': {el.Key}\\{el.ValueName}");
-            if (Policy.EnabledList is { Count: > 0 } en) lines.AddRange(en.Select(i => $"Habilitada grava {i.Key}\\{i.ValueName} = {i.Value}"));
-            if (Policy.DisabledList is { Count: > 0 } dis) lines.AddRange(dis.Select(i => $"Desabilitada grava {i.Key}\\{i.ValueName} = {i.Value}"));
+                lines.Add(Loc.Format("PolicyRegistry_Element", el.Type, el.Label ?? el.Id, $"{el.Key}\\{el.ValueName}"));
+            if (Policy.EnabledList is { Count: > 0 } en) lines.AddRange(en.Select(i => Loc.Format("PolicyRegistry_EnabledWrites", $"{i.Key}\\{i.ValueName}", i.Value)));
+            if (Policy.DisabledList is { Count: > 0 } dis) lines.AddRange(dis.Select(i => Loc.Format("PolicyRegistry_DisabledWrites", $"{i.Key}\\{i.ValueName}", i.Value)));
             return string.Join(Environment.NewLine, lines);
         }
     }
@@ -75,15 +75,15 @@ public sealed class PolicyItem
         : string.Join(Environment.NewLine, Scopes.Select(s =>
             $"{s.Scope}: {Labels.AdmxState(s.State)}" + (s.Values.Count > 0 ? " (" + string.Join("; ", s.Values) + ")" : "")));
 
-    public string SupportedOnText => Policy.SupportedOn ?? Policy.SupportedOnRef ?? "Não informado";
-    public string ExplainText => string.IsNullOrWhiteSpace(Policy.ExplainText) ? "(sem texto de explicação no ADML)" : Policy.ExplainText.Trim();
+    public string SupportedOnText => Policy.SupportedOn ?? Policy.SupportedOnRef ?? Loc.Get("Policy_NotSpecified");
+    public string ExplainText => string.IsNullOrWhiteSpace(Policy.ExplainText) ? Loc.Get("Policy_NoExplainText") : Policy.ExplainText.Trim();
     public string QualifiedName => Policy.QualifiedName;
     public Uri? CspUri => Csp is null ? null : new Uri(Csp.Url);
-    public string CspText => Csp is null ? "" : Csp.Reference + (Csp.Deprecated ? " (obsoleta)" : "");
+    public string CspText => Csp is null ? "" : Csp.Reference + (Csp.Deprecated ? " " + Loc.Get("Policy_Deprecated") : "");
     public Visibility CspVisibility => Csp is null ? Visibility.Collapsed : Visibility.Visible;
 }
 
-/// <summary>Todas as políticas ADMX do PC, carregadas uma vez (em segundo plano) e mantidas em cache.</summary>
+/// <summary>All ADMX policies of the PC, loaded once (in the background) and cached.</summary>
 public sealed class PolicyCatalog
 {
     public required string Directory { get; init; }
@@ -107,20 +107,20 @@ public sealed class PolicyCatalog
         return _cached;
     }
 
-    /// <summary>Item pelo nome "Arquivo.admx:Nome".</summary>
+    /// <summary>Item by its "File.admx:Name" name.</summary>
     public PolicyItem? Find(string qualifiedName)
     {
         _byName ??= Items.GroupBy(i => i.QualifiedName, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         return _byName.GetValueOrDefault(qualifiedName);
     }
 
-    /// <summary>Política da CSP correspondente (se o catálogo já foi carregado).</summary>
+    /// <summary>Matching CSP policy (if the catalog has already been loaded).</summary>
     public static CspPolicy? CspFor(AdmxPolicy policy) => _loaded?.Find(policy.QualifiedName)?.Csp;
 
-    /// <summary>Catálogo já carregado (ou null).</summary>
+    /// <summary>Catalog already loaded (or null).</summary>
     public static PolicyCatalog? Loaded => _loaded;
 
-    /// <summary>Separador de níveis na árvore; nomes de categoria que contêm "/" são preservados.</summary>
+    /// <summary>Level separator in the tree; category names that contain "/" are preserved.</summary>
     public static string PathOf(AdmxPolicy p) => string.Join("/", p.CategoryPath.Select(c => c.Replace('/', '∕')));
 
     private static PolicyCatalog Load()
@@ -141,7 +141,7 @@ public sealed class PolicyCatalog
             }
             catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException)
             {
-                // Sem links da CSP; o resto funciona.
+                // No CSP links; everything else works.
             }
         }
 

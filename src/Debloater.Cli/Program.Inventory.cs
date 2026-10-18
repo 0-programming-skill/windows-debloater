@@ -14,7 +14,7 @@ internal static partial class Program
             null => await InventoryShowAsync(a),
             "snapshot" => await InventorySnapshotAsync(a),
             "diff" => InventoryDiffCommand(a),
-            _ => Fail($"Subcomando desconhecido 'inventory {sub}' (use: snapshot, diff, ou nenhum)."),
+            _ => Fail(L.F("Inv_UnknownSub", sub)),
         };
     }
 
@@ -23,7 +23,7 @@ internal static partial class Program
         if (a.Kinds.Count == 0) return null;
         var unknown = a.Kinds.Where(k => !InventoryKinds.IsKnown(k)).ToList();
         if (unknown.Count > 0)
-            throw new ArgumentException($"--kind inválido: {string.Join(", ", unknown)} (conhecidos: {string.Join(", ", InventoryKinds.All)}).");
+            throw new ArgumentException(L.F("Inv_InvalidKind", string.Join(", ", unknown), string.Join(", ", InventoryKinds.All)));
         return a.Kinds.Select(k => k.ToLowerInvariant()).ToList();
     }
 
@@ -32,7 +32,7 @@ internal static partial class Program
         var snapshot = await new InventoryCollector().CollectAsync(ParseKinds(a));
         var catalog = CatalogLoader.LoadDirectory(a.CatalogDir);
         if (!catalog.IsValid)
-            Console.Error.WriteLine($"Aviso: catálogo com {catalog.Errors.Count} erro(s); cruzamento parcial.");
+            Console.Error.WriteLine(L.F("Inv_CatalogErrors", catalog.Errors.Count));
         CatalogCrossReference.Annotate(snapshot, catalog.Tweaks);
         return snapshot;
     }
@@ -53,10 +53,10 @@ internal static partial class Program
 
         foreach (var section in snapshot.Sections)
         {
-            Console.WriteLine($"\n[{section.Kind}]{(section.Available ? "" : " INDISPONÍVEL")}{(section.Note is null ? "" : $" ({section.Note})")}");
+            Console.WriteLine($"\n[{section.Kind}]{(section.Available ? "" : " " + L.T("Inv_UnavailableUpper"))}{(section.Note is null ? "" : $" ({section.Note})")}");
             foreach (var item in section.Items)
             {
-                var mark = item.IsCatalogued ? "catalogado" : "não catalogado";
+                var mark = L.T(item.IsCatalogued ? "Inv_Catalogued" : "Inv_NotCatalogued");
                 var name = item.DisplayName is { Length: > 0 } dn && !dn.Equals(item.Id, StringComparison.OrdinalIgnoreCase) ? $"  {dn}" : "";
                 Console.WriteLine($"  {item.Id,-60} {mark,-15}{name}");
                 if (a.Verbose)
@@ -68,31 +68,31 @@ internal static partial class Program
         }
 
         Console.WriteLine();
-        Console.WriteLine(a.Uncatalogued ? "Resumo (acima, somente os não catalogados):" : "Resumo:");
+        Console.WriteLine(L.T(a.Uncatalogued ? "Inv_SummaryUncatalogued" : "Inv_Summary"));
         foreach (var section in snapshot.Sections)
         {
-            if (!section.Available) { Console.WriteLine($"  {section.Kind,-13} indisponível"); continue; }
+            if (!section.Available) { Console.WriteLine($"  {section.Kind,-13} {L.T("Inv_Unavailable")}"); continue; }
             var (total, cat) = totals[section.Kind];
-            Console.WriteLine($"  {section.Kind,-13} {total,6} item(ns) | catalogados {cat,4} | não catalogados {total - cat,6}");
+            Console.WriteLine($"  {section.Kind,-13} {L.F("Inv_SectionSummary", total, cat, total - cat)}");
         }
         return 0;
     }
 
     private static async Task<int> InventorySnapshotAsync(Args a)
     {
-        if (a.Positional.Count < 2) return Fail("Uso: inventory snapshot <arquivo.json>");
+        if (a.Positional.Count < 2) return Fail(L.T("InvSnapshot_Usage"));
         var file = Path.GetFullPath(a.Positional[1]);
         var snapshot = await CollectInventoryAsync(a);
         InventoryDiff.Save(snapshot, file);
-        Console.WriteLine($"Snapshot gravado em {file} (build {snapshot.WindowsBuild}, {snapshot.Sections.Sum(s => s.Items.Count)} itens).");
+        Console.WriteLine(L.F("InvSnapshot_Saved", file, snapshot.WindowsBuild, snapshot.Sections.Sum(s => s.Items.Count)));
         foreach (var s in snapshot.Sections.Where(s => !s.Available || s.Note is not null))
-            Console.WriteLine($"  {s.Kind}: {(s.Available ? "" : "INDISPONÍVEL ")}{s.Note}");
+            Console.WriteLine($"  {s.Kind}: {(s.Available ? "" : L.T("Inv_UnavailableUpper") + " ")}{s.Note}");
         return 0;
     }
 
     private static int InventoryDiffCommand(Args a)
     {
-        if (a.Positional.Count < 3) return Fail("Uso: inventory diff <antigo.json> <novo.json>");
+        if (a.Positional.Count < 3) return Fail(L.T("InvDiff_Usage"));
         var oldSnap = InventoryDiff.Load(a.Positional[1]);
         var newSnap = InventoryDiff.Load(a.Positional[2]);
         var diff = InventoryDiff.Compare(oldSnap, newSnap);
@@ -103,8 +103,8 @@ internal static partial class Program
             return 0;
         }
 
-        Console.WriteLine($"Diferenças: build {diff.OldBuild ?? "?"} → {diff.NewBuild ?? "?"}");
-        foreach (var w in diff.Warnings) Console.WriteLine($"  aviso: {w}");
+        Console.WriteLine(L.F("InvDiff_Header", diff.OldBuild ?? "?", diff.NewBuild ?? "?"));
+        foreach (var w in diff.Warnings) Console.WriteLine($"  {L.T("Label_Warning")}: {w}");
         foreach (var group in diff.Entries.GroupBy(e => e.Kind))
         {
             Console.WriteLine($"\n[{group.Key}]");
@@ -118,7 +118,7 @@ internal static partial class Program
             }
         }
         var counts = diff.Entries.GroupBy(e => e.Change).Select(g => $"{g.Key}: {g.Count()}");
-        Console.WriteLine(diff.Entries.Count == 0 ? "\nNenhuma diferença." : $"\nTotal {diff.Entries.Count} | {string.Join(" | ", counts)}");
+        Console.WriteLine(diff.Entries.Count == 0 ? "\n" + L.T("InvDiff_None") : $"\nTotal {diff.Entries.Count} | {string.Join(" | ", counts)}");
         return 0;
     }
 }

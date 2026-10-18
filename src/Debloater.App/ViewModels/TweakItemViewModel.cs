@@ -8,7 +8,7 @@ using Microsoft.UI.Xaml.Media;
 
 namespace Debloater.App.ViewModels;
 
-/// <summary>Uma ação do tweak com o seu estado individual.</summary>
+/// <summary>One action of the tweak with its individual state.</summary>
 public sealed class ActionItemViewModel(ActionSpec action, ActionStatus? status)
 {
     public string TypeText { get; } = Labels.ActionType(action.Type);
@@ -26,14 +26,14 @@ public sealed class ActionItemViewModel(ActionSpec action, ActionStatus? status)
     });
 }
 
-/// <summary>Link de fonte/referência.</summary>
+/// <summary>Source/reference link.</summary>
 public sealed record LinkItem(string Text, Uri? Uri)
 {
     public bool IsLink => Uri is not null;
     public bool IsText => Uri is null;
 }
 
-/// <summary>Linha da lista de ajustes: tweak + estado atual + estado desejado.</summary>
+/// <summary>Row of the tweak list: tweak + current state + desired state.</summary>
 public sealed partial class TweakItemViewModel : ObservableObject
 {
     private readonly AppState _app;
@@ -47,10 +47,10 @@ public sealed partial class TweakItemViewModel : ObservableObject
 
     public Tweak Tweak { get; }
     public string Id => Tweak.Id;
-    public string Name => Tweak.Name;
-    public string Description => Tweak.Description.Trim();
+    public string Name => Tweak.DisplayName;
+    public string Description => Tweak.DisplayDescription.Trim();
 
-    /// <summary>Primeira frase da descrição, para a linha recolhida.</summary>
+    /// <summary>First sentence of the description, for the collapsed row.</summary>
     public string ShortDescription
     {
         get
@@ -61,9 +61,14 @@ public sealed partial class TweakItemViewModel : ObservableObject
         }
     }
 
-    public string Category => Tweak.Category;
-    public string? Breaks => Tweak.Breaks?.Trim();
+    /// <summary>Category as shown to the user (translated path).</summary>
+    public string Category => _app.DisplayCategory(Tweak.Category);
+    public string? Breaks => Tweak.DisplayBreaks?.Trim();
     public Visibility BreaksVisibility => string.IsNullOrWhiteSpace(Tweak.Breaks) ? Visibility.Collapsed : Visibility.Visible;
+
+    public string PreconditionText => Tweak.DisplayPreconditionReason is { } reason && !string.IsNullOrWhiteSpace(reason)
+        ? Loc.Format("Tweak_Precondition", reason.Trim()) : "";
+    public Visibility PreconditionVisibility => PreconditionText.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
 
     public string RiskText => Labels.RiskShort(Tweak.Risk);
     public SolidColorBrush RiskBrush => Labels.Brush(Labels.RiskColor(Tweak.Risk));
@@ -76,29 +81,29 @@ public sealed partial class TweakItemViewModel : ObservableObject
 
     public string BuildText => (Tweak.MinBuild, Tweak.MaxBuild) switch
     {
-        (null, null) => "Todos os builds",
-        ({ } min, null) => $"Build {min} ou superior",
-        (null, { } max) => $"Até o build {max}",
-        ({ } min, { } max) => $"Builds {min} a {max}",
+        (null, null) => Loc.Get("Tweak_AllBuilds"),
+        ({ } min, null) => Loc.Format("Tweak_BuildMin", min),
+        (null, { } max) => Loc.Format("Tweak_BuildMax", max),
+        ({ } min, { } max) => Loc.Format("Tweak_BuildRange", min, max),
     };
 
     public string ReversibleText => Tweak.Reversible
-        ? "Reversível: o valor original é guardado em backup antes de aplicar."
-        : "Não reversível pelo programa (ex.: app removido; reinstale pela Microsoft Store).";
+        ? Loc.Get("Tweak_Reversible")
+        : Loc.Get("Tweak_NotReversible");
 
-    public string TagsText => Tweak.Tags.Count == 0 ? "" : "Tags: " + string.Join(", ", Tweak.Tags);
-    public string SourceFileText => $"Arquivo: {Tweak.SourceFile}";
+    public string TagsText => Tweak.Tags.Count == 0 ? "" : Loc.Format("Tweak_Tags", string.Join(", ", Tweak.Tags));
+    public string SourceFileText => Loc.Format("Tweak_SourceFile", Tweak.SourceFile);
 
     public IReadOnlyList<LinkItem> Links { get; }
     public Visibility LinksVisibility => Links.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
 
-    // ---------------- estado ----------------
+    // ---------------- state ----------------
 
     [ObservableProperty]
     public partial TweakStatus? Status { get; set; }
 
     public TweakState? State => Status?.State;
-    public string StateText => Status is null ? "Verificando..." : Labels.State(Status.State);
+    public string StateText => Status is null ? Loc.Get("Tweak_Checking") : Labels.State(Status.State);
     public SolidColorBrush StateBrush => Labels.Brush(Status is null ? Labels.StateColor(TweakState.NotApplicable) : Labels.StateColor(Status.State));
     public SolidColorBrush StateForeground => Labels.ForegroundOn(Status is null ? Labels.StateColor(TweakState.NotApplicable) : Labels.StateColor(Status.State));
     public string StateMessage => Status?.Message ?? "";
@@ -119,12 +124,12 @@ public sealed partial class TweakItemViewModel : ObservableObject
         RaiseDesiredChanged();
     }
 
-    // ---------------- desejado ----------------
+    // ---------------- desired ----------------
 
-    /// <summary>Estado desejado escolhido explicitamente (nulo = manter como está).</summary>
+    /// <summary>Desired state chosen explicitly (null = keep as is).</summary>
     public DesiredState? ExplicitDesired => _app.GetDesired(Id);
 
-    /// <summary>Desejado efetivo: o explícito ou, sem escolha, o atual (Parcial = indefinido).</summary>
+    /// <summary>Effective desired state: the explicit one or, without a choice, the current one (Partial = undefined).</summary>
     public DesiredState? EffectiveDesired => ExplicitDesired ?? State switch
     {
         TweakState.Applied => DesiredState.Applied,
@@ -132,7 +137,7 @@ public sealed partial class TweakItemViewModel : ObservableObject
         _ => null,
     };
 
-    /// <summary>Caixa "desejado: aplicado". Indeterminada para estado Parcial sem escolha.</summary>
+    /// <summary>"Desired: applied" check box. Indeterminate for the Partial state without a choice.</summary>
     public bool? DesiredChecked
     {
         get => EffectiveDesired switch
@@ -154,7 +159,7 @@ public sealed partial class TweakItemViewModel : ObservableObject
 
     public bool IsPending => State is { } s && ExplicitDesired is { } d && ChangePlanner.NeedsChange(s, d);
 
-    public string PendingText => !IsPending ? "" : ExplicitDesired == DesiredState.Applied ? "Será aplicado" : "Será revertido";
+    public string PendingText => !IsPending ? "" : ExplicitDesired == DesiredState.Applied ? Loc.Get("Tweak_WillApply") : Loc.Get("Tweak_WillRevert");
     public Visibility PendingVisibility => IsPending ? Visibility.Visible : Visibility.Collapsed;
 
     public void RaiseDesiredChanged()
@@ -181,11 +186,11 @@ public sealed partial class TweakItemViewModel : ObservableObject
             };
             var label = s.Kind switch
             {
-                SourceRef.MsDocs => "Microsoft Learn: " + s.Ref,
-                SourceRef.AdmxKind => "Política ADMX: " + s.Ref,
-                SourceRef.CommunityKind => "Comunidade: " + s.Ref,
-                SourceRef.ReKind => "Engenharia reversa: " + s.Ref,
-                SourceRef.ToolKind => "Ferramenta: " + s.Ref,
+                SourceRef.MsDocs => Loc.Format("Source_MsDocs", s.Ref),
+                SourceRef.AdmxKind => Loc.Format("Source_Admx", s.Ref),
+                SourceRef.CommunityKind => Loc.Format("Source_Community", s.Ref),
+                SourceRef.ReKind => Loc.Format("Source_ReverseEngineering", s.Ref),
+                SourceRef.ToolKind => Loc.Format("Source_Tool", s.Ref),
                 _ => s.Ref,
             };
             links.Add(new LinkItem(label, uri));
@@ -195,7 +200,7 @@ public sealed partial class TweakItemViewModel : ObservableObject
         return links;
     }
 
-    /// <summary>"Policy CSP - Area/Name" → página policy-csp-area#name.</summary>
+    /// <summary>"Policy CSP - Area/Name" → page policy-csp-area#name.</summary>
     private static Uri? MsDocsUri(string reference)
     {
         const string prefix = "Policy CSP - ";

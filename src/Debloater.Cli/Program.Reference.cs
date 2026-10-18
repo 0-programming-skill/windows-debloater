@@ -9,7 +9,7 @@ internal static partial class Program
 {
     private const string CspFileName = "msdocs-policy-csp.json";
 
-    /// <summary>Raiz do repositório (pasta com Debloater.slnx), a partir da pasta atual ou do executável.</summary>
+    /// <summary>Repository root (folder with Debloater.slnx), searched from the current folder or the executable.</summary>
     private static string? FindRepoRoot()
     {
         foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
@@ -25,12 +25,12 @@ internal static partial class Program
         AdmxCatalog? admx = null;
         if (Directory.Exists(a.AdmxDir))
         {
-            admx = AdmxParser.ParseDirectory(a.AdmxDir, a.Lang is null ? AdmxParser.DefaultLanguages : [a.Lang]);
-            Console.WriteLine($"ADMX: {admx.Policies.Count} políticas de {admx.FileCount} arquivo(s) em {a.AdmxDir}.");
+            admx = AdmxParser.ParseDirectory(a.AdmxDir, AdmxParser.DefaultLanguages);
+            Console.WriteLine(L.F("Ref_AdmxLoaded", admx.Policies.Count, admx.FileCount, a.AdmxDir));
         }
         else
         {
-            Console.WriteLine($"ADMX: pasta {a.AdmxDir} não encontrada; verificação ADMX desativada.");
+            Console.WriteLine(L.F("Ref_AdmxMissing", a.AdmxDir));
         }
 
         string? cspPath = a.CspFile;
@@ -47,11 +47,11 @@ internal static partial class Program
         if (cspPath is not null && File.Exists(cspPath))
         {
             csp = CspMarkdownParser.Load(cspPath);
-            Console.WriteLine($"Policy CSP: {csp.Policies.Count} políticas de {csp.Pages.Count} páginas ({cspPath}).");
+            Console.WriteLine(L.F("Ref_CspLoaded", csp.Policies.Count, csp.Pages.Count, cspPath));
         }
         else
         {
-            Console.WriteLine("Policy CSP: referência não encontrada (rode tools/Debloater.RefGen); verificação CSP desativada.");
+            Console.WriteLine(L.T("Ref_CspMissing"));
         }
         return new References(admx, csp, cspPath, new ReferenceMatcher(admx?.Policies, csp?.Policies));
     }
@@ -71,24 +71,24 @@ internal static partial class Program
         {
             Console.WriteLine($"{group.Key}:");
             foreach (var f in group.Where(f => a.Verbose || f.Severity == FindingSeverity.Warning))
-                Console.WriteLine($"  {(f.Severity == FindingSeverity.Warning ? "AVISO" : "info ")} [{f.TweakId}] {f.Code}: {f.Message}");
+                Console.WriteLine($"  {L.T(f.Severity == FindingSeverity.Warning ? "Ref_FindingWarning" : "Ref_FindingInfo"),-5} [{f.TweakId}] {f.Code}: {f.Message}");
             int infos = group.Count(f => f.Severity == FindingSeverity.Info);
-            if (!a.Verbose && infos > 0) Console.WriteLine($"  ({infos} informativo(s); use --verbose para ver)");
+            if (!a.Verbose && infos > 0) Console.WriteLine("  " + L.F("Ref_InfosHidden", infos));
         }
 
-        // Cobertura: confiança sugerida pelas referências x declarada no YAML.
+        // Coverage: confidence suggested by the references vs. declared in the YAML.
         var suggested = catalog.Tweaks
             .Select(t => ReferenceMatcher.SuggestConfidence(refs.Matcher.Match(t), findings))
             .GroupBy(c => c).OrderBy(g => g.Key).Select(g => $"{ReferenceValidator.Lower(g.Key)} {g.Count()}");
         var declared = catalog.Tweaks
-            .GroupBy(t => t.Confidence is { } c ? ReferenceValidator.Lower(c) : "(não declarado)")
+            .GroupBy(t => t.Confidence is { } c ? ReferenceValidator.Lower(c) : L.T("Ref_NotDeclared"))
             .OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} {g.Count()}");
         Console.WriteLine();
-        Console.WriteLine($"Confiança sugerida: {string.Join(" | ", suggested)}");
-        Console.WriteLine($"Confiança declarada: {string.Join(" | ", declared)}");
+        Console.WriteLine(L.F("Ref_SuggestedConfidence", string.Join(" | ", suggested)));
+        Console.WriteLine(L.F("Ref_DeclaredConfidence", string.Join(" | ", declared)));
         var byCode = findings.GroupBy(f => (f.Severity, f.Code)).OrderBy(g => g.Key.Severity).ThenBy(g => g.Key.Code, StringComparer.Ordinal)
             .Select(g => $"{g.Key.Code} {g.Count()}");
-        Console.WriteLine($"{findings.Count(f => f.Severity == FindingSeverity.Warning)} aviso(s), {findings.Count(f => f.Severity == FindingSeverity.Info)} informativo(s): {string.Join(", ", byCode)}");
+        Console.WriteLine(L.F("Ref_FindingCounts", findings.Count(f => f.Severity == FindingSeverity.Warning), findings.Count(f => f.Severity == FindingSeverity.Info), string.Join(", ", byCode)));
 
         if (a.WarningsOut is not null)
         {
@@ -96,9 +96,9 @@ internal static partial class Program
             var dir = Path.GetDirectoryName(a.WarningsOut);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(a.WarningsOut, string.Join("\n", lines) + "\n");
-            Console.WriteLine($"Achados gravados em {a.WarningsOut}.");
+            Console.WriteLine(L.F("Ref_FindingsWritten", a.WarningsOut));
         }
-        // Avisos de referência não são erros: o resultado é o da validação do catálogo.
+        // Reference warnings are not errors: the result is the catalog validation's.
         return baseResult;
     }
 
@@ -106,22 +106,22 @@ internal static partial class Program
     {
         var sub = a.Positional.Count > 0 ? a.Positional[0].ToLowerInvariant() : null;
         if (sub != "annotate")
-            return Fail("Uso: reference annotate [--write] [--force] [--catalog DIR] [--admx-dir DIR] [--csp FILE]");
+            return Fail(L.T("RefAnnotate_Usage"));
 
-        // Escreve nos YAML do repositório, não na cópia ao lado do executável.
+        // Writes to the repository YAML files, not to the copy next to the executable.
         var catalogDir = a.CatalogDir;
         if (catalogDir == Path.Combine(AppContext.BaseDirectory, "catalog"))
         {
             var root = FindRepoRoot();
-            if (root is null) return Fail("Raiz do repositório não encontrada; informe --catalog <pasta catalog do repositório>.");
+            if (root is null) return Fail(L.T("Ref_NoRepoRoot"));
             catalogDir = Path.Combine(root, "catalog");
         }
         var catalog = CatalogLoader.LoadDirectory(catalogDir);
-        if (!catalog.IsValid) return Fail($"Catálogo inválido; rode 'validate'. Primeiro erro: {catalog.Errors[0]}");
+        if (!catalog.IsValid) return Fail(L.F("Ref_InvalidCatalog", catalog.Errors[0]));
 
         var refs = LoadReferences(a);
         if (refs.Admx is null || refs.Csp is null)
-            return Fail("annotate exige as duas referências (ADMX e Policy CSP).");
+            return Fail(L.T("Ref_NeedBoth"));
         var findings = ReferenceValidator.Validate(catalog.Tweaks, refs.Matcher, refs.Admx.Policies, refs.Csp.Policies);
 
         var plan = new Dictionary<string, Dictionary<string, CatalogAnnotator.Annotation>>(StringComparer.OrdinalIgnoreCase);
@@ -131,7 +131,7 @@ internal static partial class Program
             var match = refs.Matcher.Match(tweak);
             var confidence = ReferenceMatcher.SuggestConfidence(match, findings);
             var sources = ReferenceMatcher.SuggestSources(match);
-            // Mantém fontes declaradas à mão que o matcher não encontra (url, community...).
+            // Keeps hand-declared sources that the matcher does not find (url, community...).
             foreach (var s in tweak.Sources)
                 if (!sources.Any(x => x.Kind == s.Kind && x.Ref.Equals(s.Ref, StringComparison.OrdinalIgnoreCase))) sources.Add(s);
             counts[confidence] = counts.GetValueOrDefault(confidence) + 1;
@@ -148,19 +148,19 @@ internal static partial class Program
             var (newText, changed) = CatalogAnnotator.Annotate(text, annotations, a.Force);
             total += changed;
             if (changed > 0 && a.Write) File.WriteAllText(path, newText, new System.Text.UTF8Encoding(false));
-            if (changed > 0) Console.WriteLine($"{file}: {changed} tweak(s) {(a.Write ? "atualizado(s)" : "a atualizar")}");
+            if (changed > 0) Console.WriteLine(L.F(a.Write ? "Ref_FileUpdated" : "Ref_FileToUpdate", file, changed));
         }
 
         Console.WriteLine();
-        Console.WriteLine($"Sugestão: {string.Join(" | ", counts.OrderBy(c => c.Key).Select(c => $"{ReferenceValidator.Lower(c.Key)} {c.Value}"))}");
+        Console.WriteLine(L.F("Ref_Suggestion", string.Join(" | ", counts.OrderBy(c => c.Key).Select(c => $"{ReferenceValidator.Lower(c.Key)} {c.Value}"))));
         Console.WriteLine(a.Write
-            ? $"{total} tweak(s) anotados em {catalogDir}."
-            : $"{total} tweak(s) seriam anotados. Rode com --write para gravar{(a.Force ? "" : " (tweaks que já têm 'confidence' são mantidos; --force sobrescreve)")}.");
+            ? L.F("Ref_Annotated", total, catalogDir)
+            : L.F("Ref_WouldAnnotate", total, a.Force ? "" : L.T("Ref_KeepExisting")));
 
         if (a.Write)
         {
             var check = CatalogLoader.LoadDirectory(catalogDir);
-            if (!check.IsValid) return Fail($"ATENÇÃO: o catálogo ficou inválido após anotar: {check.Errors[0]}");
+            if (!check.IsValid) return Fail(L.F("Ref_InvalidAfterAnnotate", check.Errors[0]));
         }
         return 0;
     }

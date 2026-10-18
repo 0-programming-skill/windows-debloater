@@ -10,30 +10,40 @@ public enum ThemeChoice
     Dark,
 }
 
-/// <summary>Configurações do app, em %LocalAppData%\Debloater\settings.json.</summary>
+/// <summary>App settings, in %LocalAppData%\Debloater\settings.json.</summary>
 public sealed class AppSettings
 {
+    /// <summary>Value of <see cref="UiLanguage"/> that follows the Windows display language.</summary>
+    public const string AutoLanguage = "auto";
+
     public static string DataDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Debloater");
 
     public static string FilePath => Path.Combine(DataDirectory, "settings.json");
 
+    /// <summary>Unexpected app errors are appended here.</summary>
+    public static string ErrorLogPath => Path.Combine(DataDirectory, "errors.log");
+
     public static string DefaultCatalogDirectory => Path.Combine(AppContext.BaseDirectory, "catalog");
 
-    /// <summary>Perfis do usuário (salvos e importados).</summary>
+    /// <summary>User profiles (saved and imported).</summary>
     public static string UserProfilesDirectory => Path.Combine(DataDirectory, "profiles");
 
-    /// <summary>Pasta do catálogo; nulo = a que acompanha o programa.</summary>
+    /// <summary>Catalog folder; null = the one shipped with the program.</summary>
     public string? CatalogDirectory { get; set; }
 
-    /// <summary>Pasta dos backups; nulo = %ProgramData%\Debloater\backups.</summary>
+    /// <summary>Backup folder; null = %ProgramData%\Debloater\backups.</summary>
     public string? BackupDirectory { get; set; }
 
     public ThemeChoice Theme { get; set; } = ThemeChoice.System;
 
     public bool CreateRestorePoint { get; set; } = true;
 
-    public string Language { get; set; } = "pt-BR";
+    /// <summary>
+    /// Interface language: "auto" (follow the Windows display language), "en-US" or "pt-BR". Applied at
+    /// startup, so a change takes effect after a restart. (The old "Language" property is ignored.)
+    /// </summary>
+    public string UiLanguage { get; set; } = AutoLanguage;
 
     public string EffectiveCatalogDirectory => string.IsNullOrWhiteSpace(CatalogDirectory) ? DefaultCatalogDirectory : CatalogDirectory!;
 
@@ -50,7 +60,7 @@ public sealed class AppSettings
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            // Arquivo corrompido ou inacessível: volta ao padrão.
+            // Corrupted or inaccessible file: fall back to the defaults.
         }
         return new AppSettings();
     }
@@ -64,7 +74,7 @@ public sealed class AppSettings
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Não impede o uso do app.
+            // Does not prevent using the app.
         }
     }
 }

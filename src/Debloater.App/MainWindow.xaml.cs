@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Debloater.App.Helpers;
 using Debloater.App.Services;
 using Debloater.App.Views;
 using Debloater.Core.Planning;
@@ -30,11 +31,11 @@ public sealed partial class MainWindow : Window
 
         var state = App.State;
         ReadOnlyBar.IsOpen = !state.IsElevated;
-        ModeText.Text = state.IsElevated ? "Administrador" : "Somente leitura";
-        // O item de configurações só existe depois que o template é aplicado.
+        ModeText.Text = state.IsElevated ? Loc.Get("Mode_Administrator") : Loc.Get("Mode_ReadOnly");
+        // The settings item only exists after the template is applied.
         Nav.Loaded += (_, _) =>
         {
-            if (Nav.SettingsItem is NavigationViewItem settings) settings.Content = "Configurações";
+            if (Nav.SettingsItem is NavigationViewItem settings) settings.Content = Loc.Get("Nav_Settings");
         };
 
         state.CatalogReloaded += (_, _) => { BuildCategoryItems(); UpdateCatalogBar(); };
@@ -51,7 +52,7 @@ public sealed partial class MainWindow : Window
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint hwnd);
 
-    // ---------------- navegação ----------------
+    // ---------------- navigation ----------------
 
     public void Navigate(string tag, object? parameter = null)
     {
@@ -105,7 +106,7 @@ public sealed partial class MainWindow : Window
         else Navigate(tag);
     }
 
-    /// <summary>Itens de categoria sob "Ajustes", a partir dos caminhos "A/B" do catálogo.</summary>
+    /// <summary>Category items under "Tweaks", from the catalog's "A/B" paths (display names translated).</summary>
     private void BuildCategoryItems()
     {
         TweaksItem.MenuItems.Clear();
@@ -114,7 +115,7 @@ public sealed partial class MainWindow : Window
 
         static NavigationViewItem MakeItem(CategoryNode node)
         {
-            var item = new NavigationViewItem { Content = $"{node.Name} ({node.Count})", Tag = "cat:" + node.Path };
+            var item = new NavigationViewItem { Content = $"{node.DisplayName} ({node.Count})", Tag = "cat:" + node.Path };
             foreach (var child in node.Children) item.MenuItems.Add(MakeItem(child));
             return item;
         }
@@ -135,20 +136,20 @@ public sealed partial class MainWindow : Window
 
     public void ShowError(string message)
     {
-        ErrorBar.Title = "Erro";
+        ErrorBar.Title = Loc.Get("Error_Title");
         ErrorBar.Message = message;
         ErrorBar.IsOpen = true;
     }
 
-    // ---------------- elevação ----------------
+    // ---------------- elevation ----------------
 
     private void Elevate_Click(object sender, RoutedEventArgs e)
     {
         if (Elevation.TryRelaunchElevated(out var error)) Application.Current.Exit();
-        else ShowError(error ?? "Não foi possível reiniciar como administrador.");
+        else ShowError(error ?? Loc.Get("Error_RestartElevated"));
     }
 
-    // ---------------- tema ----------------
+    // ---------------- theme ----------------
 
     public void ApplyTheme(ThemeChoice theme)
     {
@@ -169,7 +170,7 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.ButtonHoverBackgroundColor = dark ? Windows.UI.Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF) : Windows.UI.Color.FromArgb(0x20, 0, 0, 0);
     }
 
-    // ---------------- captura de tela (--screenshot) ----------------
+    // ---------------- screenshot (--screenshot) ----------------
 
     private async void OnScanCompleted(object? sender, EventArgs e)
     {
@@ -179,14 +180,16 @@ public sealed partial class MainWindow : Window
         {
             if (App.StartPage is "overview" or "tweaks")
             {
-                Navigate("tweaks", "Privacidade");
+                // A category with many tweaks (Privacy), or the first one.
+                var category = App.State.Categories.FirstOrDefault(c => c.Path == "Privacy") ?? App.State.Categories.FirstOrDefault();
+                Navigate("tweaks", category?.Path);
                 await Task.Delay(1500);
                 if (ContentFrame.Content is TweaksPage page) page.ExpandFirstForScreenshot();
                 await Task.Delay(1200);
             }
             else
             {
-                // Outra página (--page): espera ela terminar de carregar os próprios dados.
+                // Another page (--page): wait for it to finish loading its own data.
                 await Task.Delay(8000);
                 if (ContentFrame.Content is PoliciesPage policies)
                 {
@@ -198,14 +201,14 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            File.WriteAllText(path + ".erro.txt", ex.ToString());
+            File.WriteAllText(path + ".error.txt", ex.ToString());
         }
         Application.Current.Exit();
     }
 
     private async Task SaveScreenshotAsync(string path)
     {
-        // O Mica não aparece no RenderTargetBitmap: usa um fundo sólido do tema na captura.
+        // Mica does not show in RenderTargetBitmap: use a solid theme background for the capture.
         Root.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"];
         await Task.Delay(300);
         var rtb = new RenderTargetBitmap();

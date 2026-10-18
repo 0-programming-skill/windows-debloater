@@ -15,13 +15,13 @@ internal static partial class Program
         {
             "create" => await FingerprintCreateAsync(a),
             "diff" => FingerprintDiffCommand(a),
-            _ => Fail("Uso: fingerprint create <saida.json.gz> [--root C:\\] [--binaries default|all|none] | fingerprint diff <antigo> <novo> [--md R.md] [--json R.json] [--top N] [--no-privacy]"),
+            _ => Fail(L.T("Fp_Usage")),
         };
     }
 
     private static async Task<int> FingerprintCreateAsync(Args a)
     {
-        if (a.Positional.Count < 2) return Fail("Uso: fingerprint create <saida.json.gz> [--root C:\\] [--binaries default|all|none]");
+        if (a.Positional.Count < 2) return Fail(L.T("FpCreate_Usage"));
         var file = Path.GetFullPath(a.Positional[1]);
         var catalog = CatalogLoader.LoadDirectory(a.CatalogDir);
         var sw = Stopwatch.StartNew();
@@ -37,18 +37,20 @@ internal static partial class Program
         fp.TimingsMs["write"] = write.ElapsedMilliseconds;
 
         Console.WriteLine();
-        Console.WriteLine($"Impressão digital: {file} ({new FileInfo(file).Length / 1024.0:N0} KB)");
-        Console.WriteLine($"  Windows {fp.Os.FullBuild} {fp.Os.Edition} {fp.Os.DisplayVersion} | raiz {fp.Root} | {(fp.Live ? "em execução" : "offline")} | {(fp.Elevated ? "elevado" : "sem elevação")}");
-        Console.WriteLine($"  inventário: {fp.Inventory?.Sections.Sum(s => s.Items.Count) ?? 0} itens | ADMX: {fp.Policies.Count} políticas | binários ({fp.Binaries.Mode}): {fp.Binaries.Files.Count} PE, {fp.Binaries.Files.Sum(f => f.Strings.Count):N0} cadeias + {fp.Binaries.Files.Sum(f => f.NearNames?.Count ?? 0):N0} nomes próximos, {fp.Binaries.Errors} erro(s)");
-        Console.WriteLine($"  tempos (ms): {string.Join(", ", fp.TimingsMs.Select(t => $"{t.Key}={t.Value}"))}");
-        foreach (var n in fp.Notes) Console.WriteLine($"  nota: {n}");
-        Console.WriteLine($"Total: {sw.Elapsed.TotalSeconds:N1} s");
+        Console.WriteLine(L.F("Fp_Created", file, new FileInfo(file).Length / 1024.0));
+        Console.WriteLine("  " + L.F("Fp_Os", fp.Os.FullBuild, fp.Os.Edition, fp.Os.DisplayVersion, fp.Root,
+            L.T(fp.Live ? "Fp_Live" : "Fp_Offline"), L.T(fp.Elevated ? "Fp_Elevated" : "Fp_NotElevated")));
+        Console.WriteLine("  " + L.F("Fp_Counts", fp.Inventory?.Sections.Sum(s => s.Items.Count) ?? 0, fp.Policies.Count, fp.Binaries.Mode,
+            fp.Binaries.Files.Count, fp.Binaries.Files.Sum(f => f.Strings.Count), fp.Binaries.Files.Sum(f => f.NearNames?.Count ?? 0), fp.Binaries.Errors));
+        Console.WriteLine("  " + L.F("Fp_Timings", string.Join(", ", fp.TimingsMs.Select(t => $"{t.Key}={t.Value}"))));
+        foreach (var n in fp.Notes) Console.WriteLine($"  {L.T("Label_Note")}: {n}");
+        Console.WriteLine(L.F("Fp_Total", sw.Elapsed.TotalSeconds));
         return 0;
     }
 
     private static int FingerprintDiffCommand(Args a)
     {
-        if (a.Positional.Count < 3) return Fail("Uso: fingerprint diff <antigo> <novo> [--md R.md] [--json R.json] [--top N] [--no-privacy]");
+        if (a.Positional.Count < 3) return Fail(L.T("FpDiff_Usage"));
         var sw = Stopwatch.StartNew();
         var oldFp = FingerprintStore.Load(a.Positional[1]);
         var newFp = FingerprintStore.Load(a.Positional[2]);
@@ -59,22 +61,22 @@ internal static partial class Program
         if (a.MdOut is not null)
         {
             WriteFile(a.MdOut, FingerprintReport.ToMarkdown(diff, a.Top));
-            Console.WriteLine($"Relatório Markdown: {a.MdOut}");
+            Console.WriteLine(L.F("FpDiff_Markdown", a.MdOut));
         }
         if (a.JsonOut is not null)
         {
             WriteFile(a.JsonOut, JsonSerializer.Serialize(diff, FingerprintDiff.JsonOptions));
-            Console.WriteLine($"Relatório JSON: {a.JsonOut}");
+            Console.WriteLine(L.F("FpDiff_Json", a.JsonOut));
         }
 
         Console.WriteLine($"Build {diff.Old.Build} → {diff.New.Build}");
-        foreach (var w in diff.Warnings) Console.WriteLine($"  aviso: {w}");
-        Console.WriteLine(diff.Privacy is { } p
-            ? $"  privacidade: ligada, {p.Total} item(ns) omitido(s) ({string.Join(", ", p.Omitted.Select(o => $"{o.Key}={o.Value}"))}); --no-privacy desliga"
-            : "  privacidade: desligada (--no-privacy)");
+        foreach (var w in diff.Warnings) Console.WriteLine($"  {L.T("Label_Warning")}: {w}");
+        Console.WriteLine("  " + (diff.Privacy is { } p
+            ? L.F("FpDiff_PrivacyOn", p.Total, string.Join(", ", p.Omitted.Select(o => $"{o.Key}={o.Value}")))
+            : L.T("FpDiff_PrivacyOff")));
         foreach (var (k, v) in diff.Counts) Console.WriteLine($"  {k,-34} {v,8:N0}");
         Console.WriteLine();
-        Console.WriteLine($"Top {Math.Min(25, diff.Candidates.Count)} candidatos:");
+        Console.WriteLine(L.F("FpDiff_Top", Math.Min(25, diff.Candidates.Count)));
         foreach (var c in diff.Candidates.Take(25))
             Console.WriteLine($"  {c.Score,4} {c.Kind,-17} {c.Value}  [{c.Binaries.FirstOrDefault()?.Path}]");
         Console.WriteLine($"({sw.ElapsedMilliseconds} ms)");

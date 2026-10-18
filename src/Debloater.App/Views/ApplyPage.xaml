@@ -6,14 +6,13 @@
 
     <ScrollViewer>
         <StackPanel Padding="24,12,24,24" Spacing="8" MaxWidth="1100" HorizontalAlignment="Left">
-            <TextBlock Text="Aplicar/revisar" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock x:Uid="ApplyPage_Title" Style="{StaticResource TitleTextBlockStyle}" />
             <TextBlock x:Name="SummaryText" Style="{StaticResource BodyTextBlockStyle}" TextWrapping="Wrap" />
 
             <StackPanel x:Name="EmptyPanel" Spacing="8" Visibility="Collapsed" Margin="0,16">
-                <TextBlock Text="Nenhuma mudança pendente." Style="{StaticResource SubtitleTextBlockStyle}" />
-                <TextBlock Style="{StaticResource Caption}"
-                           Text="Marque ou desmarque ajustes na página Ajustes, configure políticas em Políticas (ADMX), ou carregue um perfil, para escolher o estado desejado." />
-                <Button Content="Ir para Ajustes" Click="GoTweaks_Click" />
+                <TextBlock x:Uid="ApplyPage_EmptyTitle" Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="ApplyPage_EmptyText" Style="{StaticResource Caption}" />
+                <Button x:Uid="ApplyPage_GoTweaks" Click="GoTweaks_Click" />
             </StackPanel>
 
             <StackPanel x:Name="Groups" Spacing="12" />
@@ -21,34 +20,29 @@
             <StackPanel x:Name="OptionsPanel" Spacing="8" Margin="0,8,0,0">
                 <Border Style="{StaticResource Card}">
                     <StackPanel Spacing="6">
-                        <ToggleSwitch x:Name="RestorePointToggle" Header="Criar um ponto de restauração do sistema antes"
-                                      OnContent="Sim (recomendado)" OffContent="Não" Toggled="RestorePoint_Toggled" />
-                        <TextBlock Style="{StaticResource Caption}"
-                                   Text="Usa a Restauração do Sistema do Windows. O Windows cria no máximo um ponto a cada 24 horas; se já houver um recente, ele é mantido e o programa apenas avisa (sem alterar essa regra). Exige a Proteção do Sistema ativa." />
+                        <ToggleSwitch x:Name="RestorePointToggle" x:Uid="ApplyPage_RestorePointToggle" Toggled="RestorePoint_Toggled" />
+                        <TextBlock x:Uid="ApplyPage_RestorePointText" Style="{StaticResource Caption}" />
                     </StackPanel>
                 </Border>
-                <CheckBox x:Name="HighConfirm" Visibility="Collapsed" Checked="Confirm_Changed" Unchecked="Confirm_Changed"
-                          Content="Li o que pode quebrar e quero aplicar os ajustes de risco ALTO desta lista." />
-                <TextBlock x:Name="CriticalNote" Visibility="Collapsed" Style="{StaticResource Caption}" Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                           Text="Há ajustes de risco CRÍTICO: será pedida uma confirmação digitada antes de aplicar." />
-                <InfoBar x:Name="ElevationBar" Severity="Warning" IsClosable="False" IsOpen="False"
-                         Title="Somente leitura" Message="Reinicie como administrador (botão no topo) para aplicar ou reverter." />
+                <CheckBox x:Name="HighConfirm" x:Uid="ApplyPage_HighConfirm" Visibility="Collapsed" Checked="Confirm_Changed" Unchecked="Confirm_Changed" />
+                <TextBlock x:Name="CriticalNote" x:Uid="ApplyPage_CriticalNote" Visibility="Collapsed" Style="{StaticResource Caption}" Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                <InfoBar x:Name="ElevationBar" x:Uid="ApplyPage_ElevationBar" Severity="Warning" IsClosable="False" IsOpen="False" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Button x:Name="ApplyButton" Style="{StaticResource AccentButtonStyle}" Click="Apply_Click">
-                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE768;" FontSize="14" /><TextBlock x:Name="ApplyText" Text="Aplicar mudanças" /></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE768;" FontSize="14" /><TextBlock x:Name="ApplyText" /></StackPanel>
                     </Button>
-                    <Button x:Name="CancelButton" Content="Parar após o ajuste atual" Click="Cancel_Click" Visibility="Collapsed" />
+                    <Button x:Name="CancelButton" x:Uid="ApplyPage_CancelButton" Click="Cancel_Click" Visibility="Collapsed" />
                 </StackPanel>
             </StackPanel>
 
             <StackPanel x:Name="RunPanel" Spacing="8" Visibility="Collapsed" Margin="0,16,0,0">
-                <TextBlock Text="Progresso" Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Uid="ApplyPage_Progress" Style="{StaticResource SubtitleTextBlockStyle}" />
                 <ProgressBar x:Name="RunProgress" />
                 <TextBlock x:Name="RunText" Style="{StaticResource Caption}" />
                 <StackPanel x:Name="Results" Spacing="4" />
                 <Grid>
-                    <TextBlock Text="Log" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Bottom" />
-                    <Button Content="Abrir pasta de logs" HorizontalAlignment="Right" Click="OpenLogs_Click" />
+                    <TextBlock x:Uid="ApplyPage_Log" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Bottom" />
+                    <Button x:Uid="Common_OpenLogsButton" HorizontalAlignment="Right" Click="OpenLogs_Click" />
                 </Grid>
                 <TextBox x:Name="LogBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}"
                          FontSize="12" MinHeight="160" MaxHeight="360" ScrollViewer.VerticalScrollBarVisibility="Auto" />

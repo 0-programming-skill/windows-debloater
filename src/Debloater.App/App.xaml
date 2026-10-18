@@ -9,7 +9,7 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Selo (estado, risco, confiança). -->
+            <!-- Badge (state, risk, confidence). -->
             <Style x:Key="BadgeBorder" TargetType="Border">
                 <Setter Property="CornerRadius" Value="10" />
                 <Setter Property="Padding" Value="8,2,8,3" />
@@ -24,7 +24,7 @@
                 <Setter Property="Margin" Value="0,2,0,1" />
             </Style>
 
-            <!-- Cartão sobre o Mica. -->
+            <!-- Card over Mica. -->
             <Style x:Key="Card" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
                 <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />

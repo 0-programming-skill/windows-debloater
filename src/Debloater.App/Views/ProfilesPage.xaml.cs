@@ -1,3 +1,4 @@
+using Debloater.App.Helpers;
 using Debloater.App.Services;
 using Debloater.App.ViewModels;
 using Debloater.Core.Profiles;
@@ -8,7 +9,7 @@ using Microsoft.Windows.Storage.Pickers;
 
 namespace Debloater.App.Views;
 
-/// <summary>Perfis embutidos e do usuário: carregar, salvar, importar e exportar.</summary>
+/// <summary>Built-in and user profiles: load, save, import and export.</summary>
 public sealed partial class ProfilesPage : Page
 {
     private readonly AppState _app = App.State;
@@ -17,10 +18,16 @@ public sealed partial class ProfilesPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
+        _app.CatalogReloaded += Catalog_Reloaded;
         _app.LoadProfiles();
         Rebuild();
-        if (_app.ProfileErrors.Count > 0) Show(InfoBarSeverity.Warning, "Perfis com erro foram ignorados", string.Join(Environment.NewLine, _app.ProfileErrors));
+        if (_app.ProfileErrors.Count > 0) Show(InfoBarSeverity.Warning, Loc.Get("ProfilesPage_ErrorsTitle"), string.Join(Environment.NewLine, _app.ProfileErrors));
     }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e) => _app.CatalogReloaded -= Catalog_Reloaded;
+
+    // The catalog may load after this page opens: tweak counts and category names depend on it.
+    private void Catalog_Reloaded(object? sender, EventArgs e) => Rebuild();
 
     private void Show(InfoBarSeverity severity, string title, string message)
     {
@@ -44,47 +51,51 @@ public sealed partial class ProfilesPage : Page
 
         var info = new StackPanel { Spacing = 2 };
         var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        title.Children.Add(new TextBlock { Text = p.Name, Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"] });
+        title.Children.Add(new TextBlock { Text = p.DisplayName, Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"] });
         title.Children.Add(new Border
         {
             Style = (Style)Application.Current.Resources["BadgeBorder"],
             Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"],
-            Child = new TextBlock { Text = p.IsBuiltIn ? "Embutido" : "Meu perfil", Style = (Style)Application.Current.Resources["BadgeText"] },
+            Child = new TextBlock { Text = p.IsBuiltIn ? Loc.Get("ProfilesPage_BuiltIn") : Loc.Get("ProfilesPage_Mine"), Style = (Style)Application.Current.Resources["BadgeText"] },
         });
         info.Children.Add(title);
-        if (!string.IsNullOrWhiteSpace(p.Description))
-            info.Children.Add(new TextBlock { Text = p.Description.Trim(), TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["Caption"] });
+        if (!string.IsNullOrWhiteSpace(p.DisplayDescription))
+            info.Children.Add(new TextBlock { Text = p.DisplayDescription.Trim(), TextWrapping = TextWrapping.Wrap, Style = (Style)Application.Current.Resources["Caption"] });
         var resolution = ProfileStore.Resolve(p, _app.Tweaks.Select(t => t.Tweak));
         var rules = p.Rules is { } r
-            ? $"Regras: risco até {Helpers.Labels.RiskShort(r.MaxRisk).ToLowerInvariant()}" +
-              (r.Categories.Count > 0 ? $", categorias {string.Join(", ", r.Categories)}" : ", todas as categorias") +
-              (r.IncludeIrreversible ? "" : ", sem ajustes irreversíveis") + ". "
+            ? Loc.Format("ProfilesPage_RulesRisk", Labels.RiskShort(r.MaxRisk).ToLower(System.Globalization.CultureInfo.CurrentCulture)) +
+              (r.Categories.Count > 0
+                  ? Loc.Format("ProfilesPage_RulesCategories", string.Join(", ", r.Categories.Select(_app.DisplayCategory)))
+                  : Loc.Get("ProfilesPage_RulesAllCategories")) +
+              (r.IncludeIrreversible ? "" : Loc.Get("ProfilesPage_RulesNoIrreversible")) + ". "
             : "";
         info.Children.Add(new TextBlock
         {
-            Text = $"{rules}{resolution.Desired.Count} ajuste(s)"
-                + (p.Policies is { Count: > 0 } pol ? $" e {pol.Count} política(s) ADMX" : "")
-                + $" no perfil · {p.SourceFile}",
+            Text = rules
+                + (p.Policies is { Count: > 0 } pol
+                    ? Loc.Format("ProfilesPage_ContentsWithPolicies", resolution.Desired.Count, pol.Count)
+                    : Loc.Format("ProfilesPage_Contents", resolution.Desired.Count))
+                + $" · {p.SourceFile}",
             TextWrapping = TextWrapping.Wrap,
             Style = (Style)Application.Current.Resources["Caption"],
         });
         grid.Children.Add(info);
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
-        var load = new Button { Content = "Carregar", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        var load = new Button { Content = Loc.Get("ProfilesPage_Load"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         load.Click += async (_, _) =>
         {
             var msg = await _app.ApplyProfileToSelectionAsync(p);
-            Show(InfoBarSeverity.Success, "Seleção atualizada", msg);
+            Show(InfoBarSeverity.Success, Loc.Get("ProfilesPage_SelectionUpdated"), msg);
             if (_app.PendingCount > 0)
             {
-                var review = new Button { Content = "Revisar mudanças" };
+                var review = new Button { Content = Loc.Get("TweaksPage_Review") };
                 review.Click += (_, _) => App.Window.Navigate("apply");
                 Info.ActionButton = review;
             }
             else Info.ActionButton = null;
         };
-        var export = new Button { Content = "Exportar..." };
+        var export = new Button { Content = Loc.Get("ProfilesPage_Export") };
         export.Click += async (_, _) => await ExportAsync(p);
         buttons.Children.Add(load);
         buttons.Children.Add(export);
@@ -98,14 +109,14 @@ public sealed partial class ProfilesPage : Page
         var name = NameBox.Text.Trim();
         if (name.Length == 0)
         {
-            Show(InfoBarSeverity.Warning, "Informe um nome", "Dê um nome ao perfil antes de salvar.");
+            Show(InfoBarSeverity.Warning, Loc.Get("ProfilesPage_NameMissingTitle"), Loc.Get("ProfilesPage_NameMissing"));
             return;
         }
         var selection = _app.EffectiveSelection();
         var policies = await _app.EffectivePolicySettingsAsync();
         if (selection.Count == 0 && policies.Count == 0)
         {
-            Show(InfoBarSeverity.Warning, "Seleção vazia", "Nenhum ajuste nem política aplicado ou escolhido; não há o que salvar.");
+            Show(InfoBarSeverity.Warning, Loc.Get("ProfilesPage_EmptyTitle"), Loc.Get("ProfilesPage_Empty"));
             return;
         }
         var profile = ProfileStore.FromSelection(name, string.IsNullOrWhiteSpace(DescriptionBox.Text) ? null : DescriptionBox.Text.Trim(), selection, policies);
@@ -116,13 +127,13 @@ public sealed partial class ProfilesPage : Page
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Show(InfoBarSeverity.Error, "Falha ao salvar", ex.Message);
+            Show(InfoBarSeverity.Error, Loc.Get("ProfilesPage_SaveFailed"), ex.Message);
             return;
         }
         _app.LoadProfiles();
         Rebuild();
         Info.ActionButton = null;
-        Show(InfoBarSeverity.Success, "Perfil salvo", $"{selection.Count} ajuste(s) e {policies.Count} política(s) gravados em {file}.");
+        Show(InfoBarSeverity.Success, Loc.Get("ProfilesPage_Saved"), Loc.Format("ProfilesPage_SavedText", selection.Count, policies.Count, file));
     }
 
     private async void Import_Click(object sender, RoutedEventArgs e)
@@ -141,11 +152,11 @@ public sealed partial class ProfilesPage : Page
             File.Copy(result.Path, dest, overwrite: true);
             _app.LoadProfiles();
             Rebuild();
-            Show(InfoBarSeverity.Success, "Perfil importado", $"\"{profile.Name}\" copiado para {dest}. Use \"Carregar\" para aplicá-lo à seleção.");
+            Show(InfoBarSeverity.Success, Loc.Get("ProfilesPage_Imported"), Loc.Format("ProfilesPage_ImportedText", profile.DisplayName, dest));
         }
         catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
         {
-            Show(InfoBarSeverity.Error, "Não foi possível importar", ex.Message);
+            Show(InfoBarSeverity.Error, Loc.Get("ProfilesPage_ImportFailed"), ex.Message);
         }
     }
 
@@ -155,7 +166,7 @@ public sealed partial class ProfilesPage : Page
         {
             SuggestedFileName = Path.GetFileNameWithoutExtension(ProfileStore.FileNameFor(p.Name)),
         };
-        picker.FileTypeChoices.Add("Perfil YAML", [".yaml"]);
+        picker.FileTypeChoices.Add(Loc.Get("ProfilesPage_YamlFileType"), [".yaml"]);
         var result = await picker.PickSaveFileAsync();
         if (result is null) return;
         Info.ActionButton = null;
@@ -163,11 +174,11 @@ public sealed partial class ProfilesPage : Page
         {
             if (p.SourceFile is not null && File.Exists(p.SourceFile)) File.Copy(p.SourceFile, result.Path, overwrite: true);
             else ProfileStore.Save(p, result.Path);
-            Show(InfoBarSeverity.Success, "Perfil exportado", result.Path);
+            Show(InfoBarSeverity.Success, Loc.Get("ProfilesPage_Exported"), result.Path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Show(InfoBarSeverity.Error, "Falha ao exportar", ex.Message);
+            Show(InfoBarSeverity.Error, Loc.Get("ProfilesPage_ExportFailed"), ex.Message);
         }
     }
 

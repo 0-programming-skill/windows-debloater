@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Debloater.App.Helpers;
 using Debloater.App.Services;
 using Debloater.Core.Admx;
 using Debloater.Core.Catalog;
@@ -13,9 +14,9 @@ using Debloater.Core.Profiles;
 namespace Debloater.App.ViewModels;
 
 /// <summary>
-/// Estado global do app: catálogo, estados atuais (varredura), seleção desejada e perfis.
-/// Vive na thread de interface; trabalho pesado roda em segundo plano (Task.Run) e só o resultado
-/// volta para cá.
+/// Global app state: catalog, current states (scan), desired selection and profiles.
+/// Lives on the UI thread; heavy work runs in the background (Task.Run) and only the result
+/// comes back here.
 /// </summary>
 public sealed partial class AppState : ObservableObject
 {
@@ -38,6 +39,12 @@ public sealed partial class AppState : ObservableObject
 
     public ObservableCollection<TweakItemViewModel> Tweaks { get; } = [];
     public IReadOnlyList<CategoryNode> Categories { get; private set; } = [];
+
+    /// <summary>Translated category names of the loaded catalog (display only; paths stay the identifiers).</summary>
+    public CategoryNames CategoryNames { get; private set; } = CategoryNames.Empty;
+
+    /// <summary>Category path as shown to the user ("Privacy/Telemetry" → "Privacidade/Telemetria" in pt-BR).</summary>
+    public string DisplayCategory(string path) => CategoryNames.DisplayPath(path);
     public IReadOnlyList<CatalogError> CatalogErrors { get; private set; } = [];
 
     public ObservableCollection<Profile> Profiles { get; } = [];
@@ -61,13 +68,13 @@ public sealed partial class AppState : ObservableObject
     [ObservableProperty]
     public partial string? CatalogMessage { get; set; }
 
-    /// <summary>Disparado quando a varredura termina (estados novos).</summary>
+    /// <summary>Raised when the scan finishes (new states).</summary>
     public event EventHandler? ScanCompleted;
 
-    /// <summary>Disparado quando o catálogo é (re)carregado (categorias podem ter mudado).</summary>
+    /// <summary>Raised when the catalog is (re)loaded (categories may have changed).</summary>
     public event EventHandler? CatalogReloaded;
 
-    /// <summary>Disparado quando a seleção desejada muda.</summary>
+    /// <summary>Raised when the desired selection changes.</summary>
     public event EventHandler? DesiredChanged;
 
     private TweakEngine CreateEngine() => new(new TweakEngineOptions { BackupDirectory = Settings.EffectiveBackupDirectory, System = System });
@@ -80,23 +87,23 @@ public sealed partial class AppState : ObservableObject
         PolicyEngine = CreatePolicyEngine();
     }
 
-    /// <summary>Gravação de políticas ADMX (registro real, backups em backups\policies).</summary>
+    /// <summary>ADMX policy writing (real registry, backups in backups\policies).</summary>
     public PolicyEngine PolicyEngine { get; private set; } = null!;
 
-    // ---------------- políticas pendentes ----------------
+    // ---------------- pending policies ----------------
 
     private readonly Dictionary<string, PolicyRequest> _policyRequests = new(StringComparer.OrdinalIgnoreCase);
     private PolicyEnvironment? _policyEnvironment;
 
-    /// <summary>Contexto para os avisos de política (edição, domínio, GPO local), lido uma vez.</summary>
+    /// <summary>Context for the policy warnings (edition, domain, local GPO), read once.</summary>
     public PolicyEnvironment PolicyEnvironment => _policyEnvironment ??= PolicyEnvironment.Current(System);
 
-    /// <summary>Mudanças de política escolhidas (configurar ou reverter), por "Arquivo.admx:Nome".</summary>
+    /// <summary>Chosen policy changes (configure or revert), by "File.admx:Name".</summary>
     public IReadOnlyCollection<PolicyRequest> PolicyRequests => _policyRequests.Values;
 
     public PolicyRequest? GetPolicyRequest(string qualifiedName) => _policyRequests.GetValueOrDefault(qualifiedName);
 
-    /// <summary>Adiciona/substitui (request) ou remove (null) a mudança pendente de uma política.</summary>
+    /// <summary>Adds/replaces (request) or removes (null) the pending change of a policy.</summary>
     public void SetPolicyRequest(string qualifiedName, PolicyRequest? request)
     {
         if (request is null) _policyRequests.Remove(qualifiedName);
@@ -110,16 +117,16 @@ public sealed partial class AppState : ObservableObject
         UpdatePending();
     }
 
-    /// <summary>Mudanças de política pendentes com prévia do registro, risco e avisos.</summary>
+    /// <summary>Pending policy changes with registry preview, risk and warnings.</summary>
     public IReadOnlyList<PlannedPolicyChange> PlanPolicyChanges() =>
         PolicyChangePlanner.Plan(_policyRequests.Values, PolicyEngine, PolicyWarnings);
 
     public IReadOnlyList<PolicyWarning> PolicyWarnings(AdmxPolicy policy, PolicyTargetState target, PolicyScope scope) =>
         PolicyAdvisor.Warnings(policy, PolicyCatalog.CspFor(policy), PolicyEnvironment, target, scope);
 
-    // ---------------- catálogo e varredura ----------------
+    // ---------------- catalog and scan ----------------
 
-    /// <summary>Carrega o catálogo e os perfis (rápido) e dispara a varredura de estados (lenta).</summary>
+    /// <summary>Loads the catalog and profiles (fast) and starts the state scan (slow).</summary>
     public async Task LoadCatalogAsync()
     {
         var dir = Settings.EffectiveCatalogDirectory;
@@ -128,27 +135,29 @@ public sealed partial class AppState : ObservableObject
         _scanCts?.Cancel();
         Tweaks.Clear();
         _byId.Clear();
-        foreach (var t in result.Tweaks.OrderBy(t => t.Category, StringComparer.CurrentCulture).ThenBy(t => t.Name, StringComparer.CurrentCulture))
+        var names = result.Categories;
+        foreach (var t in result.Tweaks.OrderBy(t => names.DisplayPath(t.Category), StringComparer.CurrentCulture).ThenBy(t => t.DisplayName, StringComparer.CurrentCulture))
         {
             var vm = new TweakItemViewModel(t, this);
             Tweaks.Add(vm);
             _byId[t.Id] = vm;
         }
-        // Escolhas de tweaks que sumiram do catálogo são descartadas.
+        // Choices for tweaks that disappeared from the catalog are discarded.
         foreach (var id in _desired.Keys.Where(id => !_byId.ContainsKey(id)).ToList()) _desired.Remove(id);
 
-        Categories = CategoryNode.Build(result.Tweaks.Select(t => t.Category));
+        CategoryNames = names;
+        Categories = CategoryNode.Build(result.Tweaks.Select(t => t.Category), names);
         CatalogErrors = result.Errors;
         CatalogMessage = result.Errors.Count == 0
             ? null
-            : $"O catálogo em '{dir}' tem {result.Errors.Count} erro(s); os ajustes com erro foram ignorados. Primeiro: {result.Errors[0]}";
+            : Loc.Format("Catalog_ErrorsMessage", dir, result.Errors.Count, result.Errors[0]);
         LoadProfiles();
         CatalogReloaded?.Invoke(this, EventArgs.Empty);
         UpdatePending();
         await ScanAsync();
     }
 
-    /// <summary>Lê o estado atual de todos os ajustes (em paralelo, fora da thread de interface).</summary>
+    /// <summary>Reads the current state of every tweak (in parallel, off the UI thread).</summary>
     public async Task ScanAsync()
     {
         _scanCts?.Cancel();
@@ -198,7 +207,7 @@ public sealed partial class AppState : ObservableObject
     public int CountByState(TweakState s) => Tweaks.Count(t => t.State == s);
     public int CountByRisk(RiskLevel r) => Tweaks.Count(t => t.Tweak.Risk == r);
 
-    // ---------------- seleção desejada ----------------
+    // ---------------- desired selection ----------------
 
     public DesiredState? GetDesired(string id) => _desired.TryGetValue(id, out var d) ? d : null;
 
@@ -212,7 +221,7 @@ public sealed partial class AppState : ObservableObject
         UpdatePending();
     }
 
-    /// <summary>Substitui toda a seleção explícita.</summary>
+    /// <summary>Replaces the whole explicit selection.</summary>
     public void ReplaceDesired(IReadOnlyDictionary<string, DesiredState> desired)
     {
         _desired.Clear();
@@ -224,7 +233,7 @@ public sealed partial class AppState : ObservableObject
 
     public void ClearDesired() => ReplaceDesired(new Dictionary<string, DesiredState>());
 
-    /// <summary>Mudanças pendentes (o que será aplicado e revertido).</summary>
+    /// <summary>Pending changes (what will be applied and reverted).</summary>
     public IReadOnlyList<PlannedChange> PlanChanges() =>
         ChangePlanner.Plan(Tweaks.Where(t => t.Status is not null).Select(t => t.Status!), _desired, Engine.Backups.Exists);
 
@@ -234,7 +243,7 @@ public sealed partial class AppState : ObservableObject
         DesiredChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    // ---------------- perfis ----------------
+    // ---------------- profiles ----------------
 
     public string BuiltInProfilesDirectory => Path.Combine(Settings.EffectiveCatalogDirectory, CatalogLoader.ProfilesFolder);
 
@@ -246,7 +255,7 @@ public sealed partial class AppState : ObservableObject
         foreach (var p in ProfileStore.LoadDirectory(AppSettings.UserProfilesDirectory, builtIn: false, ProfileErrors)) Profiles.Add(p);
     }
 
-    /// <summary>Carrega um perfil na seleção (substitui a seleção atual, inclusive políticas pendentes). Devolve um resumo.</summary>
+    /// <summary>Loads a profile into the selection (replaces the current selection, including pending policies). Returns a summary.</summary>
     public async Task<string> ApplyProfileToSelectionAsync(Profile profile)
     {
         var resolution = ProfileStore.Resolve(profile, Tweaks.Select(t => t.Tweak));
@@ -261,19 +270,19 @@ public sealed partial class AppState : ObservableObject
         foreach (var r in policyRequests) _policyRequests[r.Policy.QualifiedName] = r;
         ReplaceDesired(resolution.Desired);
 
-        var msg = $"Perfil \"{profile.Name}\" carregado: {resolution.Desired.Count} ajuste(s) com estado desejado";
-        if (policyRequests.Count > 0) msg += $", {policyRequests.Count} política(s)";
-        msg += $", {PendingCount} mudança(s) pendente(s).";
+        var msg = Loc.Format("Profile_Loaded", profile.DisplayName, resolution.Desired.Count);
+        if (policyRequests.Count > 0) msg += Loc.Format("Profile_LoadedPolicies", policyRequests.Count);
+        msg += Loc.Format("Profile_LoadedPending", PendingCount);
         if (resolution.UnknownIds.Count > 0)
-            msg += $" Ignorados (não existem no catálogo): {string.Join(", ", resolution.UnknownIds)}.";
+            msg += " " + Loc.Format("Profile_UnknownIds", string.Join(", ", resolution.UnknownIds));
         if (unknownPolicies.Count > 0)
-            msg += $" Políticas que não existem neste PC (ADMX): {string.Join(", ", unknownPolicies)}.";
+            msg += " " + Loc.Format("Profile_UnknownPolicies", string.Join(", ", unknownPolicies));
         return msg;
     }
 
     /// <summary>
-    /// Políticas para salvar num perfil: as que este programa configurou (têm backup), com os valores
-    /// atuais do registro, sobrepostas pelas mudanças pendentes (reverter pendente = fica de fora).
+    /// Policies to save in a profile: those this program configured (they have a backup), with the current
+    /// registry values, overridden by the pending changes (a pending revert = left out).
     /// </summary>
     public async Task<List<PolicySetting>> EffectivePolicySettingsAsync()
     {
@@ -299,7 +308,7 @@ public sealed partial class AppState : ObservableObject
         return [.. result.Values];
     }
 
-    /// <summary>Seleção efetiva para salvar num perfil: escolhas explícitas + o que já está aplicado.</summary>
+    /// <summary>Effective selection to save in a profile: explicit choices + what is already applied.</summary>
     public Dictionary<string, DesiredState> EffectiveSelection()
     {
         var result = new Dictionary<string, DesiredState>(StringComparer.OrdinalIgnoreCase);

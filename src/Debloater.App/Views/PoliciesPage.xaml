@@ -13,9 +13,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock Text="Políticas (ADMX)" Style="{StaticResource TitleTextBlockStyle}" />
-            <TextBlock x:Name="SubtitleText" Style="{StaticResource Caption}"
-                       Text="Todas as Políticas de Grupo dos modelos administrativos deste PC, com o estado atual." />
+            <TextBlock x:Uid="PoliciesPage_Title" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock x:Name="SubtitleText" x:Uid="PoliciesPage_Subtitle" Style="{StaticResource Caption}" />
         </StackPanel>
 
         <Grid Grid.Row="1" ColumnSpacing="8">
@@ -26,12 +25,12 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Buscar política, chave ou valor do registro" QueryIcon="Find" TextChanged="Search_TextChanged" />
-            <ToggleButton x:Name="ConfiguredToggle" Grid.Column="1" Content="Só configuradas" Click="Filter_Changed" />
-            <ToggleButton x:Name="PendingToggle" Grid.Column="2" Content="Só com mudanças pendentes" Click="Filter_Changed" />
+            <AutoSuggestBox x:Name="SearchBox" x:Uid="PoliciesPage_SearchBox" QueryIcon="Find" TextChanged="Search_TextChanged" />
+            <ToggleButton x:Name="ConfiguredToggle" x:Uid="PoliciesPage_ConfiguredToggle" Grid.Column="1" Click="Filter_Changed" />
+            <ToggleButton x:Name="PendingToggle" x:Uid="PoliciesPage_PendingToggle" Grid.Column="2" Click="Filter_Changed" />
             <TextBlock x:Name="CountText" Grid.Column="3" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="8,0" />
             <Button Grid.Column="4" Click="Refresh_Click">
-                <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE72C;" FontSize="14" /><TextBlock Text="Atualizar" /></StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE72C;" FontSize="14" /><TextBlock x:Uid="Common_RefreshText" /></StackPanel>
             </Button>
         </Grid>
 
@@ -71,7 +70,7 @@
                     </ListView>
                     <StackPanel x:Name="LoadingPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                         <ProgressRing IsActive="True" />
-                        <TextBlock Text="Lendo os modelos administrativos e o registro..." Style="{StaticResource Caption}" />
+                        <TextBlock x:Uid="PoliciesPage_Loading" Style="{StaticResource Caption}" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -89,43 +88,36 @@
                             </Border>
                         </StackPanel>
 
-                        <!-- Editor: estado desejado, valores dos elementos, prévia exata do registro e avisos. -->
+                        <!-- Editor: desired state, element values, exact registry preview and warnings. -->
                         <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="12" Margin="0,8,0,0">
                             <StackPanel Spacing="10">
-                                <TextBlock Text="Configurar" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <RadioButtons x:Name="StateRadios" Header="Estado desejado" MaxColumns="1" SelectionChanged="State_Changed">
-                                    <x:String>Não configurada</x:String>
-                                    <x:String>Habilitada</x:String>
-                                    <x:String>Desabilitada</x:String>
-                                </RadioButtons>
-                                <ComboBox x:Name="ScopeBox" Header="Gravar em" SelectionChanged="Scope_Changed" Visibility="Collapsed" MinWidth="260">
-                                    <x:String>Computador (HKLM)</x:String>
-                                    <x:String>Usuário (HKCU)</x:String>
-                                </ComboBox>
+                                <TextBlock x:Uid="PoliciesPage_Configure" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <RadioButtons x:Name="StateRadios" x:Uid="PoliciesPage_StateRadios" MaxColumns="1" SelectionChanged="State_Changed" />
+                                <ComboBox x:Name="ScopeBox" x:Uid="PoliciesPage_ScopeBox" SelectionChanged="Scope_Changed" Visibility="Collapsed" MinWidth="260" />
                                 <ContentControl x:Name="ElementsHost" HorizontalContentAlignment="Stretch" />
-                                <TextBlock Text="Prévia do registro" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <TextBlock x:Uid="PoliciesPage_Preview" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                 <TextBlock x:Name="PreviewText" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                                 <TextBlock x:Name="ErrorsText" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Visibility="Collapsed" />
                                 <StackPanel x:Name="WarningsHost" Spacing="4" />
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button x:Name="AddPendingButton" Style="{StaticResource AccentButtonStyle}" Content="Adicionar às mudanças pendentes" Click="AddPending_Click" />
-                                    <Button x:Name="RemovePendingButton" Content="Descartar" Click="RemovePending_Click" />
-                                    <Button x:Name="RevertButton" Content="Reverter ao original" Click="Revert_Click" />
+                                    <Button x:Name="AddPendingButton" Style="{StaticResource AccentButtonStyle}" Click="AddPending_Click" />
+                                    <Button x:Name="RemovePendingButton" x:Uid="PoliciesPage_RemovePendingButton" Click="RemovePending_Click" />
+                                    <Button x:Name="RevertButton" x:Uid="PoliciesPage_RevertButton" Click="Revert_Click" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <TextBlock x:Name="PendingInfo" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-                                    <HyperlinkButton x:Name="GoApplyLink" Content="Revisar e aplicar" Click="GoApply_Click" Padding="4,0" Visibility="Collapsed" />
+                                    <HyperlinkButton x:Name="GoApplyLink" x:Uid="PoliciesPage_GoApplyLink" Click="GoApply_Click" Padding="4,0" Visibility="Collapsed" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
-                        <TextBlock Text="Estado por escopo" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+                        <TextBlock x:Uid="PoliciesPage_ScopesHeader" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
                         <TextBlock x:Name="DScopes" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                        <TextBlock Text="Definição no ADMX" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+                        <TextBlock x:Uid="PoliciesPage_DefinitionHeader" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
                         <TextBlock x:Name="DRegistry" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                        <TextBlock Text="Detalhes" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+                        <TextBlock x:Uid="PoliciesPage_DetailsHeader" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
                         <TextBlock x:Name="DMeta" Style="{StaticResource Caption}" IsTextSelectionEnabled="True" />
                         <HyperlinkButton x:Name="DCsp" Padding="0,4" />
-                        <TextBlock Text="Explicação" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+                        <TextBlock x:Uid="PoliciesPage_ExplainHeader" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
                         <TextBlock x:Name="DExplain" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                     </StackPanel>
                 </ScrollViewer>

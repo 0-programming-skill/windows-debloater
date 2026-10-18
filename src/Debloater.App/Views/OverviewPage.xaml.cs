@@ -21,12 +21,12 @@ public sealed partial class OverviewPage : Page
         var s = _app.System;
         ProductText.Text = $"{s.ProductName} {s.DisplayVersion}";
         BuildText.Text = $"Build {s.Build}.{s.Ubr} (UBR {s.Ubr})";
-        EditionText.Text = $"Edição: {s.Edition}";
+        EditionText.Text = Loc.Format("OverviewPage_Edition", s.Edition);
         ElevationIcon.Glyph = s.IsElevated ? "" : "";
-        ElevationTitle.Text = s.IsElevated ? "Administrador" : "Somente leitura";
+        ElevationTitle.Text = s.IsElevated ? Loc.Get("Mode_Administrator") : Loc.Get("Mode_ReadOnly");
         ElevationText.Text = s.IsElevated
-            ? "Aplicar e reverter estão liberados. Um backup do valor original é gravado antes de cada mudança."
-            : "Estados são lidos normalmente. Para aplicar ou reverter, use \"Reiniciar como administrador\" acima.";
+            ? Loc.Get("OverviewPage_ElevatedText")
+            : Loc.Get("OverviewPage_ReadOnlyText");
 
         _app.ScanCompleted += App_Changed;
         _app.CatalogReloaded += App_Changed;
@@ -52,8 +52,8 @@ public sealed partial class OverviewPage : Page
     {
         ScanRing.IsActive = _app.IsScanning;
         ScanText.Text = _app.IsScanning
-            ? $"Lendo estados... {_app.ScanDone} de {_app.ScanTotal}"
-            : _app.LastScan is { } t ? $"{_app.Tweaks.Count} ajustes · lido às {t:HH:mm:ss}" : "";
+            ? Loc.Format("OverviewPage_Scanning", _app.ScanDone, _app.ScanTotal)
+            : _app.LastScan is { } t ? Loc.Format("OverviewPage_LastScan", _app.Tweaks.Count, t.ToString("HH:mm:ss")) : "";
     }
 
     private void Refresh()
@@ -69,8 +69,8 @@ public sealed partial class OverviewPage : Page
         ProfileButtons.Children.Clear();
         foreach (var p in _app.Profiles.Where(p => p.IsBuiltIn))
         {
-            var b = new Button { Content = p.Name };
-            ToolTipService.SetToolTip(b, p.Description?.Trim());
+            var b = new Button { Content = p.DisplayName };
+            ToolTipService.SetToolTip(b, p.DisplayDescription?.Trim());
             b.Click += async (_, _) =>
             {
                 var msg = await _app.ApplyProfileToSelectionAsync(p);
@@ -80,7 +80,7 @@ public sealed partial class OverviewPage : Page
                 }
                 else
                 {
-                    ProfileInfo.Message = msg + " Nada a mudar: este PC já está como o perfil pede.";
+                    ProfileInfo.Message = msg + " " + Loc.Get("OverviewPage_NothingToChange");
                     ProfileInfo.IsOpen = true;
                 }
             };

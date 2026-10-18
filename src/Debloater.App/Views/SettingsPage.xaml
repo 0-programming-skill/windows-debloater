@@ -6,13 +6,13 @@
 
     <ScrollViewer>
         <StackPanel Padding="24,12,24,24" Spacing="8" MaxWidth="900" HorizontalAlignment="Left">
-            <TextBlock Text="Configurações" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock x:Uid="SettingsPage_Title" Style="{StaticResource TitleTextBlockStyle}" />
             <InfoBar x:Name="Info" IsOpen="False" />
 
             <Border Style="{StaticResource Card}">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Pasta do catálogo" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    <TextBlock Style="{StaticResource Caption}" Text="Pasta com os arquivos YAML dos ajustes (e a subpasta profiles com os perfis embutidos)." />
+                    <TextBlock x:Uid="SettingsPage_CatalogHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Uid="SettingsPage_CatalogText" Style="{StaticResource Caption}" />
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -20,16 +20,16 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBox x:Name="CatalogBox" IsReadOnly="True" />
-                        <Button Grid.Column="1" Content="Procurar..." Click="BrowseCatalog_Click" />
-                        <Button Grid.Column="2" Content="Padrão" Click="DefaultCatalog_Click" />
+                        <Button x:Uid="SettingsPage_Browse" Grid.Column="1" Click="BrowseCatalog_Click" />
+                        <Button x:Uid="SettingsPage_Default" Grid.Column="2" Click="DefaultCatalog_Click" />
                     </Grid>
                 </StackPanel>
             </Border>
 
             <Border Style="{StaticResource Card}">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Pasta dos backups" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    <TextBlock Style="{StaticResource Caption}" Text="Onde fica o valor original de cada ajuste aplicado (necessário para reverter). Mudar a pasta não move backups existentes." />
+                    <TextBlock x:Uid="SettingsPage_BackupHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Uid="SettingsPage_BackupText" Style="{StaticResource Caption}" />
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -38,39 +38,38 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBox x:Name="BackupBox" IsReadOnly="True" />
-                        <Button Grid.Column="1" Content="Procurar..." Click="BrowseBackup_Click" />
-                        <Button Grid.Column="2" Content="Padrão" Click="DefaultBackup_Click" />
-                        <Button Grid.Column="3" Content="Abrir" Click="OpenBackup_Click" />
+                        <Button x:Uid="SettingsPage_Browse" Grid.Column="1" Click="BrowseBackup_Click" />
+                        <Button x:Uid="SettingsPage_Default" Grid.Column="2" Click="DefaultBackup_Click" />
+                        <Button x:Uid="SettingsPage_Open" Grid.Column="3" Click="OpenBackup_Click" />
                     </Grid>
                 </StackPanel>
             </Border>
 
             <Border Style="{StaticResource Card}">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Aparência e idioma" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                    <RadioButtons x:Name="ThemeRadios" Header="Tema" SelectionChanged="Theme_Changed">
-                        <x:String>Usar o tema do sistema</x:String>
-                        <x:String>Claro</x:String>
-                        <x:String>Escuro</x:String>
-                    </RadioButtons>
-                    <ComboBox Header="Idioma" SelectedIndex="0" IsEnabled="False" MinWidth="240">
-                        <x:String>Português (Brasil)</x:String>
-                    </ComboBox>
-                    <TextBlock Style="{StaticResource Caption}" Text="Por enquanto só há português (Brasil)." />
+                    <TextBlock x:Uid="SettingsPage_AppearanceHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <RadioButtons x:Name="ThemeRadios" x:Uid="SettingsPage_ThemeRadios" SelectionChanged="Theme_Changed" />
+                    <ComboBox x:Name="LanguageBox" x:Uid="SettingsPage_LanguageBox" MinWidth="240" SelectionChanged="Language_Changed" />
+                    <TextBlock x:Uid="SettingsPage_LanguageText" Style="{StaticResource Caption}" />
+                    <InfoBar x:Name="RestartBar" x:Uid="SettingsPage_RestartBar" Severity="Informational" IsClosable="False" IsOpen="False">
+                        <InfoBar.ActionButton>
+                            <Button x:Uid="SettingsPage_RestartButton" Click="Restart_Click" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
                 </StackPanel>
             </Border>
 
             <Border Style="{StaticResource Card}">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Logs" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Uid="SettingsPage_LogsHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock x:Name="LogsText" Style="{StaticResource Caption}" IsTextSelectionEnabled="True" />
-                    <Button Content="Abrir pasta de logs" Click="OpenLogs_Click" />
+                    <Button x:Uid="Common_OpenLogsButton" Click="OpenLogs_Click" />
                 </StackPanel>
             </Border>
 
             <Border Style="{StaticResource Card}">
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Sobre" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Uid="SettingsPage_AboutHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock x:Name="AboutText" Style="{StaticResource Caption}" IsTextSelectionEnabled="True" />
                 </StackPanel>
             </Border>

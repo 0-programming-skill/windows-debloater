@@ -1,93 +1,37 @@
-﻿using System.Text;
+using System.Text;
 using Debloater.Core.Catalog;
 using Debloater.Core.Engine;
+using Debloater.Core.Localization;
 using Debloater.Core.Model;
 
 namespace Debloater.Cli;
 
 internal static partial class Program
 {
-    private const string Usage = """
-        Debloater.Cli - testes e automação do catálogo de tweaks
-
-        Uso:
-          Debloater.Cli list     [--category X] [--catalog DIR]
-          Debloater.Cli status   [--category X] [--catalog DIR] [--verbose]
-          Debloater.Cli apply    <id...> [--max-risk low|medium|high|critical] [--catalog DIR]
-          Debloater.Cli revert   <id...> [--catalog DIR]
-          Debloater.Cli validate [--catalog DIR] [--reference [--admx-dir DIR] [--csp FILE] [--warnings-out FILE]]
-
-          Debloater.Cli inventory [--kind K[,K...]] [--uncatalogued] [--json]
-          Debloater.Cli inventory snapshot <arquivo.json> [--kind K]
-          Debloater.Cli inventory diff <antigo.json> <novo.json> [--json]
-
-          Debloater.Cli admx list   [--search TEXTO] [--configured] [--admx-dir DIR] [--lang pt-BR]
-          Debloater.Cli admx show   <[Arquivo.admx:]Nome> [--admx-dir DIR]
-          Debloater.Cli admx export <arquivo.json> [--with-state] [--admx-dir DIR]
-
-          Debloater.Cli policy show   <[Arquivo.admx:]Nome> [--scope machine|user] [--state S [--value id=valor]...]
-          Debloater.Cli policy set    <[Arquivo.admx:]Nome> --state enabled|disabled|notconfigured
-                                      [--value id=valor]... [--scope machine|user] [--dry-run] [--max-risk high]
-          Debloater.Cli policy revert <[Arquivo.admx:]Nome>
-          Debloater.Cli policy backups
-
-          Debloater.Cli reference annotate [--write] [--force] [--admx-dir DIR] [--csp FILE]
-
-          Debloater.Cli fingerprint create <saida.json.gz> [--root C:\] [--binaries default|all|none]
-          Debloater.Cli fingerprint diff <antigo.json.gz> <novo.json.gz> [--md R.md] [--json R.json] [--top 100] [--no-privacy]
-
-          Debloater.Cli selftest [--id ID]... [--category X] [--max-risk R] [--include-irreversible]
-                                 [--json RELATORIO.json] [--backup-dir DIR] [--restore-point] [--verbose]
-                                 [--phase full|apply-only|verify|revert] [--state ESTADO.json] [--label ROTULO]
-                                 [--i-know-this-is-not-a-vm]
-
-        --category X     filtra pelo início da categoria (ex.: privacidade, "Sistema/Tarefas").
-        --max-risk       risco máximo aceito por 'apply' (padrão: medium). High/Critical exigem opt-in explícito.
-        --catalog DIR    pasta do catálogo (padrão: 'catalog' ao lado do executável).
-        --kind K         services, drivers, tasks, appx, features, capabilities, autoruns.
-        --admx-dir DIR   pasta PolicyDefinitions (padrão: C:\Windows\PolicyDefinitions). Aceita o pacote
-                         de Modelos Administrativos mais recente baixado da Microsoft.
-        --csp FILE       referência da Policy CSP (padrão: reference/msdocs-policy-csp.json do repositório).
-        fingerprint      impressão digital de uma instalação (inventário, ADMX, cadeias de registro/políticas nos
-                         binários) e diff entre builds, com candidatos a tweak novo. Somente leitura.
-        --root DIR       (fingerprint create) raiz da instalação (padrão: C:\). Outra pasta = imagem montada
-                         (offline: só as partes baseadas em arquivos).
-        --binaries M     (fingerprint create) default = lista curada de binários relevantes; all = todo PE das
-                         raízes; none = sem varredura de binários.
-        --md / --json    (fingerprint diff) grava o relatório Markdown / JSON (com a lista "candidates").
-        --top N          (fingerprint diff) candidatos na tabela do Markdown (padrão: 100).
-        --no-privacy     (fingerprint diff) desliga o filtro de privacidade (ligado por padrão; --privacy
-                         liga): omite itens de terceiros/hardware/instalados à parte, o que só existia no
-                         PC antigo sem evidência de ser do Windows e o nome das máquinas.
-        policy           configura uma política ADMX gravando direto no registro (HKLM/HKCU\...\Policies),
-                         com backup do valor original em %ProgramData%\Debloater\backups\policies. --value
-                         repete-se por item (list/multiText); list com nome=valor: --value Id=nome=valor.
-                         Enum aceita o valor, o nome exibido ou #índice; boolean true/false. --dry-run só
-                         mostra a prévia. Risco alto (segurança/Update/Defender) exige --max-risk high.
-                         Não altera o Registry.pol: o gpedit.msc não mostra o que foi gravado.
-        apply/revert/policy set/policy revert exigem um prompt de administrador. Os demais comandos são
-        somente leitura.
-
-        selftest         SÓ PARA VM DESCARTÁVEL: para cada tweak, lê o estado, aplica, confere (Applied),
-                         re-aplica (o backup original deve ficar intacto), reverte e confere que cada ação
-                         voltou ao valor de antes. Recusa rodar fora de um convidado Hyper-V, a menos que
-                         se passe --i-know-this-is-not-a-vm. Requer administrador. Padrão: todos os tweaks,
-                         todos os riscos; irreversíveis (appx) só com --include-irreversible.
-        --id ID          tweak a testar (repetível ou separado por vírgulas).
-        --json ARQ       (selftest) grava o relatório JSON, atualizado a cada tweak.
-        --backup-dir DIR (selftest) pasta dos backups (padrão: %ProgramData%\Debloater\backups).
-        --restore-point  (selftest) cria um ponto de restauração antes e registra o resultado.
-        --phase P        (selftest) teste de persistência em fases: apply-only aplica e grava o arquivo de
-                         estado; verify relê o estado e diz quais tweaks o Windows desfez (repetível, com
-                         --label, ex. depois de reiniciar e depois de esperar); revert reverte e compara com
-                         o estado original. Padrão: full (ciclo completo de uma vez).
-        --state ARQ      (selftest) arquivo de estado das fases (padrão: %ProgramData%\Debloater\selftest-state.json).
-        --label TEXTO    (selftest --phase verify) rótulo da conferência (padrão: verify-<n>).
-        """;
+    private static string Usage => L.T("Usage");
 
     private static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
+        // The global --lang option is accepted anywhere and applied before any text is produced.
+        string? lang;
+        try
+        {
+            lang = ExtractLanguage(ref args);
+        }
+        catch (ArgumentException ex)
+        {
+            return Fail(ex.Message);
+        }
+        try
+        {
+            UiLanguage.Apply(lang);
+        }
+        catch (ArgumentException)
+        {
+            return Fail(L.F("Err_UnsupportedLanguage", lang));
+        }
+
         try
         {
             var parsed = Args.Parse(args);
@@ -110,7 +54,7 @@ internal static partial class Program
                 "reference" => Reference(parsed),
                 "selftest" => await SelfTestAsync(parsed),
                 "fingerprint" => await FingerprintAsync(parsed),
-                _ => Fail($"Comando desconhecido '{parsed.Command}'.\n\n{Usage}"),
+                _ => Fail($"{L.F("Err_UnknownCommand", parsed.Command)}\n\n{Usage}"),
             };
         }
         catch (ArgumentException ex)
@@ -123,44 +67,78 @@ internal static partial class Program
         }
     }
 
+    /// <summary>
+    /// Removes the global "--lang X" (or "--lang=X") option from the arguments and returns its value
+    /// (null when absent = follow the Windows display language).
+    /// </summary>
+    private static string? ExtractLanguage(ref string[] args)
+    {
+        string? lang = null;
+        var rest = new List<string>(args.Length);
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--lang")
+            {
+                if (i + 1 >= args.Length) throw new ArgumentException(L.F("Args_NeedsValue", args[i]));
+                lang = args[++i];
+            }
+            else if (args[i].StartsWith("--lang=", StringComparison.Ordinal))
+            {
+                lang = args[i]["--lang=".Length..];
+            }
+            else
+            {
+                rest.Add(args[i]);
+            }
+        }
+        args = [.. rest];
+        return lang;
+    }
+
     private static int Fail(string message)
     {
         Console.Error.WriteLine(message);
         return 2;
     }
 
-    // ---------------- comandos ----------------
+    // ---------------- commands ----------------
 
     private static int Validate(Args a)
     {
         var result = CatalogLoader.LoadDirectory(a.CatalogDir);
-        Console.WriteLine($"Catálogo: {a.CatalogDir}");
-        Console.WriteLine($"{result.FileCount} arquivo(s), {result.Tweaks.Count} tweak(s) válido(s), {result.Errors.Count} erro(s).");
-        foreach (var error in result.Errors) Console.WriteLine($"  ERRO {error}");
+        Console.WriteLine(L.F("Validate_Catalog", a.CatalogDir));
+        Console.WriteLine(L.F("Validate_Summary", result.FileCount, result.Tweaks.Count, result.Errors.Count, result.Warnings.Count));
+        foreach (var error in result.Errors) Console.WriteLine($"  {L.T("Label_ErrorUpper")} {error}");
+        // Warnings (missing translations, category names) do not change the exit code.
+        foreach (var warning in result.Warnings) Console.WriteLine($"  {L.T("Label_WarningUpper")} {warning}");
+        if (result.Warnings.Count > 0) Console.WriteLine(L.F("Validate_WarningCount", result.Warnings.Count));
         return result.IsValid ? 0 : 1;
     }
 
     private static int List(Args a)
     {
-        var tweaks = LoadOrFail(a);
-        if (tweaks is null) return 1;
+        var loaded = LoadOrFail(a);
+        if (loaded is null) return 1;
+        var (tweaks, categories) = loaded.Value;
         foreach (var group in tweaks.GroupBy(t => t.Category))
         {
-            Console.WriteLine($"\n[{group.Key}]");
+            Console.WriteLine($"\n[{categories.DisplayPath(group.Key)}]");
             foreach (var t in group)
-                Console.WriteLine($"  {t.Id,-48} {RiskText(t.Risk),-8} {t.Name}");
+                Console.WriteLine($"  {t.Id,-48} {RiskText(t.Risk),-8} {t.DisplayName}");
         }
-        Console.WriteLine($"\n{tweaks.Count} tweak(s).");
+        Console.WriteLine();
+        Console.WriteLine(L.F("List_Total", tweaks.Count));
         return 0;
     }
 
     private static async Task<int> StatusAsync(Args a)
     {
-        var tweaks = LoadOrFail(a);
-        if (tweaks is null) return 1;
+        var loaded = LoadOrFail(a);
+        if (loaded is null) return 1;
+        var (tweaks, categories) = loaded.Value;
         if (tweaks.Count == 0)
         {
-            Console.WriteLine("Nenhum tweak corresponde ao filtro.");
+            Console.WriteLine(L.T("NoTweakMatches"));
             return 0;
         }
         var engine = new TweakEngine();
@@ -172,10 +150,10 @@ internal static partial class Program
 
         foreach (var group in statuses.GroupBy(s => s.Tweak.Category))
         {
-            Console.WriteLine($"\n[{group.Key}]");
+            Console.WriteLine($"\n[{categories.DisplayPath(group.Key)}]");
             foreach (var s in group)
             {
-                Console.WriteLine($"  {s.Tweak.Id,-48} {s.State,-13} {RiskText(s.Tweak.Risk),-8} {s.Tweak.Name}");
+                Console.WriteLine($"  {s.Tweak.Id,-48} {s.State,-13} {RiskText(s.Tweak.Risk),-8} {s.Tweak.DisplayName}");
                 bool showDetails = a.Verbose || s.State is TweakState.Error or TweakState.Partial;
                 if (s.Message is not null && (a.Verbose || s.State == TweakState.Error))
                     Console.WriteLine($"      {s.Message}");
@@ -201,15 +179,15 @@ internal static partial class Program
         {
             try
             {
-                if (!tweak.Reversible) Console.WriteLine($"! {tweak.Id}: NÃO reversível pelo programa.");
-                if (tweak.Breaks is not null) Console.WriteLine($"! {tweak.Id}: pode afetar: {tweak.Breaks.Trim()}");
+                if (!tweak.Reversible) Console.WriteLine(L.F("Apply_NotReversible", tweak.Id));
+                if (tweak.DisplayBreaks is { } breaks) Console.WriteLine(L.F("Apply_MayAffect", tweak.Id, breaks.Trim()));
                 var result = await engine.ApplyAsync(tweak, a.MaxRisk);
                 Report(result);
                 if (!result.Success) failures++;
             }
             catch (RiskNotAllowedException ex)
             {
-                Console.Error.WriteLine($"x {ex.Message} Use --max-risk {ex.Tweak.Risk.ToString().ToLowerInvariant()} para confirmar.");
+                Console.Error.WriteLine($"x {ex.Message} {L.F("Apply_UseMaxRisk", ex.Tweak.Risk.ToString().ToLowerInvariant())}");
                 failures++;
             }
         }
@@ -237,33 +215,42 @@ internal static partial class Program
     {
         Console.WriteLine($"{(r.Success ? "ok" : "x ")} {r.TweakId}: {r.Message}");
         foreach (var e in r.Errors) Console.WriteLine($"    {e}");
-        foreach (var n in r.Notes) Console.WriteLine($"    aviso: {n}");
+        foreach (var n in r.Notes) Console.WriteLine($"    {L.T("Label_Warning")}: {n}");
     }
 
-    private static List<Tweak>? LoadOrFail(Args a)
+    private static (List<Tweak> Tweaks, CategoryNames Categories)? LoadOrFail(Args a)
     {
         var result = CatalogLoader.LoadDirectory(a.CatalogDir);
         if (!result.IsValid)
         {
-            Console.Error.WriteLine($"Catálogo com {result.Errors.Count} erro(s); rode 'validate'. Primeiro erro: {result.Errors[0]}");
+            Console.Error.WriteLine(L.F("Catalog_HasErrors", result.Errors.Count, result.Errors[0]));
             if (result.Tweaks.Count == 0) return null;
         }
-        return result.Tweaks
-            .Where(t => a.Category is null || CategoryMatches(t.Category, a.Category))
-            .OrderBy(t => t.Category, StringComparer.CurrentCulture)
+        var categories = result.Categories;
+        var tweaks = result.Tweaks
+            .Where(t => a.Category is null || CategoryMatches(t.Category, a.Category, categories))
+            .OrderBy(t => categories.DisplayPath(t.Category), StringComparer.CurrentCulture)
             .ThenBy(t => t.Id, StringComparer.Ordinal)
             .ToList();
+        return (tweaks, categories);
     }
 
-    /// <summary>Prefixo da categoria, sem diferenciar maiúsculas (ex.: "privacidade", "Sistema/Tarefas").</summary>
-    private static bool CategoryMatches(string category, string filter) =>
-        category.StartsWith(filter.Trim().TrimEnd('/'), StringComparison.CurrentCultureIgnoreCase);
+    /// <summary>
+    /// Case-insensitive category prefix, either the identifier (e.g. "privacy", "System/Scheduled tasks")
+    /// or the displayed (translated) path.
+    /// </summary>
+    private static bool CategoryMatches(string category, string filter, CategoryNames categories)
+    {
+        var prefix = filter.Trim().TrimEnd('/');
+        return category.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase)
+            || categories.DisplayPath(category).StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase);
+    }
 
     private static List<Tweak>? SelectByIds(Args a)
     {
         if (a.Positional.Count == 0)
         {
-            Console.Error.WriteLine("Informe ao menos um id de tweak.");
+            Console.Error.WriteLine(L.T("Select_NeedId"));
             return null;
         }
         var all = CatalogLoader.LoadDirectory(a.CatalogDir);
@@ -271,7 +258,7 @@ internal static partial class Program
         var missing = a.Positional.Where(id => !byId.ContainsKey(id)).ToList();
         if (missing.Count > 0)
         {
-            Console.Error.WriteLine($"Id(s) não encontrado(s): {string.Join(", ", missing)}");
+            Console.Error.WriteLine(L.F("Select_IdsNotFound", string.Join(", ", missing)));
             return null;
         }
         return a.Positional.Select(id => byId[id]).ToList();
@@ -279,10 +266,10 @@ internal static partial class Program
 
     private static string RiskText(RiskLevel risk) => risk switch
     {
-        RiskLevel.Low => "baixo",
-        RiskLevel.Medium => "médio",
-        RiskLevel.High => "ALTO",
-        RiskLevel.Critical => "CRÍTICO",
+        RiskLevel.Low => L.T("Risk_Low"),
+        RiskLevel.Medium => L.T("Risk_Medium"),
+        RiskLevel.High => L.T("Risk_High"),
+        RiskLevel.Critical => L.T("Risk_Critical"),
         _ => risk.ToString(),
     };
 
@@ -301,7 +288,6 @@ internal static partial class Program
         public bool Configured { get; private set; }
         public bool WithState { get; private set; }
         public string AdmxDir { get; private set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "PolicyDefinitions");
-        public string? Lang { get; private set; }
         public bool Reference { get; private set; }
         public string? CspFile { get; private set; }
         public string? WarningsOut { get; private set; }
@@ -327,12 +313,13 @@ internal static partial class Program
         public string? Scope { get; private set; }
         public bool DryRun { get; private set; }
 
+        /// <summary>Parses the arguments; the global --lang option must already have been removed.</summary>
         public static Args Parse(string[] args)
         {
             var a = new Args();
             for (int i = 0; i < args.Length; i++)
             {
-                string Next() => i + 1 < args.Length ? args[++i] : throw new ArgumentException($"'{args[i]}' exige um valor.");
+                string Next() => i + 1 < args.Length ? args[++i] : throw new ArgumentException(L.F("Args_NeedsValue", args[i]));
                 switch (args[i])
                 {
                     case "--category": a.Category = Next(); break;
@@ -341,7 +328,7 @@ internal static partial class Program
                     case "--kind": a.Kinds.AddRange(Next().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)); break;
                     case "--uncatalogued": a.Uncatalogued = true; break;
                     case "--json":
-                        // No selftest, --json recebe o caminho do relatório; nos demais é uma chave.
+                        // In selftest/fingerprint, --json takes the report path; elsewhere it is a switch.
                         if (a.Command is "selftest" or "fingerprint") a.JsonOut = Path.GetFullPath(Next());
                         else a.Json = true;
                         break;
@@ -352,7 +339,7 @@ internal static partial class Program
                     case "--i-know-this-is-not-a-vm": a.NotAVmOverride = true; break;
                     case "--phase": a.Phase = Next().ToLowerInvariant(); break;
                     case "--state":
-                        // Em 'policy', --state é o estado desejado; no selftest, o arquivo de estado das fases.
+                        // In 'policy', --state is the desired state; in selftest, the phase state file.
                         if (a.Command == "policy") a.PolicyState = Next();
                         else a.StateFile = Path.GetFullPath(Next());
                         break;
@@ -367,13 +354,12 @@ internal static partial class Program
                     case "--no-privacy": a.Privacy = false; break;
                     case "--top":
                         var top = Next();
-                        a.Top = int.TryParse(top, out var t) && t > 0 ? t : throw new ArgumentException($"--top inválido '{top}'.");
+                        a.Top = int.TryParse(top, out var t) && t > 0 ? t : throw new ArgumentException(L.F("Args_InvalidTop", top));
                         break;
                     case "--search": a.Search = Next(); break;
                     case "--configured": a.Configured = true; break;
                     case "--with-state": a.WithState = true; break;
                     case "--admx-dir": a.AdmxDir = Path.GetFullPath(Next()); break;
-                    case "--lang": a.Lang = Next(); break;
                     case "--reference": a.Reference = true; break;
                     case "--csp": a.CspFile = Path.GetFullPath(Next()); break;
                     case "--warnings-out": a.WarningsOut = Path.GetFullPath(Next()); break;
@@ -383,11 +369,11 @@ internal static partial class Program
                         var v = Next();
                         a.MaxRisk = Enum.TryParse<RiskLevel>(v, ignoreCase: true, out var r) && Enum.IsDefined(r)
                             ? r
-                            : throw new ArgumentException($"--max-risk inválido '{v}' (low|medium|high|critical).");
+                            : throw new ArgumentException(L.F("Args_InvalidMaxRisk", v));
                         a.MaxRiskSet = true;
                         break;
                     default:
-                        if (args[i].StartsWith("--")) throw new ArgumentException($"Opção desconhecida '{args[i]}'.");
+                        if (args[i].StartsWith("--")) throw new ArgumentException(L.F("Args_UnknownOption", args[i]));
                         if (a.Command is null) a.Command = args[i].ToLowerInvariant();
                         else a.Positional.Add(args[i]);
                         break;

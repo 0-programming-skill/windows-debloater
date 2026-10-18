@@ -14,7 +14,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Barra de título própria (conteúdo estendido sobre a barra do sistema). -->
+        <!-- Custom title bar (content extended over the system title bar). -->
         <Grid x:Name="AppTitleBar" Height="48" Padding="16,0,140,0">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                 <FontIcon Glyph="&#xE90F;" FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
@@ -34,26 +34,26 @@
                         OpenPaneLength="280"
                         ItemInvoked="Nav_ItemInvoked">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Visão geral" Tag="overview">
+                <NavigationViewItem x:Uid="Nav_Overview" Tag="overview">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Name="TweaksItem" Content="Ajustes" Tag="tweaks" SelectsOnInvoked="True">
+                <NavigationViewItem x:Name="TweaksItem" x:Uid="Nav_Tweaks" Tag="tweaks" SelectsOnInvoked="True">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Name="ApplyItem" Content="Aplicar/revisar" Tag="apply">
+                <NavigationViewItem x:Name="ApplyItem" x:Uid="Nav_Apply" Tag="apply">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE73E;" /></NavigationViewItem.Icon>
                     <NavigationViewItem.InfoBadge>
                         <InfoBadge x:Name="PendingBadge" Visibility="Collapsed" />
                     </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
                 <NavigationViewItemSeparator />
-                <NavigationViewItem Content="Políticas (ADMX)" Tag="policies">
+                <NavigationViewItem x:Uid="Nav_Policies" Tag="policies">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Inventário" Tag="inventory">
+                <NavigationViewItem x:Uid="Nav_Inventory" Tag="inventory">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE7B8;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Perfis" Tag="profiles">
+                <NavigationViewItem x:Uid="Nav_Profiles" Tag="profiles">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE77B;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
@@ -64,20 +64,18 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <StackPanel Margin="24,8,24,0" Spacing="8">
-                    <InfoBar x:Name="ReadOnlyBar" Severity="Warning" IsClosable="False"
-                             Title="Modo somente leitura — reinicie como administrador para aplicar"
-                             Message="O estado de cada ajuste é lido normalmente; aplicar e reverter exigem privilégios de administrador.">
+                    <InfoBar x:Name="ReadOnlyBar" x:Uid="MainWindow_ReadOnlyBar" Severity="Warning" IsClosable="False">
                         <InfoBar.ActionButton>
                             <Button Click="Elevate_Click">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon Glyph="&#xE7EF;" FontSize="14" />
-                                    <TextBlock Text="Reiniciar como administrador" />
+                                    <TextBlock x:Uid="MainWindow_ElevateText" />
                                 </StackPanel>
                             </Button>
                         </InfoBar.ActionButton>
                     </InfoBar>
                     <InfoBar x:Name="ErrorBar" Severity="Error" IsOpen="False" />
-                    <InfoBar x:Name="CatalogBar" Severity="Warning" IsOpen="False" Title="Catálogo com erros" />
+                    <InfoBar x:Name="CatalogBar" x:Uid="MainWindow_CatalogBar" Severity="Warning" IsOpen="False" />
                 </StackPanel>
                 <Frame x:Name="ContentFrame" Grid.Row="1" />
             </Grid>

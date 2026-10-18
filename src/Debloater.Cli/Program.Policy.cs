@@ -8,14 +8,7 @@ namespace Debloater.Cli;
 
 internal static partial class Program
 {
-    private const string PolicyUsage = """
-        Uso:
-          policy show   <[Arquivo.admx:]Nome> [--scope machine|user] [--state S [--value id=valor]...]
-          policy set    <[Arquivo.admx:]Nome> --state enabled|disabled|notconfigured [--value id=valor]...
-                        [--scope machine|user] [--dry-run] [--max-risk high] [--backup-dir DIR]
-          policy revert <[Arquivo.admx:]Nome> [--backup-dir DIR]
-          policy backups [--backup-dir DIR]
-        """;
+    private static string PolicyUsage => L.T("PolicyUsage");
 
     private static int Policy(Args a)
     {
@@ -25,7 +18,7 @@ internal static partial class Program
 
         if (sub == "revert" && a.Positional[1].Contains(':'))
         {
-            // Reverter não precisa da definição ADMX (o backup tem tudo); usa-a só para ler o estado depois.
+            // Reverting does not need the ADMX definition (the backup has everything); it is only used to read the state afterwards.
             var catalogOpt = Directory.Exists(a.AdmxDir) ? LoadAdmx(a) : null;
             var def = catalogOpt?.Policies.FirstOrDefault(p => p.QualifiedName.Equals(a.Positional[1], StringComparison.OrdinalIgnoreCase));
             return PolicyRevert(a, def?.QualifiedName ?? a.Positional[1], def);
@@ -49,8 +42,8 @@ internal static partial class Program
         var matches = catalog.Policies.Where(p => p.QualifiedName.Equals(query, StringComparison.OrdinalIgnoreCase)).ToList();
         if (matches.Count == 0) matches = catalog.Policies.Where(p => p.Name.Equals(query, StringComparison.OrdinalIgnoreCase)).ToList();
         if (matches.Count == 1) return matches[0];
-        if (matches.Count == 0) Console.Error.WriteLine($"Política '{query}' não encontrada. Use 'admx list --search {query}'.");
-        else Console.Error.WriteLine($"'{query}' é ambíguo: {string.Join(", ", matches.Select(m => m.QualifiedName))}. Use Arquivo.admx:Nome.");
+        if (matches.Count == 0) Console.Error.WriteLine(L.F("Policy_NotFound", query));
+        else Console.Error.WriteLine(L.F("Policy_Ambiguous", query, string.Join(", ", matches.Select(m => m.QualifiedName))));
         return null;
     }
 
@@ -61,12 +54,12 @@ internal static partial class Program
     {
         if (a.PolicyState is null)
         {
-            Console.Error.WriteLine("Informe --state enabled|disabled|notconfigured.");
+            Console.Error.WriteLine(L.T("Policy_NeedState"));
             return null;
         }
         if (!PolicySetting.TryParseState(a.PolicyState, out var state))
         {
-            Console.Error.WriteLine($"--state inválido '{a.PolicyState}' (enabled|disabled|notconfigured).");
+            Console.Error.WriteLine(L.F("Policy_InvalidState", a.PolicyState));
             return null;
         }
         var setting = new PolicySetting { Policy = policy.QualifiedName, State = state };
@@ -76,7 +69,7 @@ internal static partial class Program
             else if (scopeText.ToLowerInvariant() is "user" or "usuario" or "usuário" or "hkcu") setting.Scope = PolicyScope.User;
             else
             {
-                Console.Error.WriteLine($"--scope inválido '{scopeText}' (machine|user).");
+                Console.Error.WriteLine(L.F("Policy_InvalidScope", scopeText));
                 return null;
             }
         }
@@ -85,7 +78,7 @@ internal static partial class Program
             int eq = v.IndexOf('=');
             if (eq <= 0)
             {
-                Console.Error.WriteLine($"--value '{v}' deve ser id=valor (ids: {string.Join(", ", policy.Elements.Select(e => e.Id))}).");
+                Console.Error.WriteLine(L.F("Policy_InvalidValue", v, string.Join(", ", policy.Elements.Select(e => e.Id))));
                 return null;
             }
             var id = v[..eq].Trim();
@@ -125,7 +118,7 @@ internal static partial class Program
         foreach (var n in plan.Notes) Console.WriteLine($"  i {n}");
         if (!plan.IsValid) return;
         var lines = plan.Describe().ToList();
-        if (lines.Count == 0) Console.WriteLine("  (nada a mudar: o registro já está assim)");
+        if (lines.Count == 0) Console.WriteLine("  " + L.T("Policy_NothingToChange"));
         foreach (var l in lines) Console.WriteLine($"  {l}");
     }
 
@@ -133,33 +126,33 @@ internal static partial class Program
     {
         var engine = CreatePolicyEngine(a);
         Console.WriteLine($"{p.QualifiedName}  ({p.Namespace})");
-        Console.WriteLine($"  Nome exibido : {p.DisplayName}");
-        Console.WriteLine($"  Classe       : {p.Class}");
-        Console.WriteLine($"  Categoria    : {string.Join(" > ", p.CategoryPath)}");
-        Console.WriteLine($"  Com suporte  : {p.SupportedOn}");
-        Console.WriteLine($"  Risco        : {RiskText(PolicyAdvisor.Risk(p))}");
-        Console.WriteLine($"  Chave        : {p.Key}" + (p.ValueName is null ? "" : $"\\{p.ValueName}"));
-        if (p.EnabledValue is not null || p.ValueName is not null) Console.WriteLine($"  Habilitada   : {p.EnabledValue?.ToString() ?? "1 (padrão)"}");
-        if (p.DisabledValue is not null || p.ValueName is not null) Console.WriteLine($"  Desabilitada : {p.DisabledValue?.ToString() ?? "(apaga o valor)"}");
-        PrintList("Lista habilitada", p.EnabledList);
-        PrintList("Lista desabilitada", p.DisabledList);
+        PrintField("Field_DisplayName", p.DisplayName);
+        PrintField("Field_Class", p.Class);
+        PrintField("Field_Category", string.Join(" > ", p.CategoryPath));
+        PrintField("Field_SupportedOn", p.SupportedOn);
+        PrintField("Field_Risk", RiskText(PolicyAdvisor.Risk(p)));
+        PrintField("Field_Key", p.Key + (p.ValueName is null ? "" : $"\\{p.ValueName}"));
+        if (p.EnabledValue is not null || p.ValueName is not null) PrintField("Field_Enabled", p.EnabledValue?.ToString() ?? L.T("Policy_EnabledDefault"));
+        if (p.DisabledValue is not null || p.ValueName is not null) PrintField("Field_Disabled", p.DisabledValue?.ToString() ?? L.T("Policy_DisabledDeletes"));
+        PrintList(L.T("Field_EnabledList"), p.EnabledList);
+        PrintList(L.T("Field_DisabledList"), p.DisabledList);
         foreach (var e in p.Elements) Console.WriteLine("  " + DescribeElement(p, e));
 
         var scopes = p.Class == AdmxClass.Both ? new[] { PolicyScope.Machine, PolicyScope.User } : [PolicySetting.DefaultScope(p.Class)];
         foreach (var scope in scopes)
         {
             var (state, current) = engine.ReadCurrent(p, scope);
-            Console.WriteLine($"  Atual {PolicySetting.ScopeText(scope)}   : {StateText(state)}");
+            Console.WriteLine($"  {L.F("Field_Current", PolicySetting.ScopeText(scope)),-13}: {StateText(state)}");
             foreach (var (id, values) in current.Values) Console.WriteLine($"      {id} = {string.Join(" | ", values)}");
         }
-        Console.WriteLine($"  Backup       : {(engine.Backups.Exists(p.QualifiedName) ? engine.Backups.PathFor(p.QualifiedName) : "nenhum")}");
+        PrintField("Field_Backup", engine.Backups.Exists(p.QualifiedName) ? engine.Backups.PathFor(p.QualifiedName) : L.T("Policy_NoBackup"));
 
         if (a.PolicyState is not null)
         {
             var setting = BuildSetting(a, p);
             if (setting is null) return 2;
             Console.WriteLine();
-            Console.WriteLine($"Prévia de {setting}:");
+            Console.WriteLine(L.F("Policy_Preview", setting));
             PrintWarnings(a, p, setting);
             PrintPlan(engine.Plan(p, setting));
         }
@@ -168,20 +161,20 @@ internal static partial class Program
 
     private static string DescribeElement(AdmxPolicy p, AdmxElement e)
     {
-        var parts = new List<string> { $"Elemento {e.Type} '{e.Id}'" };
+        var parts = new List<string> { L.F("Elem_Header", e.Type, e.Id) };
         if (e.Label is not null) parts.Add($"\"{e.Label}\"");
         var key = e.Key.Equals(p.Key, StringComparison.OrdinalIgnoreCase) ? "" : e.Key + "\\";
         if (e.ValueName is not null) parts.Add($"→ {key}{e.ValueName}");
-        else if (e.Type == "list") parts.Add($"→ chave {e.Key}" + (e.ValuePrefix is { } vp ? $" (prefixo \"{vp}\")" : "") + (e.ExplicitValue ? " (nome=valor)" : "") + (e.Additive ? " (aditiva)" : ""));
-        if (e.Type is "decimal" or "longDecimal") parts.Add($"[{e.MinValue ?? 0}..{e.MaxValue?.ToString() ?? "∞"}]" + (e.StoreAsText ? " (texto)" : ""));
-        if (e.Type is "text" or "multiText") parts.Add($"máx. {e.MaxLength ?? PolicyWriter.DefaultTextMaxLength} caracteres" + (e.MaxStrings is > 0 ? $", {e.MaxStrings} linhas" : "") + (e.Expandable ? " (expansível)" : ""));
-        if (e.Required) parts.Add("obrigatório");
-        if (e.DefaultValue is not null) parts.Add($"padrão {e.DefaultValue}");
+        else if (e.Type == "list") parts.Add(L.F("Elem_ListKey", e.Key) + (e.ValuePrefix is { } vp ? L.F("Elem_Prefix", vp) : "") + (e.ExplicitValue ? L.T("Elem_NameValue") : "") + (e.Additive ? L.T("Elem_Additive") : ""));
+        if (e.Type is "decimal" or "longDecimal") parts.Add($"[{e.MinValue ?? 0}..{e.MaxValue?.ToString() ?? "∞"}]" + (e.StoreAsText ? L.T("Elem_AsText") : ""));
+        if (e.Type is "text" or "multiText") parts.Add(L.F("Elem_MaxChars", e.MaxLength ?? PolicyWriter.DefaultTextMaxLength) + (e.MaxStrings is > 0 ? L.F("Elem_Lines", e.MaxStrings) : "") + (e.Expandable ? L.T("Elem_Expandable") : ""));
+        if (e.Required) parts.Add(L.T("Elem_Required"));
+        if (e.DefaultValue is not null) parts.Add(L.F("Elem_Default", e.DefaultValue));
         var text = string.Join(" ", parts);
         if (e.Type == "enum")
             text += Environment.NewLine + string.Join(Environment.NewLine, (e.Items ?? []).Select((it, i) => $"      {PolicyWriter.EnumToken(e, i),-12} {it.DisplayName}"));
         if (e.Type == "boolean")
-            text += $"  (marcado = {e.TrueValue?.ToString() ?? "1"}, desmarcado = {e.FalseValue?.ToString() ?? "0"})";
+            text += L.F("Elem_Boolean", e.TrueValue?.ToString() ?? "1", e.FalseValue?.ToString() ?? "0");
         return text;
     }
 
@@ -193,25 +186,25 @@ internal static partial class Program
         var plan = engine.Plan(p, setting);
         var risk = PolicyAdvisor.Risk(p);
 
-        Console.WriteLine($"{setting}  (risco {RiskText(risk)})");
+        Console.WriteLine(L.F("PolicySet_Header", setting, RiskText(risk)));
         PrintWarnings(a, p, setting);
         PrintPlan(plan);
         if (!plan.IsValid) return 1;
         if (a.DryRun)
         {
-            Console.WriteLine("--dry-run: nada foi gravado.");
+            Console.WriteLine(L.T("Policy_DryRun"));
             return 0;
         }
         if (risk > a.MaxRisk)
         {
-            Console.Error.WriteLine($"x Risco {RiskText(risk)} acima do permitido ({RiskText(a.MaxRisk)}). Use --max-risk {risk.ToString().ToLowerInvariant()} para confirmar.");
+            Console.Error.WriteLine(L.F("Policy_RiskTooHigh", RiskText(risk), RiskText(a.MaxRisk), risk.ToString().ToLowerInvariant()));
             return 1;
         }
 
         using var log = new OperationLog();
         log.Write($"policy set {setting} ({engine.System})");
         var result = engine.Apply(p, setting, log);
-        log.Write($"  {(result.Success ? "OK" : "FALHA")}: {result.Message}");
+        log.Write($"  {(result.Success ? "OK" : "FAILED")}: {result.Message}");
         Console.WriteLine($"{(result.Success ? "ok" : "x ")} {result.Message}");
         foreach (var e in result.Errors) Console.WriteLine($"    {e}");
         Console.WriteLine($"Backup: {engine.Backups.PathFor(p.QualifiedName)}");
@@ -225,10 +218,10 @@ internal static partial class Program
         using var log = new OperationLog();
         log.Write($"policy revert {qualifiedName} ({engine.System})");
         var result = engine.Revert(qualifiedName, policy, log);
-        log.Write($"  {(result.Success ? "OK" : "FALHA")}: {result.Message}");
+        log.Write($"  {(result.Success ? "OK" : "FAILED")}: {result.Message}");
         Console.WriteLine($"{(result.Success ? "ok" : "x ")} {qualifiedName}: {result.Message}");
         foreach (var op in result.Operations) Console.WriteLine($"    {op}");
-        foreach (var e in result.Errors) Console.WriteLine($"    erro: {e}");
+        foreach (var e in result.Errors) Console.WriteLine($"    {L.T("Label_Error")}: {e}");
         return result.Success ? 0 : 1;
     }
 
@@ -239,9 +232,9 @@ internal static partial class Program
         foreach (var name in list.Order(StringComparer.OrdinalIgnoreCase))
         {
             var b = engine.Backups.Load(name)!;
-            Console.WriteLine($"{name,-70} {b.Values.Count} valor(es), desde {b.CreatedUtc.ToLocalTime():yyyy-MM-dd HH:mm}");
+            Console.WriteLine($"{name,-70} {L.F("PolicyBackups_Item", b.Values.Count, b.CreatedUtc.ToLocalTime())}");
         }
-        Console.WriteLine($"{list.Count} política(s) com backup em {engine.Backups.Directory}.");
+        Console.WriteLine(L.F("PolicyBackups_Total", list.Count, engine.Backups.Directory));
         return 0;
     }
 }

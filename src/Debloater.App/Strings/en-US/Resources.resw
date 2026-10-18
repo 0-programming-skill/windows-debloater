@@ -1,0 +1,998 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ActionDesired_Appx" xml:space="preserve">
+    <value>{0}: remove</value>
+  </data>
+  <data name="ActionDesired_DefaultValue" xml:space="preserve">
+    <value>(Default)</value>
+  </data>
+  <data name="ActionDesired_FeatureDisabled" xml:space="preserve">
+    <value>disabled</value>
+  </data>
+  <data name="ActionDesired_FeatureEnabled" xml:space="preserve">
+    <value>enabled</value>
+  </data>
+  <data name="ActionDesired_PowerShell" xml:space="preserve">
+    <value>PowerShell script (detect / apply / revert)</value>
+  </data>
+  <data name="ActionDesired_RegistryDelete" xml:space="preserve">
+    <value>{0}: delete the value</value>
+  </data>
+  <data name="ActionDesired_Service" xml:space="preserve">
+    <value>{0}: startup {1}</value>
+  </data>
+  <data name="ActionDesired_TaskDisabled" xml:space="preserve">
+    <value>disabled</value>
+  </data>
+  <data name="ActionDesired_TaskEnabled" xml:space="preserve">
+    <value>enabled</value>
+  </data>
+  <data name="ActionState_Desired" xml:space="preserve">
+    <value>In the desired state</value>
+  </data>
+  <data name="ActionState_NotDesired" xml:space="preserve">
+    <value>Differs from desired</value>
+  </data>
+  <data name="ActionType_Appx" xml:space="preserve">
+    <value>App (Appx)</value>
+  </data>
+  <data name="ActionType_OptionalFeature" xml:space="preserve">
+    <value>Optional feature</value>
+  </data>
+  <data name="ActionType_PowerShell" xml:space="preserve">
+    <value>PowerShell</value>
+  </data>
+  <data name="ActionType_Registry" xml:space="preserve">
+    <value>Registry</value>
+  </data>
+  <data name="ActionType_ScheduledTask" xml:space="preserve">
+    <value>Scheduled task</value>
+  </data>
+  <data name="ActionType_Service" xml:space="preserve">
+    <value>Service</value>
+  </data>
+  <data name="ApplyLog_Applying" xml:space="preserve">
+    <value>Applying {0} (risk {1})...</value>
+  </data>
+  <data name="ApplyLog_ConfiguringPolicy" xml:space="preserve">
+    <value>Configuring policy {0} (risk {1})...</value>
+  </data>
+  <data name="ApplyLog_CreatingRestorePoint" xml:space="preserve">
+    <value>Creating restore point...</value>
+  </data>
+  <data name="ApplyLog_Done" xml:space="preserve">
+    <value>Done: {0} succeeded, {1} failed, {2} not run.</value>
+  </data>
+  <data name="ApplyLog_Error" xml:space="preserve">
+    <value>error: {0}</value>
+  </data>
+  <data name="ApplyLog_Failed" xml:space="preserve">
+    <value>FAILED</value>
+  </data>
+  <data name="ApplyLog_FileError" xml:space="preserve">
+    <value>(could not write the log file: {0})</value>
+  </data>
+  <data name="ApplyLog_Interrupted" xml:space="preserve">
+    <value>Stopped by the user.</value>
+  </data>
+  <data name="ApplyLog_Note" xml:space="preserve">
+    <value>note: {0}</value>
+  </data>
+  <data name="ApplyLog_Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="ApplyLog_Reverting" xml:space="preserve">
+    <value>Reverting {0} (risk {1})...</value>
+  </data>
+  <data name="ApplyLog_RevertingPolicy" xml:space="preserve">
+    <value>Reverting policy {0}...</value>
+  </data>
+  <data name="ApplyLog_SessionStarted" xml:space="preserve">
+    <value>Session started: {0} tweak(s) and {1} policy(ies). {2}</value>
+  </data>
+  <data name="ApplyPage_ApplyAnyway" xml:space="preserve">
+    <value>Apply anyway</value>
+  </data>
+  <data name="ApplyPage_ApplyCount" xml:space="preserve">
+    <value>Apply {0} change(s)</value>
+  </data>
+  <data name="ApplyPage_Blocked" xml:space="preserve">
+    <value>Will not run: {0}</value>
+  </data>
+  <data name="ApplyPage_BreaksNotSpecified" xml:space="preserve">
+    <value>(not specified in the catalog)</value>
+  </data>
+  <data name="ApplyPage_CancelButton.Content" xml:space="preserve">
+    <value>Stop after the current tweak</value>
+  </data>
+  <data name="ApplyPage_ChangeCount" xml:space="preserve">
+    <value>{0} change(s)</value>
+  </data>
+  <data name="ApplyPage_CriticalIntro" xml:space="preserve">
+    <value>The tweaks below have CRITICAL risk and may leave essential Windows features inoperable:</value>
+  </data>
+  <data name="ApplyPage_CriticalNote.Text" xml:space="preserve">
+    <value>There are CRITICAL risk tweaks: a typed confirmation will be required before applying.</value>
+  </data>
+  <data name="ApplyPage_CriticalTitle" xml:space="preserve">
+    <value>Confirm critical risk tweaks</value>
+  </data>
+  <data name="ApplyPage_CriticalWord" xml:space="preserve">
+    <value>CONFIRM</value>
+  </data>
+  <data name="ApplyPage_CurrentState" xml:space="preserve">
+    <value>Current state: {0}</value>
+  </data>
+  <data name="ApplyPage_Done" xml:space="preserve">
+    <value>Done: {0} succeeded, {1} failed. Log: {2}</value>
+  </data>
+  <data name="ApplyPage_ElevationBar.Message" xml:space="preserve">
+    <value>Restart as administrator (button at the top) to apply or revert.</value>
+  </data>
+  <data name="ApplyPage_ElevationBar.Title" xml:space="preserve">
+    <value>Read-only</value>
+  </data>
+  <data name="ApplyPage_EmptyText.Text" xml:space="preserve">
+    <value>Check or uncheck tweaks on the Tweaks page, configure policies in Policies (ADMX), or load a profile, to choose the desired state.</value>
+  </data>
+  <data name="ApplyPage_EmptyTitle.Text" xml:space="preserve">
+    <value>No pending changes.</value>
+  </data>
+  <data name="ApplyPage_GoTweaks.Content" xml:space="preserve">
+    <value>Go to Tweaks</value>
+  </data>
+  <data name="ApplyPage_HighConfirm.Content" xml:space="preserve">
+    <value>I have read what may break and want to apply the HIGH risk tweaks in this list.</value>
+  </data>
+  <data name="ApplyPage_KindApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="ApplyPage_KindRevert" xml:space="preserve">
+    <value>Revert</value>
+  </data>
+  <data name="ApplyPage_Log.Text" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="ApplyPage_MayBreak" xml:space="preserve">
+    <value>May break: {0}</value>
+  </data>
+  <data name="ApplyPage_NotReversible" xml:space="preserve">
+    <value>Not reversible by the program.</value>
+  </data>
+  <data name="ApplyPage_PoliciesGroup" xml:space="preserve">
+    <value>Policies (ADMX)</value>
+  </data>
+  <data name="ApplyPage_PoliciesGroupText" xml:space="preserve">
+    <value>{0} change(s) · written directly to the registry (not shown in gpedit.msc)</value>
+  </data>
+  <data name="ApplyPage_Progress.Text" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="ApplyPage_RestorePoint" xml:space="preserve">
+    <value>Restore point</value>
+  </data>
+  <data name="ApplyPage_RestorePointName" xml:space="preserve">
+    <value>Windows Debloater: before applying tweaks</value>
+  </data>
+  <data name="ApplyPage_RestorePointText.Text" xml:space="preserve">
+    <value>Uses Windows System Restore. Windows creates at most one point every 24 hours; if there is a recent one, it is kept and the program only warns you (without changing that rule). Requires System Protection to be on.</value>
+  </data>
+  <data name="ApplyPage_RestorePointToggle.Header" xml:space="preserve">
+    <value>Create a system restore point first</value>
+  </data>
+  <data name="ApplyPage_RestorePointToggle.OffContent" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="ApplyPage_RestorePointToggle.OnContent" xml:space="preserve">
+    <value>Yes (recommended)</value>
+  </data>
+  <data name="ApplyPage_ResultNote" xml:space="preserve">
+    <value>Note: {0}</value>
+  </data>
+  <data name="ApplyPage_RunApplying" xml:space="preserve">
+    <value>Applying {0} of {1}: {2}</value>
+  </data>
+  <data name="ApplyPage_RunConfiguringPolicy" xml:space="preserve">
+    <value>Configuring policy {0} of {1}: {2}</value>
+  </data>
+  <data name="ApplyPage_RunReverting" xml:space="preserve">
+    <value>Reverting {0} of {1}: {2}</value>
+  </data>
+  <data name="ApplyPage_RunRevertingPolicy" xml:space="preserve">
+    <value>Reverting policy {0} of {1}: {2}</value>
+  </data>
+  <data name="ApplyPage_Summary" xml:space="preserve">
+    <value>{0} to apply, {1} to revert</value>
+  </data>
+  <data name="ApplyPage_SummaryBlocked" xml:space="preserve">
+    <value>, {0} that cannot be run (see the reason).</value>
+  </data>
+  <data name="ApplyPage_SummaryPolicies" xml:space="preserve">
+    <value>, {0} ADMX policy(ies)</value>
+  </data>
+  <data name="ApplyPage_Title.Text" xml:space="preserve">
+    <value>Apply/review</value>
+  </data>
+  <data name="ApplyPage_TypeToContinue" xml:space="preserve">
+    <value>To continue, type {0}:</value>
+  </data>
+  <data name="ApplyPage_WaitingScan" xml:space="preserve">
+    <value>Waiting for the current state to be read...</value>
+  </data>
+  <data name="ApplyPage_Warning" xml:space="preserve">
+    <value>Warning: {0}</value>
+  </data>
+  <data name="Catalog_ErrorsMessage" xml:space="preserve">
+    <value>The catalog in '{0}' has {1} error(s); the tweaks with errors were skipped. First: {2}</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common_OpenLogsButton.Content" xml:space="preserve">
+    <value>Open logs folder</value>
+  </data>
+  <data name="Common_RefreshText.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Confidence_Admx" xml:space="preserve">
+    <value>ADMX</value>
+  </data>
+  <data name="Confidence_Community" xml:space="preserve">
+    <value>Community</value>
+  </data>
+  <data name="Confidence_Official" xml:space="preserve">
+    <value>Official</value>
+  </data>
+  <data name="Confidence_Questionable" xml:space="preserve">
+    <value>Questionable</value>
+  </data>
+  <data name="ConfidenceTip_Admx" xml:space="preserve">
+    <value>Matches a policy from an official administrative template (ADMX).</value>
+  </data>
+  <data name="ConfidenceTip_Community" xml:space="preserve">
+    <value>Known from the community and established tools, without official documentation.</value>
+  </data>
+  <data name="ConfidenceTip_Official" xml:space="preserve">
+    <value>Documented by Microsoft (Policy CSP on Microsoft Learn).</value>
+  </data>
+  <data name="ConfidenceTip_Questionable" xml:space="preserve">
+    <value>There are signs it does not work as described (unexpected value, Insider only, edition...).</value>
+  </data>
+  <data name="Error_ElevationCancelled" xml:space="preserve">
+    <value>Elevation was cancelled.</value>
+  </data>
+  <data name="Error_ExecutableNotFound" xml:space="preserve">
+    <value>Could not find the executable.</value>
+  </data>
+  <data name="Error_RestartElevated" xml:space="preserve">
+    <value>Could not restart as administrator.</value>
+  </data>
+  <data name="Error_Title" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Error_Unexpected" xml:space="preserve">
+    <value>Unexpected error: {0}</value>
+  </data>
+  <data name="Inventory_Catalogued" xml:space="preserve">
+    <value>Catalogued</value>
+  </data>
+  <data name="Inventory_NotCatalogued" xml:space="preserve">
+    <value>Not catalogued</value>
+  </data>
+  <data name="Inventory_Tweaks" xml:space="preserve">
+    <value>Tweaks: {0}</value>
+  </data>
+  <data name="InventoryKind_Apps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
+  <data name="InventoryKind_Autoruns" xml:space="preserve">
+    <value>Autoruns</value>
+  </data>
+  <data name="InventoryKind_Capabilities" xml:space="preserve">
+    <value>Capabilities</value>
+  </data>
+  <data name="InventoryKind_Drivers" xml:space="preserve">
+    <value>Drivers</value>
+  </data>
+  <data name="InventoryKind_Features" xml:space="preserve">
+    <value>Features</value>
+  </data>
+  <data name="InventoryKind_Services" xml:space="preserve">
+    <value>Services</value>
+  </data>
+  <data name="InventoryKind_Tasks" xml:space="preserve">
+    <value>Tasks</value>
+  </data>
+  <data name="InventoryPage_Count" xml:space="preserve">
+    <value>{0} shown · {1} in total · {2} catalogued</value>
+  </data>
+  <data name="InventoryPage_Failed" xml:space="preserve">
+    <value>Failed to collect the inventory: {0}</value>
+  </data>
+  <data name="InventoryPage_Loading.Text" xml:space="preserve">
+    <value>Enumerating services, drivers, tasks, apps, features, capabilities and autoruns...</value>
+  </data>
+  <data name="InventoryPage_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search by name or property</value>
+  </data>
+  <data name="InventoryPage_Subtitle.Text" xml:space="preserve">
+    <value>Everything on this PC, of each kind, and which catalog tweaks touch each item. Items that are not catalogued are candidates for new tweaks.</value>
+  </data>
+  <data name="InventoryPage_Title.Text" xml:space="preserve">
+    <value>Inventory</value>
+  </data>
+  <data name="InventoryPage_Unavailable" xml:space="preserve">
+    <value>unavailable</value>
+  </data>
+  <data name="InventoryPage_UncataloguedToggle.Content" xml:space="preserve">
+    <value>Only not catalogued</value>
+  </data>
+  <data name="MainWindow_CatalogBar.Title" xml:space="preserve">
+    <value>Catalog has errors</value>
+  </data>
+  <data name="MainWindow_ElevateText.Text" xml:space="preserve">
+    <value>Restart as administrator</value>
+  </data>
+  <data name="MainWindow_ReadOnlyBar.Message" xml:space="preserve">
+    <value>The state of each tweak is read normally; applying and reverting require administrator privileges.</value>
+  </data>
+  <data name="MainWindow_ReadOnlyBar.Title" xml:space="preserve">
+    <value>Read-only mode — restart as administrator to apply</value>
+  </data>
+  <data name="Mode_Administrator" xml:space="preserve">
+    <value>Administrator</value>
+  </data>
+  <data name="Mode_ReadOnly" xml:space="preserve">
+    <value>Read-only</value>
+  </data>
+  <data name="Nav_Apply.Content" xml:space="preserve">
+    <value>Apply/review</value>
+  </data>
+  <data name="Nav_Inventory.Content" xml:space="preserve">
+    <value>Inventory</value>
+  </data>
+  <data name="Nav_Overview.Content" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="Nav_Policies.Content" xml:space="preserve">
+    <value>Policies (ADMX)</value>
+  </data>
+  <data name="Nav_Profiles.Content" xml:space="preserve">
+    <value>Profiles</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Nav_Tweaks.Content" xml:space="preserve">
+    <value>Tweaks</value>
+  </data>
+  <data name="OverviewPage_ByRisk.Text" xml:space="preserve">
+    <value>Tweaks by risk</value>
+  </data>
+  <data name="OverviewPage_ByState.Text" xml:space="preserve">
+    <value>Tweaks by state</value>
+  </data>
+  <data name="OverviewPage_Edition" xml:space="preserve">
+    <value>Edition: {0}</value>
+  </data>
+  <data name="OverviewPage_ElevatedText" xml:space="preserve">
+    <value>Applying and reverting are enabled. A backup of the original value is saved before each change.</value>
+  </data>
+  <data name="OverviewPage_LastScan" xml:space="preserve">
+    <value>{0} tweaks · read at {1}</value>
+  </data>
+  <data name="OverviewPage_NothingToChange" xml:space="preserve">
+    <value>Nothing to change: this PC already matches the profile.</value>
+  </data>
+  <data name="OverviewPage_Permissions.Text" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="OverviewPage_QuickProfiles.Text" xml:space="preserve">
+    <value>Quick profiles</value>
+  </data>
+  <data name="OverviewPage_QuickProfilesText.Text" xml:space="preserve">
+    <value>Loads a profile as the desired selection and opens the review. Nothing is applied without your confirmation.</value>
+  </data>
+  <data name="OverviewPage_ReadOnlyText" xml:space="preserve">
+    <value>States are read normally. To apply or revert, use "Restart as administrator" above.</value>
+  </data>
+  <data name="OverviewPage_Scanning" xml:space="preserve">
+    <value>Reading states... {0} of {1}</value>
+  </data>
+  <data name="OverviewPage_ThisPc.Text" xml:space="preserve">
+    <value>This PC</value>
+  </data>
+  <data name="OverviewPage_Title.Text" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="PoliciesPage_AddPending" xml:space="preserve">
+    <value>Add to pending changes</value>
+  </data>
+  <data name="PoliciesPage_AllPolicies" xml:space="preserve">
+    <value>All policies</value>
+  </data>
+  <data name="PoliciesPage_Configure.Text" xml:space="preserve">
+    <value>Configure</value>
+  </data>
+  <data name="PoliciesPage_ConfiguredToggle.Content" xml:space="preserve">
+    <value>Only configured</value>
+  </data>
+  <data name="PoliciesPage_Count" xml:space="preserve">
+    <value>{0} shown · {1} configured on this PC · {2} pending</value>
+  </data>
+  <data name="PoliciesPage_DefinitionHeader.Text" xml:space="preserve">
+    <value>Definition in the ADMX</value>
+  </data>
+  <data name="PoliciesPage_DetailsHeader.Text" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="PoliciesPage_Documentation" xml:space="preserve">
+    <value>Documentation: {0}</value>
+  </data>
+  <data name="PoliciesPage_ExplainHeader.Text" xml:space="preserve">
+    <value>Explanation</value>
+  </data>
+  <data name="PoliciesPage_GoApplyLink.Content" xml:space="preserve">
+    <value>Review and apply</value>
+  </data>
+  <data name="PoliciesPage_HasBackup" xml:space="preserve">
+    <value>This policy was changed by this program: there is a backup of the original value.</value>
+  </data>
+  <data name="PoliciesPage_LoadFailed" xml:space="preserve">
+    <value>Could not read the administrative templates: {0}</value>
+  </data>
+  <data name="PoliciesPage_Loading.Text" xml:space="preserve">
+    <value>Reading the administrative templates and the registry...</value>
+  </data>
+  <data name="PoliciesPage_Meta" xml:space="preserve">
+    <value>Name: {0}
+Class: {1}
+Category: {2}
+Supported on: {3}</value>
+  </data>
+  <data name="PoliciesPage_NoCsp" xml:space="preserve">
+    <value>(Policy CSP reference not found: no documentation links or edition warnings.)</value>
+  </data>
+  <data name="PoliciesPage_NothingToChange" xml:space="preserve">
+    <value>(nothing to change: the registry is already like this)</value>
+  </data>
+  <data name="PoliciesPage_Pending" xml:space="preserve">
+    <value>Pending: {0}</value>
+  </data>
+  <data name="PoliciesPage_PendingChange" xml:space="preserve">
+    <value>Pending change: {0}.</value>
+  </data>
+  <data name="PoliciesPage_PendingRevert" xml:space="preserve">
+    <value>Pending: revert to original</value>
+  </data>
+  <data name="PoliciesPage_PendingRevertBackup" xml:space="preserve">
+    <value>Pending: revert to the original value (backup).</value>
+  </data>
+  <data name="PoliciesPage_PendingToggle.Content" xml:space="preserve">
+    <value>Only with pending changes</value>
+  </data>
+  <data name="PoliciesPage_Preview.Text" xml:space="preserve">
+    <value>Registry preview</value>
+  </data>
+  <data name="PoliciesPage_RegistryReadFailed" xml:space="preserve">
+    <value>Could not read the registry: {0}</value>
+  </data>
+  <data name="PoliciesPage_RemovePendingButton.Content" xml:space="preserve">
+    <value>Discard</value>
+  </data>
+  <data name="PoliciesPage_RevertButton.Content" xml:space="preserve">
+    <value>Revert to original</value>
+  </data>
+  <data name="PoliciesPage_ScopeBox.Header" xml:space="preserve">
+    <value>Write to</value>
+  </data>
+  <data name="PoliciesPage_ScopesHeader.Text" xml:space="preserve">
+    <value>State by scope</value>
+  </data>
+  <data name="PoliciesPage_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search policy, registry key or value</value>
+  </data>
+  <data name="PoliciesPage_StateRadios.Header" xml:space="preserve">
+    <value>Desired state</value>
+  </data>
+  <data name="PoliciesPage_Subtitle.Text" xml:space="preserve">
+    <value>Every Group Policy from the administrative templates on this PC, with its current state.</value>
+  </data>
+  <data name="PoliciesPage_Summary" xml:space="preserve">
+    <value>{0} policies from {1} file(s) in {2}, with the current state on this PC. Choose the state and values and add them to the pending changes. They are written directly to the registry (like WinUtil/O&amp;O): gpedit.msc does not show these changes, and a domain GPO may overwrite them.</value>
+  </data>
+  <data name="PoliciesPage_Title.Text" xml:space="preserve">
+    <value>Policies (ADMX)</value>
+  </data>
+  <data name="PoliciesPage_UpdatePending" xml:space="preserve">
+    <value>Update pending change</value>
+  </data>
+  <data name="Policy_Deprecated" xml:space="preserve">
+    <value>(deprecated)</value>
+  </data>
+  <data name="Policy_NoExplainText" xml:space="preserve">
+    <value>(no explanation text in the ADML)</value>
+  </data>
+  <data name="Policy_NotSpecified" xml:space="preserve">
+    <value>Not specified</value>
+  </data>
+  <data name="PolicyClass_Both" xml:space="preserve">
+    <value>Computer and user</value>
+  </data>
+  <data name="PolicyClass_Machine" xml:space="preserve">
+    <value>Computer (HKLM)</value>
+  </data>
+  <data name="PolicyClass_User" xml:space="preserve">
+    <value>User (HKCU)</value>
+  </data>
+  <data name="PolicyEditor_Additive" xml:space="preserve">
+    <value>Additive list: items already in the registry that you delete here stay there; to clear the list, use Disabled or Not configured.</value>
+  </data>
+  <data name="PolicyEditor_Expandable" xml:space="preserve">
+    <value>Accepts environment variables (REG_EXPAND_SZ).</value>
+  </data>
+  <data name="PolicyEditor_MaxLength" xml:space="preserve">
+    <value>Up to {0} characters.</value>
+  </data>
+  <data name="PolicyEditor_MaxLines" xml:space="preserve">
+    <value>At most {0} lines.</value>
+  </data>
+  <data name="PolicyEditor_NotEditable" xml:space="preserve">
+    <value>Element '{0}' of type '{1}' is not editable.</value>
+  </data>
+  <data name="PolicyEditor_NumberRange" xml:space="preserve">
+    <value>Between {0} and {1}.</value>
+  </data>
+  <data name="PolicyEditor_OneItemPerLine" xml:space="preserve">
+    <value>One item per line.</value>
+  </data>
+  <data name="PolicyEditor_OneItemPerLineNameValue" xml:space="preserve">
+    <value>One item per line, in the name=value format.</value>
+  </data>
+  <data name="PolicyEditor_OneLinePerItem" xml:space="preserve">
+    <value>One line per item.</value>
+  </data>
+  <data name="PolicyEditor_StoredAsText" xml:space="preserve">
+    <value>Stored as text (REG_SZ).</value>
+  </data>
+  <data name="PolicyEditor_WrittenTo" xml:space="preserve">
+    <value>Written to {0}.</value>
+  </data>
+  <data name="PolicyRegistry_DisabledValue" xml:space="preserve">
+    <value>Disabled = {0}</value>
+  </data>
+  <data name="PolicyRegistry_DisabledWrites" xml:space="preserve">
+    <value>Disabled writes {0} = {1}</value>
+  </data>
+  <data name="PolicyRegistry_Element" xml:space="preserve">
+    <value>Element {0} '{1}': {2}</value>
+  </data>
+  <data name="PolicyRegistry_EnabledValue" xml:space="preserve">
+    <value>Enabled = {0}</value>
+  </data>
+  <data name="PolicyRegistry_EnabledWrites" xml:space="preserve">
+    <value>Enabled writes {0} = {1}</value>
+  </data>
+  <data name="PolicyState_Custom" xml:space="preserve">
+    <value>Custom values</value>
+  </data>
+  <data name="PolicyState_Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="PolicyState_Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="PolicyState_NotConfigured" xml:space="preserve">
+    <value>Not configured</value>
+  </data>
+  <data name="Profile_Loaded" xml:space="preserve">
+    <value>Profile "{0}" loaded: {1} tweak(s) with a desired state</value>
+  </data>
+  <data name="Profile_LoadedPending" xml:space="preserve">
+    <value>, {0} pending change(s).</value>
+  </data>
+  <data name="Profile_LoadedPolicies" xml:space="preserve">
+    <value>, {0} policy(ies)</value>
+  </data>
+  <data name="Profile_UnknownIds" xml:space="preserve">
+    <value>Skipped (not in the catalog): {0}.</value>
+  </data>
+  <data name="Profile_UnknownPolicies" xml:space="preserve">
+    <value>Policies that do not exist on this PC (ADMX): {0}.</value>
+  </data>
+  <data name="ProfilesPage_Available.Text" xml:space="preserve">
+    <value>Available profiles</value>
+  </data>
+  <data name="ProfilesPage_BuiltIn" xml:space="preserve">
+    <value>Built-in</value>
+  </data>
+  <data name="ProfilesPage_Contents" xml:space="preserve">
+    <value>{0} tweak(s) in the profile</value>
+  </data>
+  <data name="ProfilesPage_ContentsWithPolicies" xml:space="preserve">
+    <value>{0} tweak(s) and {1} ADMX policy(ies) in the profile</value>
+  </data>
+  <data name="ProfilesPage_DescriptionBox.PlaceholderText" xml:space="preserve">
+    <value>Description (optional)</value>
+  </data>
+  <data name="ProfilesPage_Empty" xml:space="preserve">
+    <value>No tweak or policy applied or chosen; there is nothing to save.</value>
+  </data>
+  <data name="ProfilesPage_EmptyTitle" xml:space="preserve">
+    <value>Empty selection</value>
+  </data>
+  <data name="ProfilesPage_ErrorsTitle" xml:space="preserve">
+    <value>Profiles with errors were skipped</value>
+  </data>
+  <data name="ProfilesPage_Export" xml:space="preserve">
+    <value>Export...</value>
+  </data>
+  <data name="ProfilesPage_Exported" xml:space="preserve">
+    <value>Profile exported</value>
+  </data>
+  <data name="ProfilesPage_ExportFailed" xml:space="preserve">
+    <value>Failed to export</value>
+  </data>
+  <data name="ProfilesPage_Imported" xml:space="preserve">
+    <value>Profile imported</value>
+  </data>
+  <data name="ProfilesPage_ImportedText" xml:space="preserve">
+    <value>"{0}" copied to {1}. Use "Load" to apply it to the selection.</value>
+  </data>
+  <data name="ProfilesPage_ImportFailed" xml:space="preserve">
+    <value>Could not import</value>
+  </data>
+  <data name="ProfilesPage_ImportText.Text" xml:space="preserve">
+    <value>Import...</value>
+  </data>
+  <data name="ProfilesPage_Load" xml:space="preserve">
+    <value>Load</value>
+  </data>
+  <data name="ProfilesPage_Mine" xml:space="preserve">
+    <value>My profile</value>
+  </data>
+  <data name="ProfilesPage_NameBox.PlaceholderText" xml:space="preserve">
+    <value>Profile name (e.g. My laptop)</value>
+  </data>
+  <data name="ProfilesPage_NameMissing" xml:space="preserve">
+    <value>Give the profile a name before saving.</value>
+  </data>
+  <data name="ProfilesPage_NameMissingTitle" xml:space="preserve">
+    <value>Enter a name</value>
+  </data>
+  <data name="ProfilesPage_OpenFolder.Content" xml:space="preserve">
+    <value>Open profiles folder</value>
+  </data>
+  <data name="ProfilesPage_RulesAllCategories" xml:space="preserve">
+    <value>, all categories</value>
+  </data>
+  <data name="ProfilesPage_RulesCategories" xml:space="preserve">
+    <value>, categories {0}</value>
+  </data>
+  <data name="ProfilesPage_RulesNoIrreversible" xml:space="preserve">
+    <value>, no irreversible tweaks</value>
+  </data>
+  <data name="ProfilesPage_RulesRisk" xml:space="preserve">
+    <value>Rules: risk up to {0}</value>
+  </data>
+  <data name="ProfilesPage_Saved" xml:space="preserve">
+    <value>Profile saved</value>
+  </data>
+  <data name="ProfilesPage_SavedText" xml:space="preserve">
+    <value>{0} tweak(s) and {1} policy(ies) saved to {2}.</value>
+  </data>
+  <data name="ProfilesPage_SaveFailed" xml:space="preserve">
+    <value>Failed to save</value>
+  </data>
+  <data name="ProfilesPage_SaveHeader.Text" xml:space="preserve">
+    <value>Save the current selection</value>
+  </data>
+  <data name="ProfilesPage_SaveText.Text" xml:space="preserve">
+    <value>Saves the desired state of each tweak as a profile: your explicit choices and what is already applied on this PC.</value>
+  </data>
+  <data name="ProfilesPage_SaveText2.Text" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ProfilesPage_SelectionUpdated" xml:space="preserve">
+    <value>Selection updated</value>
+  </data>
+  <data name="ProfilesPage_Subtitle.Text" xml:space="preserve">
+    <value>A profile is a selection of desired states (YAML file). Loading a profile replaces the current selection; nothing is applied without going through the review.</value>
+  </data>
+  <data name="ProfilesPage_Title.Text" xml:space="preserve">
+    <value>Profiles</value>
+  </data>
+  <data name="ProfilesPage_YamlFileType" xml:space="preserve">
+    <value>YAML profile</value>
+  </data>
+  <data name="Risk_Critical" xml:space="preserve">
+    <value>Critical risk</value>
+  </data>
+  <data name="Risk_High" xml:space="preserve">
+    <value>High risk</value>
+  </data>
+  <data name="Risk_Low" xml:space="preserve">
+    <value>Low risk</value>
+  </data>
+  <data name="Risk_Medium" xml:space="preserve">
+    <value>Medium risk</value>
+  </data>
+  <data name="RiskShort_Critical" xml:space="preserve">
+    <value>Critical</value>
+  </data>
+  <data name="RiskShort_High" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="RiskShort_Low" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="RiskShort_Medium" xml:space="preserve">
+    <value>Medium</value>
+  </data>
+  <data name="SettingsPage_AboutHeader.Text" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="SettingsPage_AboutProfiles" xml:space="preserve">
+    <value>User profiles: {0}</value>
+  </data>
+  <data name="SettingsPage_AboutSettings" xml:space="preserve">
+    <value>Settings: {0}</value>
+  </data>
+  <data name="SettingsPage_AppearanceHeader.Text" xml:space="preserve">
+    <value>Appearance and language</value>
+  </data>
+  <data name="SettingsPage_BackupChanged" xml:space="preserve">
+    <value>Backup folder changed. Reverting only works for tweaks with a backup in this folder.</value>
+  </data>
+  <data name="SettingsPage_BackupHeader.Text" xml:space="preserve">
+    <value>Backup folder</value>
+  </data>
+  <data name="SettingsPage_BackupText.Text" xml:space="preserve">
+    <value>Where the original value of each applied tweak is kept (needed to revert). Changing the folder does not move existing backups.</value>
+  </data>
+  <data name="SettingsPage_Browse.Content" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="SettingsPage_CatalogHeader.Text" xml:space="preserve">
+    <value>Catalog folder</value>
+  </data>
+  <data name="SettingsPage_CatalogReloaded" xml:space="preserve">
+    <value>Catalog reloaded: {0} tweak(s).</value>
+  </data>
+  <data name="SettingsPage_CatalogReloadedErrors" xml:space="preserve">
+    <value>Catalog reloaded: {0} tweak(s), {1} error(s).</value>
+  </data>
+  <data name="SettingsPage_CatalogText.Text" xml:space="preserve">
+    <value>Folder with the tweak YAML files (and the profiles subfolder with the built-in profiles).</value>
+  </data>
+  <data name="SettingsPage_Default.Content" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="SettingsPage_LanguageAuto" xml:space="preserve">
+    <value>Automatic (Windows language)</value>
+  </data>
+  <data name="SettingsPage_LanguageBox.Header" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="SettingsPage_LanguageText.Text" xml:space="preserve">
+    <value>Automatic uses Portuguese (Brazil) when Windows is in Portuguese and English otherwise. Applies to the interface and to the catalog texts.</value>
+  </data>
+  <data name="SettingsPage_LogsHeader.Text" xml:space="preserve">
+    <value>Logs</value>
+  </data>
+  <data name="SettingsPage_LogsText" xml:space="preserve">
+    <value>Each apply/revert session writes a file in {0}. Unexpected app errors go to {1}.</value>
+  </data>
+  <data name="SettingsPage_Open.Content" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="SettingsPage_RestartBar.Message" xml:space="preserve">
+    <value>The language is loaded when the app starts.</value>
+  </data>
+  <data name="SettingsPage_RestartBar.Title" xml:space="preserve">
+    <value>Restart the app to apply the language</value>
+  </data>
+  <data name="SettingsPage_RestartButton.Content" xml:space="preserve">
+    <value>Restart now</value>
+  </data>
+  <data name="SettingsPage_RestartFailed" xml:space="preserve">
+    <value>Could not restart the app.</value>
+  </data>
+  <data name="SettingsPage_ThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="SettingsPage_ThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="SettingsPage_ThemeRadios.Header" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="SettingsPage_ThemeSystem" xml:space="preserve">
+    <value>Use the system theme</value>
+  </data>
+  <data name="SettingsPage_Title.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Source_Admx" xml:space="preserve">
+    <value>ADMX policy: {0}</value>
+  </data>
+  <data name="Source_Community" xml:space="preserve">
+    <value>Community: {0}</value>
+  </data>
+  <data name="Source_MsDocs" xml:space="preserve">
+    <value>Microsoft Learn: {0}</value>
+  </data>
+  <data name="Source_ReverseEngineering" xml:space="preserve">
+    <value>Reverse engineering: {0}</value>
+  </data>
+  <data name="Source_Tool" xml:space="preserve">
+    <value>Tool: {0}</value>
+  </data>
+  <data name="Startup_Automatic" xml:space="preserve">
+    <value>automatic</value>
+  </data>
+  <data name="Startup_AutomaticDelayed" xml:space="preserve">
+    <value>automatic (delayed)</value>
+  </data>
+  <data name="Startup_Disabled" xml:space="preserve">
+    <value>disabled</value>
+  </data>
+  <data name="Startup_Manual" xml:space="preserve">
+    <value>manual</value>
+  </data>
+  <data name="State_Applied" xml:space="preserve">
+    <value>Applied</value>
+  </data>
+  <data name="State_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="State_NotApplicable" xml:space="preserve">
+    <value>Not applicable</value>
+  </data>
+  <data name="State_NotApplied" xml:space="preserve">
+    <value>Not applied</value>
+  </data>
+  <data name="State_Partial" xml:space="preserve">
+    <value>Partial</value>
+  </data>
+  <data name="Tweak_AllBuilds" xml:space="preserve">
+    <value>All builds</value>
+  </data>
+  <data name="Tweak_BuildMax" xml:space="preserve">
+    <value>Up to build {0}</value>
+  </data>
+  <data name="Tweak_BuildMin" xml:space="preserve">
+    <value>Build {0} or later</value>
+  </data>
+  <data name="Tweak_BuildRange" xml:space="preserve">
+    <value>Builds {0} to {1}</value>
+  </data>
+  <data name="Tweak_Checking" xml:space="preserve">
+    <value>Checking...</value>
+  </data>
+  <data name="Tweak_NotReversible" xml:space="preserve">
+    <value>Not reversible by the program (e.g. removed app; reinstall it from the Microsoft Store).</value>
+  </data>
+  <data name="Tweak_Precondition" xml:space="preserve">
+    <value>Precondition: {0}</value>
+  </data>
+  <data name="Tweak_Reversible" xml:space="preserve">
+    <value>Reversible: the original value is backed up before applying.</value>
+  </data>
+  <data name="Tweak_SourceFile" xml:space="preserve">
+    <value>File: {0}</value>
+  </data>
+  <data name="Tweak_Tags" xml:space="preserve">
+    <value>Tags: {0}</value>
+  </data>
+  <data name="Tweak_WillApply" xml:space="preserve">
+    <value>Will be applied</value>
+  </data>
+  <data name="Tweak_WillRevert" xml:space="preserve">
+    <value>Will be reverted</value>
+  </data>
+  <data name="TweaksPage_ActionsHeader.Text" xml:space="preserve">
+    <value>Actions and the state of each</value>
+  </data>
+  <data name="TweaksPage_AllTweaks" xml:space="preserve">
+    <value>Tweaks</value>
+  </data>
+  <data name="TweaksPage_BreaksBar.Title" xml:space="preserve">
+    <value>What may break</value>
+  </data>
+  <data name="TweaksPage_ClearButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Discards all choices (nothing pending)</value>
+  </data>
+  <data name="TweaksPage_ClearFilter" xml:space="preserve">
+    <value>Clear filter</value>
+  </data>
+  <data name="TweaksPage_ClearText.Text" xml:space="preserve">
+    <value>Clear selection</value>
+  </data>
+  <data name="TweaksPage_ConfidenceFilter" xml:space="preserve">
+    <value>Confidence</value>
+  </data>
+  <data name="TweaksPage_Count" xml:space="preserve">
+    <value>{0} tweak(s)</value>
+  </data>
+  <data name="TweaksPage_DesiredCheck.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Desired state</value>
+  </data>
+  <data name="TweaksPage_DesiredCheck.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Desired state: checked = applied, unchecked = not applied</value>
+  </data>
+  <data name="TweaksPage_DiffToggle.Content" xml:space="preserve">
+    <value>Only what differs from desired</value>
+  </data>
+  <data name="TweaksPage_EmptyText.Text" xml:space="preserve">
+    <value>No tweak matches the filters.</value>
+  </data>
+  <data name="TweaksPage_FilteredCount" xml:space="preserve">
+    <value>{0} of {1} tweak(s) with the current filters</value>
+  </data>
+  <data name="TweaksPage_LastScan" xml:space="preserve">
+    <value>state read at {0}</value>
+  </data>
+  <data name="TweaksPage_RefreshButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Read the state of every tweak again</value>
+  </data>
+  <data name="TweaksPage_Review" xml:space="preserve">
+    <value>Review changes</value>
+  </data>
+  <data name="TweaksPage_ReviewCount" xml:space="preserve">
+    <value>Review {0} change(s)</value>
+  </data>
+  <data name="TweaksPage_RiskFilter" xml:space="preserve">
+    <value>Risk</value>
+  </data>
+  <data name="TweaksPage_Scanning" xml:space="preserve">
+    <value>Reading the current state on this PC... {0} of {1}</value>
+  </data>
+  <data name="TweaksPage_SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search by name, description, id or tag</value>
+  </data>
+  <data name="TweaksPage_SourcesHeader.Text" xml:space="preserve">
+    <value>Sources and references</value>
+  </data>
+  <data name="TweaksPage_StateBadge.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Current state on this PC</value>
+  </data>
+  <data name="TweaksPage_StateFilter" xml:space="preserve">
+    <value>State</value>
+  </data>
+  <data name="TweaksPage_Title.Text" xml:space="preserve">
+    <value>Tweaks</value>
+  </data>
+</root>
