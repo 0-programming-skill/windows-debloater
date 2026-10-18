@@ -135,6 +135,7 @@ tweaks:
     sources:
       - { kind: re, ref: "26300/search-store-web-suggestions" }
     minBuild: 26300
+    requiresFeature: [61532758]
     tags: [search, store, suggestions, ads]
     breaks: Search stops suggesting Store apps; the Store itself keeps working normally.
     i18n:
@@ -166,6 +167,7 @@ tweaks:
     sources:
       - { kind: re, ref: "26300/search-store-web-suggestions" }
     minBuild: 26300
+    requiresFeature: [61532758]
     tags: [search, bing, suggestions]
     breaks: Web suggestions in the search box.
     i18n:
@@ -196,6 +198,7 @@ tweaks:
     sources:
       - { kind: re, ref: "26300/start-show-suggested-files" }
     minBuild: 26300
+    requiresFeature: [61754985]
     tags: [start, recommended, suggestions]
     breaks: Suggested files no longer appear in Recommended.
     i18n:

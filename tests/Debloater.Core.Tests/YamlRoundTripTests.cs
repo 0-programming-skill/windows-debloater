@@ -19,6 +19,8 @@ public class YamlRoundTripTests
         { "appx", new ActionSpec { Type = ActionSpec.Appx, Name = "Microsoft.BingNews", State = "removed", StoreId = "9WZDNCRFHVFW" } },
         { "feature", new ActionSpec { Type = ActionSpec.OptionalFeature, Name = "SMB1Protocol", State = "disabled" } },
         { "powershell", new ActionSpec { Type = ActionSpec.PowerShell, Detect = "$true\n'True'", Apply = "Write-Host 'a: b'", Revert = "# nothing" } },
+        { "featureflag", new ActionSpec { Type = ActionSpec.FeatureFlag, FeatureId = 61825274, State = "enabled" } },
+        { "featureflag-priority", new ActionSpec { Type = ActionSpec.FeatureFlag, FeatureId = 4000000000, State = "default", Priority = "userPolicy" } },
     };
 
     [Theory]
@@ -70,6 +72,8 @@ public class YamlRoundTripTests
         Assert.Equal(original.Detect, a.Detect);
         Assert.Equal(original.Apply, a.Apply);
         Assert.Equal(original.Revert, a.Revert);
+        Assert.Equal(original.FeatureId, a.FeatureId);
+        Assert.Equal(original.Priority, a.Priority);
         Assert.Equal(original.Target, a.Target);
 
         // The deserialized value must produce the same registry data.

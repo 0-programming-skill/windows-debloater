@@ -18,7 +18,8 @@ namespace Debloater.Core.Updates;
 /// </remarks>
 public static class CatalogSchema
 {
-    public const int CurrentVersion = 1;
+    /// <summary>2: "featureFlag" action type and the tweak field "requiresFeature".</summary>
+    public const int CurrentVersion = 2;
 
     public const int MinSupportedVersion = 1;
 

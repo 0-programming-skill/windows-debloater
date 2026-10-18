@@ -11,6 +11,7 @@ namespace Debloater.Core.Inventory;
 ///   appx             → appx by name (accepts a trailing "*")
 ///   optionalFeature  → features by name
 ///   registry         → autoruns (value in a Run/RunOnce key)
+///   featureFlag      → featureflags by feature id
 ///   powershell       → any item whose name (≥ 5 characters) appears in the script
 /// </summary>
 public static class CatalogCrossReference
@@ -49,6 +50,9 @@ public static class CatalogCrossReference
             case ActionSpec.Registry:
                 return item.Kind == InventoryKinds.Autoruns && action.Path is not null && action.Name is not null
                     && Eq(NormalizeRegistryPath(action.Path) + "\\" + action.Name, NormalizeRegistryPath(item.Id));
+            case ActionSpec.FeatureFlag:
+                return item.Kind == InventoryKinds.FeatureFlags && action.FeatureId is { } id
+                    && string.Equals(id.ToString(System.Globalization.CultureInfo.InvariantCulture), item.Id, StringComparison.Ordinal);
             case ActionSpec.PowerShell:
                 var name = SearchableName(item);
                 if (name.Length < 5) return false;

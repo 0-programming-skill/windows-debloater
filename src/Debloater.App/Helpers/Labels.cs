@@ -96,6 +96,7 @@ public static class Labels
         ActionSpec.Appx => Loc.Get("ActionType_Appx"),
         ActionSpec.OptionalFeature => Loc.Get("ActionType_OptionalFeature"),
         ActionSpec.PowerShell => Loc.Get("ActionType_PowerShell"),
+        ActionSpec.FeatureFlag => Loc.Get("ActionType_FeatureFlag"),
         _ => type,
     };
 
@@ -109,6 +110,15 @@ public static class Labels
         ActionSpec.Appx => Loc.Format("ActionDesired_Appx", a.Name),
         ActionSpec.OptionalFeature => $"{a.Name}: {(a.State == "disabled" ? Loc.Get("ActionDesired_FeatureDisabled") : Loc.Get("ActionDesired_FeatureEnabled"))}",
         ActionSpec.PowerShell => Loc.Get("ActionDesired_PowerShell"),
+        ActionSpec.FeatureFlag => Loc.Format("ActionDesired_FeatureFlag",
+            Debloater.Core.Platform.FeatureFlags.KnownFeatures.Label(a.FeatureId ?? 0),
+            a.State switch
+            {
+                "enabled" => Loc.Get("ActionDesired_FeatureFlagEnabled"),
+                "disabled" => Loc.Get("ActionDesired_FeatureFlagDisabled"),
+                _ => Loc.Get("ActionDesired_FeatureFlagDefault"),
+            },
+            string.IsNullOrWhiteSpace(a.Priority) ? "user" : a.Priority),
         _ => a.ToString(),
     };
 

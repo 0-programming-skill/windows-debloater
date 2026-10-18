@@ -47,6 +47,7 @@ public static class ActionHandlers
         new AppxActionHandler(),
         new OptionalFeatureActionHandler(),
         new PowerShellActionHandler(),
+        new FeatureFlagActionHandler(),
     }.ToDictionary(h => h.Type, StringComparer.Ordinal);
 
     public static IReadOnlyCollection<string> KnownTypes => s_handlers.Keys;

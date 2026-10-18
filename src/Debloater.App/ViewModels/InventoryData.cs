@@ -78,6 +78,7 @@ public static class InventoryData
         InventoryKinds.Features => Loc.Get("InventoryKind_Features"),
         InventoryKinds.Capabilities => Loc.Get("InventoryKind_Capabilities"),
         InventoryKinds.Autoruns => Loc.Get("InventoryKind_Autoruns"),
+        InventoryKinds.FeatureFlags => Loc.Get("InventoryKind_FeatureFlags"),
         _ => kind,
     };
 }

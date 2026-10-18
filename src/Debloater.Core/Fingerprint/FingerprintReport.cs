@@ -275,6 +275,7 @@ public static class FingerprintReport
         InventoryKinds.Features => "Optional features",
         InventoryKinds.Capabilities => "Capabilities",
         InventoryKinds.Autoruns => "Autoruns",
+        InventoryKinds.FeatureFlags => "Feature flags",
         _ => kind,
     };
 

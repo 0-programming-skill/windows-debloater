@@ -71,6 +71,8 @@
                     <InfoBar x:Uid="TweaksPage_BreaksBar" Severity="Warning" IsOpen="True" IsClosable="False"
                              Message="{x:Bind Breaks}" Visibility="{x:Bind BreaksVisibility}" />
                     <TextBlock Text="{x:Bind PreconditionText}" Visibility="{x:Bind PreconditionVisibility}" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                    <InfoBar x:Uid="TweaksPage_RequiresFeatureBar" Severity="Informational" IsOpen="True" IsClosable="False"
+                             Message="{x:Bind RequiresFeatureText}" Visibility="{x:Bind RequiresFeatureVisibility}" />
                     <TextBlock Text="{x:Bind StateMessage, Mode=OneWay}" Visibility="{x:Bind StateMessageVisibility, Mode=OneWay}" Style="{StaticResource Caption}" />
 
                     <TextBlock x:Uid="TweaksPage_ActionsHeader" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />

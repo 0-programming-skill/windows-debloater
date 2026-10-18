@@ -224,6 +224,14 @@ public static partial class CatalogLoader
             if (string.IsNullOrWhiteSpace(pre.Reason)) errors.Add("'precondition' requires the 'reason' field (why the tweak does not apply when it is False).");
         }
         if (tweak.Actions.Count == 0) errors.Add("tweak without actions.");
+        if (tweak.RequiresFeature is { } required)
+        {
+            if (required.Count == 0) errors.Add("'requiresFeature' is empty (list feature ids or remove it).");
+            if (required.Contains(0u)) errors.Add("'requiresFeature': feature ids must be positive numbers.");
+            if (required.Distinct().Count() != required.Count) errors.Add("'requiresFeature' lists the same id twice.");
+        }
+        if (tweak.Actions.Any(a => a.Type == ActionSpec.FeatureFlag) && tweak.Risk < RiskLevel.Medium)
+            errors.Add("tweaks with 'featureFlag' actions change hidden Windows features: risk must be at least medium.");
 
         for (int i = 0; i < tweak.Actions.Count; i++)
         {
@@ -235,6 +243,12 @@ public static partial class CatalogLoader
                 actionErrors.Add($"unknown action type '{action.Type}' (known: {string.Join(", ", ActionHandlers.KnownTypes)}).");
             else
             {
+                if (ActionSpec.AllowedFields.TryGetValue(action.Type, out var allowed))
+                {
+                    var extra = action.SetFields().Where(f => !allowed.Contains(f, StringComparer.Ordinal)).ToList();
+                    if (extra.Count > 0)
+                        actionErrors.Add($"action '{action.Type}' does not use the field(s) {string.Join(", ", extra.Select(f => $"'{f}'"))} (fields: {string.Join(", ", allowed)}).");
+                }
                 handler.Validate(action, actionErrors);
                 if (tweak.Reversible && !handler.CanRestore)
                     actionErrors.Add($"action '{action.Type}' cannot be reverted by the engine; mark the tweak with 'reversible: false'.");

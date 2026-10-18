@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -57,7 +57,7 @@ Uso:
 --max-risk       risco máximo aceito por 'apply' (padrão: medium). High/Critical exigem opt-in explícito.
 --catalog DIR    pasta do catálogo (padrão: o catálogo ativo: a atualização verificada mais nova em
                  %LocalAppData%\Debloater\catalog, ou 'catalog' ao lado do executável).
---kind K         services, drivers, tasks, appx, features, capabilities, autoruns.
+--kind K         services, drivers, tasks, appx, features, capabilities, autoruns, featureflags.
 --admx-dir DIR   pasta PolicyDefinitions (padrão: C:\Windows\PolicyDefinitions). Aceita o pacote
                  de Modelos Administrativos mais recente baixado da Microsoft.
 --csp FILE       referência da Policy CSP (padrão: reference/msdocs-policy-csp.json do repositório).
@@ -716,5 +716,8 @@ selftest         SÓ PARA VM DESCARTÁVEL: para cada tweak, lê o estado, aplica
   </data>
   <data name="St_RebootWarning" xml:space="preserve">
     <value>Atenção: há reinicialização pendente causada pelo teste (recursos opcionais).</value>
+  </data>
+  <data name="Status_RequiresFeature" xml:space="preserve">
+    <value>Requer o recurso oculto {0}: atualmente {1}.</value>
   </data>
 </root>

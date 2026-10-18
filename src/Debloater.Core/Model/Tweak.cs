@@ -120,6 +120,13 @@ public sealed class Tweak
     public Precondition? Precondition { get; set; }
 
     /// <summary>
+    /// Informational: hidden Windows features (feature flag ids) that must be enabled for the tweak to have a
+    /// visible effect, e.g. a new policy that Windows only enforces behind a feature switch. The app shows their
+    /// current state; nothing is changed. Only list ids that reverse engineering ties to the tweak.
+    /// </summary>
+    public List<uint>? RequiresFeature { get; set; }
+
+    /// <summary>
     /// Translations keyed by language (e.g. "pt-BR"). Format:
     /// <code>
     /// i18n:

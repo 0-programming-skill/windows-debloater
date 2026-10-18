@@ -1079,4 +1079,52 @@ Com suporte em: {3}</value>
   <data name="TweaksPage_Title.Text" xml:space="preserve">
     <value>Ajustes</value>
   </data>
+  <data name="ActionType_FeatureFlag" xml:space="preserve">
+    <value>Recurso oculto</value>
+  </data>
+  <data name="ActionDesired_FeatureFlag" xml:space="preserve">
+    <value>Recurso oculto {0}: {1} (prioridade {2})</value>
+  </data>
+  <data name="ActionDesired_FeatureFlagEnabled" xml:space="preserve">
+    <value>ativado</value>
+  </data>
+  <data name="ActionDesired_FeatureFlagDisabled" xml:space="preserve">
+    <value>desativado</value>
+  </data>
+  <data name="ActionDesired_FeatureFlagDefault" xml:space="preserve">
+    <value>sem substituição (padrão do Windows)</value>
+  </data>
+  <data name="InventoryKind_FeatureFlags" xml:space="preserve">
+    <value>Recursos ocultos</value>
+  </data>
+  <data name="Tweak_RequiresFeature" xml:space="preserve">
+    <value>Requer o recurso oculto {0}: atualmente {1} ({2}).</value>
+  </data>
+  <data name="Tweak_FeatureEnabled" xml:space="preserve">
+    <value>ativado</value>
+  </data>
+  <data name="Tweak_FeatureDisabled" xml:space="preserve">
+    <value>desativado</value>
+  </data>
+  <data name="Tweak_FeatureUnknown" xml:space="preserve">
+    <value>desconhecido</value>
+  </data>
+  <data name="Tweak_FeatureSourceConfigured" xml:space="preserve">
+    <value>configurado na prioridade {0}</value>
+  </data>
+  <data name="Tweak_FeatureSourceDefault" xml:space="preserve">
+    <value>padrão interno</value>
+  </data>
+  <data name="Tweak_FeatureSourceUnknownDefault" xml:space="preserve">
+    <value>não configurado; padrão interno desconhecido</value>
+  </data>
+  <data name="Tweak_FeatureSourceError" xml:space="preserve">
+    <value>não foi possível ler</value>
+  </data>
+  <data name="Tweak_RequiresFeatureHint" xml:space="preserve">
+    <value>Enquanto um recurso exigido estiver desativado, o Windows ignora esta configuração: o ajuste pode ser aplicado, mas não tem efeito visível até a Microsoft ativar o recurso.</value>
+  </data>
+  <data name="TweaksPage_RequiresFeatureBar.Title" xml:space="preserve">
+    <value>Recurso oculto do Windows</value>
+  </data>
 </root>

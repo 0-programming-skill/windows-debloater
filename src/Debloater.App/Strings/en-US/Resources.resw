@@ -1079,4 +1079,52 @@ Supported on: {3}</value>
   <data name="TweaksPage_Title.Text" xml:space="preserve">
     <value>Tweaks</value>
   </data>
+  <data name="ActionType_FeatureFlag" xml:space="preserve">
+    <value>Feature flag</value>
+  </data>
+  <data name="ActionDesired_FeatureFlag" xml:space="preserve">
+    <value>Hidden feature {0}: {1} (priority {2})</value>
+  </data>
+  <data name="ActionDesired_FeatureFlagEnabled" xml:space="preserve">
+    <value>enabled</value>
+  </data>
+  <data name="ActionDesired_FeatureFlagDisabled" xml:space="preserve">
+    <value>disabled</value>
+  </data>
+  <data name="ActionDesired_FeatureFlagDefault" xml:space="preserve">
+    <value>no override (Windows default)</value>
+  </data>
+  <data name="InventoryKind_FeatureFlags" xml:space="preserve">
+    <value>Feature flags</value>
+  </data>
+  <data name="Tweak_RequiresFeature" xml:space="preserve">
+    <value>Requires hidden feature {0}: currently {1} ({2}).</value>
+  </data>
+  <data name="Tweak_FeatureEnabled" xml:space="preserve">
+    <value>enabled</value>
+  </data>
+  <data name="Tweak_FeatureDisabled" xml:space="preserve">
+    <value>disabled</value>
+  </data>
+  <data name="Tweak_FeatureUnknown" xml:space="preserve">
+    <value>unknown</value>
+  </data>
+  <data name="Tweak_FeatureSourceConfigured" xml:space="preserve">
+    <value>configured at the {0} priority</value>
+  </data>
+  <data name="Tweak_FeatureSourceDefault" xml:space="preserve">
+    <value>built-in default</value>
+  </data>
+  <data name="Tweak_FeatureSourceUnknownDefault" xml:space="preserve">
+    <value>not configured; built-in default unknown</value>
+  </data>
+  <data name="Tweak_FeatureSourceError" xml:space="preserve">
+    <value>could not be read</value>
+  </data>
+  <data name="Tweak_RequiresFeatureHint" xml:space="preserve">
+    <value>While a required feature is disabled, Windows ignores this setting: the tweak can be applied, but has no visible effect until Microsoft turns the feature on.</value>
+  </data>
+  <data name="TweaksPage_RequiresFeatureBar.Title" xml:space="preserve">
+    <value>Hidden Windows feature</value>
+  </data>
 </root>

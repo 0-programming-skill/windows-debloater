@@ -48,9 +48,13 @@ public sealed partial class InventoryCollector
                 InventoryKinds.Features => CollectFeatures(),
                 InventoryKinds.Capabilities => CollectCapabilities(),
                 InventoryKinds.Autoruns => CollectAutoruns(),
+                InventoryKinds.FeatureFlags => CollectFeatureFlags(Platform.FeatureFlags.NativeFeatureStore.Instance),
                 _ => throw new ArgumentException($"unknown inventory kind '{kind}' ({string.Join(", ", InventoryKinds.All)})."),
             };
-            section.Items.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
+            if (kind == InventoryKinds.FeatureFlags)
+                section.Items.Sort((a, b) => uint.Parse(a.Id, CultureInfo.InvariantCulture).CompareTo(uint.Parse(b.Id, CultureInfo.InvariantCulture)));
+            else
+                section.Items.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
             return section;
         }
         catch (ArgumentException)

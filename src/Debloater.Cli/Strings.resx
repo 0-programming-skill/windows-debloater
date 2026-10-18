@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -57,7 +57,7 @@ Usage:
 --max-risk       maximum risk accepted by 'apply' (default: medium). High/Critical require an explicit opt-in.
 --catalog DIR    catalog folder (default: the active catalog: the newest verified update in
                  %LocalAppData%\Debloater\catalog, or 'catalog' next to the executable).
---kind K         services, drivers, tasks, appx, features, capabilities, autoruns.
+--kind K         services, drivers, tasks, appx, features, capabilities, autoruns, featureflags.
 --admx-dir DIR   PolicyDefinitions folder (default: C:\Windows\PolicyDefinitions). Accepts the latest
                  Administrative Templates package downloaded from Microsoft.
 --csp FILE       Policy CSP reference (default: reference/msdocs-policy-csp.json in the repository).
@@ -716,5 +716,8 @@ selftest         DISPOSABLE VM ONLY: for each tweak, reads the state, applies, c
   </data>
   <data name="St_RebootWarning" xml:space="preserve">
     <value>Attention: the test left a reboot pending (optional features).</value>
+  </data>
+  <data name="Status_RequiresFeature" xml:space="preserve">
+    <value>Requires hidden feature {0}: currently {1}.</value>
   </data>
 </root>

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Debloater.Core.Platform;
+using Debloater.Core.Platform.FeatureFlags;
 
 namespace Debloater.Core.Engine;
 
@@ -13,9 +14,16 @@ public sealed class ScanContext : IDisposable
     private readonly ConcurrentDictionary<string, Lazy<Task<object>>> _cache = new();
     private readonly ConcurrentQueue<string> _notes = new();
 
-    public ScanContext(SystemInfo system) => System = system;
+    public ScanContext(SystemInfo system, IFeatureStore? featureStore = null)
+    {
+        System = system;
+        FeatureStore = featureStore ?? NativeFeatureStore.Instance;
+    }
 
     public SystemInfo System { get; }
+
+    /// <summary>Windows feature configurations (feature flags); a fake one in tests.</summary>
+    public IFeatureStore FeatureStore { get; }
 
     /// <summary>Gets (or computes only once) a cached value for this scan.</summary>
     public async Task<T> GetOrAddAsync<T>(string key, Func<Task<T>> factory) where T : class

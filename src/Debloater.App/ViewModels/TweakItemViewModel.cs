@@ -70,6 +70,38 @@ public sealed partial class TweakItemViewModel : ObservableObject
         ? Loc.Format("Tweak_Precondition", reason.Trim()) : "";
     public Visibility PreconditionVisibility => PreconditionText.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
 
+    private string? _requiresFeatureText;
+
+    /// <summary>
+    /// "Requires hidden feature X — currently disabled", one line per id in requiresFeature. Read once (cheap
+    /// ntdll queries, no elevation needed) when the row is first expanded.
+    /// </summary>
+    public string RequiresFeatureText => _requiresFeatureText ??= BuildRequiresFeatureText();
+    public Visibility RequiresFeatureVisibility => Tweak.RequiresFeature is { Count: > 0 } ? Visibility.Visible : Visibility.Collapsed;
+
+    private string BuildRequiresFeatureText()
+    {
+        if (Tweak.RequiresFeature is not { Count: > 0 } ids) return "";
+        var lines = new List<string>();
+        foreach (var id in ids)
+        {
+            var s = Debloater.Core.Platform.FeatureFlags.FeatureFlagStatus.Read(Debloater.Core.Platform.FeatureFlags.NativeFeatureStore.Instance, id);
+            var state = s.IsEnabled switch
+            {
+                true => Loc.Get("Tweak_FeatureEnabled"),
+                false => Loc.Get("Tweak_FeatureDisabled"),
+                null => Loc.Get("Tweak_FeatureUnknown"),
+            };
+            var source = s.Error is not null ? Loc.Get("Tweak_FeatureSourceError")
+                : !s.IsBuiltInDefault ? Loc.Format("Tweak_FeatureSourceConfigured", Debloater.Core.Platform.FeatureFlags.FeatureFlagText.Priority(s.Winning!.Priority))
+                : s.Known?.BuiltInDefault is not null ? Loc.Get("Tweak_FeatureSourceDefault")
+                : Loc.Get("Tweak_FeatureSourceUnknownDefault");
+            lines.Add(Loc.Format("Tweak_RequiresFeature", Debloater.Core.Platform.FeatureFlags.KnownFeatures.Label(id), state, source));
+        }
+        lines.Add(Loc.Get("Tweak_RequiresFeatureHint"));
+        return string.Join("\n", lines);
+    }
+
     public string RiskText => Labels.RiskShort(Tweak.Risk);
     public SolidColorBrush RiskBrush => Labels.Brush(Labels.RiskColor(Tweak.Risk));
     public SolidColorBrush RiskForeground => Labels.ForegroundOn(Labels.RiskColor(Tweak.Risk));

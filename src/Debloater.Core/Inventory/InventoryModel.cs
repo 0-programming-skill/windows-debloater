@@ -13,7 +13,10 @@ public static class InventoryKinds
     public const string Capabilities = "capabilities";
     public const string Autoruns = "autoruns";
 
-    public static IReadOnlyList<string> All { get; } = [Services, Drivers, Tasks, Appx, Features, Capabilities, Autoruns];
+    /// <summary>Windows feature configurations (feature flags / WIL switches) present in the runtime store.</summary>
+    public const string FeatureFlags = "featureflags";
+
+    public static IReadOnlyList<string> All { get; } = [Services, Drivers, Tasks, Appx, Features, Capabilities, Autoruns, FeatureFlags];
 
     public static bool IsKnown(string kind) => All.Contains(kind, StringComparer.OrdinalIgnoreCase);
 }

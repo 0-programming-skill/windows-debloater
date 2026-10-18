@@ -144,7 +144,10 @@ tweaks:
       Manager (CapabilityAccessManager.dll, camsvc service) queries WindowsAI/ConfigureAgentConnectors through
       the PolicyManager when deciding consent between an MCP host (agent) and an MCP server (connector): with
       2, it denies without asking. The Policy CSP documentation only lists Enterprise/Education, but on 26300
-      Pro the PolicyManager returns the Group Policy value normally (verified in the VM).
+      Pro the PolicyManager returns the Group Policy value normally (verified in the VM). Windows only
+      enforces the policy while the hidden features 61825274 (Feature_CAM_Mcp_PolicyEnforcement) and its
+      prerequisite 58336780 are enabled; on a clean 26300.9711 the prerequisite is disabled, so the policy is
+      stored but has no effect yet.
     category: AI/Agents
     risk: low
     confidence: admx
@@ -153,6 +156,7 @@ tweaks:
       - { kind: msdocs, ref: "Policy CSP - WindowsAI/ConfigureAgentConnectors" }
       - { kind: re, ref: "26300/cam-ai-configure-agent-connectors" }
     minBuild: 26300
+    requiresFeature: [61825274, 58336780]
     tags: [ai, agents, mcp, policy]
     breaks: Windows AI agents (and apps that use the agent registry) cannot use MCP connectors.
     references:
@@ -166,7 +170,9 @@ tweaks:
           WindowsAI/ConfigureAgentConnectors pelo PolicyManager ao decidir o consentimento entre um host MCP
           (agente) e um servidor MCP (conector): com 2, nega sem perguntar. A documentação da Policy CSP cita
           só Enterprise/Education, mas no 26300 Pro o PolicyManager devolve o valor da política de grupo
-          normalmente (conferido na VM).
+          normalmente (conferido na VM). O Windows só aplica a política enquanto os recursos ocultos 61825274
+          (Feature_CAM_Mcp_PolicyEnforcement) e o pré-requisito 58336780 estão ativados; num 26300.9711 limpo o
+          pré-requisito vem desativado, então a política fica gravada mas ainda não tem efeito.
         breaks: Agentes de IA do Windows (e apps que usam o registro de agentes) não conseguem usar conectores MCP.
     actions:
       - type: registry

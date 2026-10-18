@@ -164,6 +164,12 @@ internal static partial class Program
                 if (showDetails)
                     foreach (var act in s.Actions)
                         Console.WriteLine($"      - {act.State,-13} {act.Action}  ({act.Detail})");
+                if (a.Verbose && s.Tweak.RequiresFeature is { Count: > 0 } required)
+                    foreach (var id in required)
+                    {
+                        var f = Debloater.Core.Platform.FeatureFlags.FeatureFlagStatus.Read(Debloater.Core.Platform.FeatureFlags.NativeFeatureStore.Instance, id);
+                        Console.WriteLine($"      {L.F("Status_RequiresFeature", Debloater.Core.Platform.FeatureFlags.KnownFeatures.Label(id), f)}");
+                    }
             }
         }
 

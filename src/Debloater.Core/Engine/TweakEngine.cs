@@ -1,6 +1,7 @@
 ﻿using Debloater.Core.Actions;
 using Debloater.Core.Model;
 using Debloater.Core.Platform;
+using Debloater.Core.Platform.FeatureFlags;
 
 namespace Debloater.Core.Engine;
 
@@ -20,6 +21,9 @@ public sealed class TweakEngineOptions
 
     /// <summary>Evaluates a tweak's precondition. Default: runs the PowerShell script. Replaceable in tests.</summary>
     public Func<Precondition, CancellationToken, Task<PreconditionResult>> PreconditionEvaluator { get; init; } = Engine.PreconditionEvaluator.EvaluateAsync;
+
+    /// <summary>Feature configuration store used by "featureFlag" actions. Default: the real one (ntdll + registry). Replaceable in tests.</summary>
+    public IFeatureStore? FeatureStore { get; init; }
 }
 
 /// <summary>The process must be elevated (administrator).</summary>
@@ -59,7 +63,7 @@ public sealed class TweakEngine
     public SystemInfo System { get; }
     public BackupStore Backups { get; }
 
-    public ScanContext CreateContext() => new(System);
+    public ScanContext CreateContext() => new(System, _options.FeatureStore);
 
     // ---------------- status ----------------
 
