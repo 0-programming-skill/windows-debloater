@@ -108,6 +108,37 @@ public sealed class AdmxElement
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ExplicitValue { get; set; }
 
+    /// <summary>
+    /// list: nomes de valores da chave da lista que alguma política do catálogo grava como valor fixo
+    /// (valueName, enabledList, elementos...). Não são itens da lista: ex. DefaultConsent, de
+    /// WerDefaultConsent, mora na mesma chave que a lista explicitValue de WerConsentCustomize.
+    /// Preenchido pelo <see cref="AdmxParser"/> depois de ler todas as políticas.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? ReservedValueNames { get; set; }
+
+    /// <summary>
+    /// list: o valor pertence à lista? Com explicitValue ou sem valuePrefix, todo valor nomeado da chave
+    /// pertence; com valuePrefix "P", só "P1", "P2"... (prefixo vazio: "1", "2"...). Nunca os nomes de
+    /// <see cref="ReservedValueNames"/>.
+    /// </summary>
+    public bool OwnsListValue(string valueName)
+    {
+        if (valueName.Length == 0) return false;
+        if (ReservedValueNames is { Count: > 0 } reserved && reserved.Contains(valueName, StringComparer.OrdinalIgnoreCase)) return false;
+        if (ExplicitValue || ValuePrefix is null) return true;
+        return ListIndex(ValuePrefix, valueName) is not null;
+    }
+
+    /// <summary>Índice do item numa lista com prefixo ("P12" → 12), ou null.</summary>
+    public static int? ListIndex(string prefix, string valueName)
+    {
+        if (!valueName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
+        var rest = valueName[prefix.Length..];
+        return rest.Length > 0 && rest.All(char.IsAsciiDigit)
+            && int.TryParse(rest, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n) && n > 0 ? n : null;
+    }
+
     /// <summary>multiText: número máximo de linhas (0 ou null = sem limite).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? MaxStrings { get; set; }
@@ -192,6 +223,25 @@ public sealed class AdmxPolicy
     /// <summary>Identificador único "Arquivo.admx:Nome".</summary>
     [JsonIgnore]
     public string QualifiedName => $"{File}:{Name}";
+
+    /// <summary>
+    /// Valores fixos (chave, nome) que a política grava, sem os itens das listas: valueName, enabledList,
+    /// disabledList e, de cada elemento, valueName, trueList/falseList e valueList dos itens de enum.
+    /// </summary>
+    public IEnumerable<(string Key, string Name, AdmxElement? Element)> StaticValues()
+    {
+        if (ValueName is { } vn) yield return (Key, vn, null);
+        foreach (var i in EnabledList ?? []) yield return (i.Key, i.ValueName, null);
+        foreach (var i in DisabledList ?? []) yield return (i.Key, i.ValueName, null);
+        foreach (var el in Elements)
+        {
+            if (el.Type == "list") continue;
+            if (el.ValueName is { } evn) yield return (el.Key, evn, el);
+            foreach (var i in (el.TrueList ?? []).Concat(el.FalseList ?? [])) yield return (i.Key, i.ValueName, el);
+            foreach (var item in el.Items ?? [])
+                foreach (var i in item.ValueList ?? []) yield return (i.Key, i.ValueName, el);
+        }
+    }
 
     public override string ToString() => QualifiedName;
 }

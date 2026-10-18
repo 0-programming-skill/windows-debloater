@@ -152,7 +152,31 @@ public static class AdmxParser
                 }
             }
         }
+        AssignReservedListNames(catalog.Policies);
         return catalog;
+    }
+
+    /// <summary>
+    /// Marca, em cada list, os nomes de valores da sua chave que alguma política grava como valor fixo.
+    /// Sem isso, uma lista explicitValue (ou sem valuePrefix) "possuiria" valores de outras políticas:
+    /// Não configurada os apagaria e a leitura os mostraria como itens.
+    /// </summary>
+    public static void AssignReservedListNames(IEnumerable<AdmxPolicy> policies)
+    {
+        var list = policies as IReadOnlyCollection<AdmxPolicy> ?? policies.ToList();
+        var byKey = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in list)
+            foreach (var (key, name, _) in p.StaticValues())
+            {
+                var k = key.Trim('\\');
+                if (!byKey.TryGetValue(k, out var names)) byKey[k] = names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                names.Add(name);
+            }
+        foreach (var p in list)
+            foreach (var el in p.Elements.Where(e => e.Type == "list"))
+                el.ReservedValueNames = byKey.TryGetValue(el.Key.Trim('\\'), out var names) && names.Count > 0
+                    ? [.. names.Order(StringComparer.OrdinalIgnoreCase)]
+                    : null;
     }
 
     private static XElement LoadXml(string text)

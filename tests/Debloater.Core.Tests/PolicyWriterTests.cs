@@ -429,6 +429,36 @@ public class PolicyWriterTests
         }
     }
 
+    // ---------------- lista na mesma chave que valores de outra política ----------------
+
+    /// <summary>
+    /// Achado na VM (ErrorReporting.admx): WerConsentCustomize (list explicitValue na chave ...\Consent)
+    /// apagava, em Não configurada, o DefaultConsent de WerDefaultConsent e o mostrava como item.
+    /// </summary>
+    [Fact]
+    public void ExplicitList_DoesNotOwnStaticValuesOfOtherPolicies()
+    {
+        const string k = @"Software\Policies\Test\W\Shared";
+        var list = P("SharedList");
+        Assert.Contains("DefaultConsent", Assert.Single(list.Elements).ReservedValueNames!);
+
+        var r = new MemoryPolicyRegistry();
+        Run(r, P("SharedDefault"), S("SharedDefault", PolicyTargetState.Enabled).Set("Consent", "4"));
+        Assert.Equal(AdmxPolicyState.NotConfigured, PolicyWriter.ReadCurrent(list, M, r).State);
+
+        Run(r, list, S("SharedList", PolicyTargetState.Enabled).Set("Apps", "notepad.exe=4"));
+        var (state, current) = PolicyWriter.ReadCurrent(list, M, r);
+        Assert.Equal(AdmxPolicyState.Enabled, state);
+        Assert.Equal(["notepad.exe=4"], current.Values["Apps"]);
+
+        var plan = Run(r, list, S("SharedList", PolicyTargetState.NotConfigured));
+        Assert.DoesNotContain(plan.Changes, c => c.Name == "DefaultConsent");
+        Assert.Null(V(r, k, "notepad.exe"));
+        Assert.Equal("4 (REG_DWORD)", V(r, k, "DefaultConsent"));
+        Assert.Equal(AdmxPolicyState.NotConfigured, PolicyWriter.ReadCurrent(list, M, r).State);
+        Assert.Equal(AdmxPolicyState.Enabled, PolicyWriter.ReadCurrent(P("SharedDefault"), M, r).State);
+    }
+
     [Theory]
     [InlineData("enabled", PolicyTargetState.Enabled)]
     [InlineData("Habilitada", PolicyTargetState.Enabled)]

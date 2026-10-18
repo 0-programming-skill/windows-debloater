@@ -99,7 +99,7 @@ public static class AdmxPolicyStateReader
             if (el.Type == "list")
             {
                 var values = listValues(el.Key)
-                    .Where(x => el.ValuePrefix is null || x.Name.StartsWith(el.ValuePrefix, StringComparison.OrdinalIgnoreCase))
+                    .Where(x => el.OwnsListValue(x.Name))
                     .ToList();
                 foreach (var (name, value) in values) Note(el.Key, name, value);
                 if (values.Count > 0) enabledEvidence++;

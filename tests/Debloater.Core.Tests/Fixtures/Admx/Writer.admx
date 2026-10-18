@@ -85,5 +85,24 @@
         </enum>
       </elements>
     </policy>
+    <!-- Como WerDefaultConsent / WerConsentCustomize (ErrorReporting.admx): um valor fixo de uma política
+         mora na mesma chave que a lista explicitValue de outra. O valor não é item da lista. -->
+    <policy name="SharedDefault" class="Machine" displayName="$(string.ElementsOnly)" explainText="$(string.ElementsOnly)"
+            key="Software\Policies\Test\W\Shared">
+      <parentCategory ref="WriterCat" />
+      <elements>
+        <enum id="Consent" valueName="DefaultConsent" required="true">
+          <item displayName="$(string.Low)"><value><decimal value="1" /></value></item>
+          <item displayName="$(string.High)"><value><decimal value="4" /></value></item>
+        </enum>
+      </elements>
+    </policy>
+    <policy name="SharedList" class="Machine" displayName="$(string.ElementsOnly)" explainText="$(string.ElementsOnly)"
+            key="Software\Policies\Test\W\Shared">
+      <parentCategory ref="WriterCat" />
+      <elements>
+        <list id="Apps" explicitValue="true" additive="true" />
+      </elements>
+    </policy>
   </policies>
 </policyDefinitions>

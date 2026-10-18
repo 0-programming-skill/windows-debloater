@@ -342,42 +342,22 @@ public static class PolicyWriter
     {
         var result = new List<(string, string, string)>();
         var seen = new HashSet<(string, string)>();
-        void Add(string key, string name, string origin)
+        foreach (var (key, name, el) in policy.StaticValues())
         {
+            var origin = el is null ? "valor da política" : $"elemento '{ElementName(el)}'";
             if (seen.Add(Targets.Norm(key, name))) result.Add((key, name, origin));
-        }
-        if (policy.ValueName is { } vn) Add(policy.Key, vn, "valor da política");
-        foreach (var i in policy.EnabledList ?? []) Add(i.Key, i.ValueName, "enabledList");
-        foreach (var i in policy.DisabledList ?? []) Add(i.Key, i.ValueName, "disabledList");
-        foreach (var el in policy.Elements)
-        {
-            if (el.Type == "list") continue;
-            var origin = $"elemento '{ElementName(el)}'";
-            if (el.ValueName is { } evn) Add(el.Key, evn, origin);
-            foreach (var i in (el.TrueList ?? []).Concat(el.FalseList ?? [])) Add(i.Key, i.ValueName, origin);
-            foreach (var item in el.Items ?? [])
-                foreach (var i in item.ValueList ?? []) Add(i.Key, i.ValueName, origin);
         }
         return result;
     }
 
     /// <summary>
     /// O nome de valor pertence à list? Com explicitValue ou sem valuePrefix, todo valor nomeado da
-    /// chave pertence; com valuePrefix "P", só "P1", "P2"... (prefixo vazio: "1", "2"...).
+    /// chave pertence; com valuePrefix "P", só "P1", "P2"... (prefixo vazio: "1", "2"...). Valores fixos
+    /// de qualquer política na mesma chave (<see cref="AdmxElement.ReservedValueNames"/>) nunca pertencem.
     /// </summary>
-    public static bool ListOwns(AdmxElement el, string valueName)
-    {
-        if (valueName.Length == 0) return false;
-        if (el.ExplicitValue || el.ValuePrefix is null) return true;
-        return ListIndex(el.ValuePrefix, valueName) is not null;
-    }
+    public static bool ListOwns(AdmxElement el, string valueName) => el.OwnsListValue(valueName);
 
-    private static int? ListIndex(string prefix, string valueName)
-    {
-        if (!valueName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
-        var rest = valueName[prefix.Length..];
-        return rest.Length > 0 && rest.All(char.IsAsciiDigit) && int.TryParse(rest, NumberStyles.None, CultureInfo.InvariantCulture, out var n) && n > 0 ? n : null;
-    }
+    private static int? ListIndex(string prefix, string valueName) => AdmxElement.ListIndex(prefix, valueName);
 
     private static IEnumerable<string> OwnedListValues(AdmxElement el, PolicyScope scope, IPolicyRegistry registry, HashSet<(string, string)> staticOwned) =>
         registry.ValueNames(scope, el.Key).Where(n => ListOwns(el, n) && !staticOwned.Contains(Targets.Norm(el.Key, n)));
