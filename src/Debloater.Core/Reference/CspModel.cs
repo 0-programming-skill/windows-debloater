@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Debloater.Core.Reference;
 
-/// <summary>Um valor permitido documentado de uma política da Policy CSP.</summary>
+/// <summary>A documented allowed value of a Policy CSP policy.</summary>
 public sealed class CspAllowedValue
 {
     public string Value { get; set; } = "";
@@ -10,11 +10,11 @@ public sealed class CspAllowedValue
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IsDefault { get; set; }
 
-    /// <summary>Descrição curta (truncada) da documentação.</summary>
+    /// <summary>Short (truncated) description from the documentation.</summary>
     public string Description { get; set; } = "";
 }
 
-/// <summary>Mapeamento para Política de Grupo ("Group policy mapping" / "ADMX mapping").</summary>
+/// <summary>Group Policy mapping ("Group policy mapping" / "ADMX mapping").</summary>
 public sealed class CspGpMapping
 {
     public string? Name { get; set; }
@@ -29,14 +29,14 @@ public sealed class CspGpMapping
     public string? AdmxFile { get; set; }
 }
 
-/// <summary>Uma política documentada em learn.microsoft.com/windows/client-management/mdm/policy-csp-*.</summary>
+/// <summary>A policy documented at learn.microsoft.com/windows/client-management/mdm/policy-csp-*.</summary>
 public sealed class CspPolicy
 {
-    /// <summary>Área (ex.: System, Experience, ADMX_DataCollection).</summary>
+    /// <summary>Area (e.g. System, Experience, ADMX_DataCollection).</summary>
     public string Area { get; set; } = "";
     public string Name { get; set; } = "";
 
-    /// <summary>Página de origem (ex.: policy-csp-system).</summary>
+    /// <summary>Source page (e.g. policy-csp-system).</summary>
     public string Page { get; set; } = "";
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -48,28 +48,28 @@ public sealed class CspPolicy
     public bool ScopeDevice { get; set; }
     public bool ScopeUser { get; set; }
 
-    /// <summary>Edições marcadas com ✅.</summary>
+    /// <summary>Editions marked with ✅.</summary>
     public List<string> Editions { get; set; } = [];
 
-    /// <summary>Edições marcadas com ❌.</summary>
+    /// <summary>Editions marked with ❌.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? NotEditions { get; set; }
 
-    /// <summary>Linhas de "Applicable OS" (✅), como na documentação.</summary>
+    /// <summary>"Applicable OS" lines (✅), as in the documentation.</summary>
     public List<string> Applicability { get; set; } = [];
 
-    /// <summary>Build mínimo no Windows 11 (null = todo o Windows 11). Ver <see cref="CspMarkdownParser.ComputeWin11MinBuild"/>.</summary>
+    /// <summary>Minimum Windows 11 build (null = all of Windows 11). See <see cref="CspMarkdownParser.ComputeWin11MinBuild"/>.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Win11MinBuild { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Win11MinUbr { get; set; }
 
-    /// <summary>Disponível só em builds do Windows Insider.</summary>
+    /// <summary>Available only in Windows Insider builds.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool InsiderOnly { get; set; }
 
-    /// <summary>A documentação diz que a política está obsoleta (deprecated).</summary>
+    /// <summary>The documentation says the policy is deprecated.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Deprecated { get; set; }
 
@@ -88,15 +88,15 @@ public sealed class CspPolicy
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<CspGpMapping>? GpMappings { get; set; }
 
-    /// <summary>Política "ADMX-backed" (configurada via SyncML com o ADMX).</summary>
+    /// <summary>"ADMX-backed" policy (configured via SyncML with the ADMX).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool AdmxBacked { get; set; }
 
-    /// <summary>Frases da documentação que restringem edição (ex.: "only supported on Enterprise...").</summary>
+    /// <summary>Documentation sentences that restrict the edition (e.g. "only supported on Enterprise...").</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? EditionNotes { get; set; }
 
-    /// <summary>"Policy CSP - Area/Nome".</summary>
+    /// <summary>"Policy CSP - Area/Name".</summary>
     [JsonIgnore]
     public string Reference => $"Policy CSP - {Area}/{Name}";
 
@@ -106,7 +106,7 @@ public sealed class CspPolicy
     public override string ToString() => Reference;
 }
 
-/// <summary>Uma página processada (para rastrear mudanças da documentação).</summary>
+/// <summary>A processed page (to track documentation changes).</summary>
 public sealed class CspPage
 {
     public string Page { get; set; } = "";
@@ -117,12 +117,12 @@ public sealed class CspPage
     public int PolicyCount { get; set; }
 }
 
-/// <summary>Arquivo reference/msdocs-policy-csp.json.</summary>
+/// <summary>The reference/msdocs-policy-csp.json file.</summary>
 public sealed class CspReference
 {
     public int SchemaVersion { get; set; } = 1;
     public string Source { get; set; } = "https://learn.microsoft.com/windows/client-management/mdm/ (Accept: text/markdown)";
-    public string Note { get; set; } = "Gerado por tools/Debloater.RefGen. Não edite à mão.";
+    public string Note { get; set; } = "Generated by tools/Debloater.RefGen. Do not edit by hand.";
     public List<CspPage> Pages { get; set; } = [];
     public List<CspPolicy> Policies { get; set; } = [];
 }

@@ -6,9 +6,9 @@ using Debloater.Core.Platform;
 namespace Debloater.Core.Actions;
 
 /// <summary>
-/// Ação "optionalFeature": habilita/desabilita um recurso opcional do Windows (nome DISM).
-/// A detecção usa WMI (Win32_OptionalFeature), que funciona sem administrador e é lida uma vez
-/// por varredura. A aplicação usa dism.exe com /norestart. Recurso ausente = NotApplicable.
+/// "optionalFeature" action: enables/disables a Windows optional feature (DISM name).
+/// Detection uses WMI (Win32_OptionalFeature), which works without administrator and is read once
+/// per scan. Applying uses dism.exe with /norestart. Missing feature = NotApplicable.
 /// </summary>
 public sealed class OptionalFeatureActionHandler : IActionHandler
 {
@@ -61,10 +61,10 @@ public sealed class OptionalFeatureActionHandler : IActionHandler
         {
             var states = await GetStatesAsync(ctx).ConfigureAwait(false);
             if (!states.TryGetValue(spec.Name!, out var state))
-                return Detection.NotApplicable("recurso não existe neste Windows");
-            var detail = $"atual: {Describe(state)}";
+                return Detection.NotApplicable("feature does not exist on this Windows");
+            var detail = $"current: {Describe(state)}";
             if (state == Absent)
-                // Payload removido: equivale a desabilitado; habilitar exigiria fonte de instalação.
+                // Payload removed: equivalent to disabled; enabling would require an installation source.
                 return WantEnabled(spec) ? Detection.NotDesired(detail) : Detection.Desired(detail);
             bool isEnabled = state == Enabled;
             return isEnabled == WantEnabled(spec) ? Detection.Desired(detail) : Detection.NotDesired(detail);
@@ -98,7 +98,7 @@ public sealed class OptionalFeatureActionHandler : IActionHandler
 
     public async Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default)
     {
-        if (backup is null) throw new InvalidOperationException($"Sem backup para {spec}.");
+        if (backup is null) throw new InvalidOperationException($"No backup for {spec}.");
         if (!backup.Existed || backup.Data is null) return;
         await RunDismAsync(spec.Name!, backup.Data == "enabled", ct).ConfigureAwait(false);
         ctx.Invalidate(CacheKey);
@@ -109,8 +109,8 @@ public sealed class OptionalFeatureActionHandler : IActionHandler
         var dism = Path.Combine(Environment.SystemDirectory, "dism.exe");
         var verb = enable ? "/Enable-Feature /All" : "/Disable-Feature";
         var result = await ProcessRunner.RunAsync(dism, $"/Online {verb} /FeatureName:{feature} /NoRestart /English", ct).ConfigureAwait(false);
-        // 3010 = sucesso, reinicialização necessária.
+        // 3010 = success, restart required.
         if (result.ExitCode is not (0 or 3010))
-            throw new InvalidOperationException($"dism falhou ({result.ExitCode}) para '{feature}': {result.StdOut.Trim()} {result.StdErr.Trim()}");
+            throw new InvalidOperationException($"dism failed ({result.ExitCode}) for '{feature}': {result.StdOut.Trim()} {result.StdErr.Trim()}");
     }
 }

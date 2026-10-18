@@ -3,15 +3,15 @@
 namespace Debloater.Core.SelfTest;
 
 /// <summary>
-/// Lógica pura do selftest: compara o estado das ações antes/depois e decide o veredito a partir dos
-/// fatos registrados no <see cref="TweakSelfTestResult"/>. Não toca no sistema.
+/// Pure selftest logic: compares the actions' state before/after and decides the verdict from the
+/// facts recorded in the <see cref="TweakSelfTestResult"/>. Does not touch the system.
 /// </summary>
 public static class SelfTestEvaluator
 {
     /// <summary>
-    /// Preenche <see cref="ActionSelfTest.Restored"/>: depois de reverter, cada ação deve ter o MESMO estado e
-    /// o MESMO valor detectado de antes de aplicar (valor de registro restaurado ou apagado, tipo de
-    /// inicialização do serviço, tarefa habilitada/desabilitada, estado do recurso).
+    /// Fills <see cref="ActionSelfTest.Restored"/>: after reverting, each action must have the SAME state and
+    /// the SAME detected value as before applying (registry value restored or deleted, service startup
+    /// type, task enabled/disabled, feature state).
     /// </summary>
     public static void CompareActions(TweakSelfTestResult result)
     {
@@ -20,18 +20,18 @@ public static class SelfTestEvaluator
     }
 
     /// <summary>
-    /// Decide o veredito. Ordem de gravidade: ApplyFailed, NotAppliedAfterApply, RevertFailed, NotRestored,
-    /// BackupProblem, Pass. Irreversíveis são julgados só por aplicar + estado (+ backup gravado).
-    /// Um resultado já marcado como Skipped é mantido.
+    /// Decides the verdict. Severity order: ApplyFailed, NotAppliedAfterApply, RevertFailed, NotRestored,
+    /// BackupProblem, Pass. Irreversible tweaks are judged only by apply + state (+ backup written).
+    /// A result already marked as Skipped is kept.
     /// </summary>
-    /// <param name="applyOnly">Fase apply-only (teste de persistência): julga só aplicar, estado e backup
-    /// gravado/preservado ao re-aplicar; a reversão vem depois, na fase revert.</param>
+    /// <param name="applyOnly">Apply-only phase (persistence test): judges only apply, state and backup
+    /// written/preserved on re-apply; the revert comes later, in the revert phase.</param>
     public static (SelfTestVerdict Verdict, string? Reason) Evaluate(TweakSelfTestResult r, bool applyOnly = false)
     {
         if (r.Verdict == SelfTestVerdict.Skipped) return (SelfTestVerdict.Skipped, r.Reason);
 
-        if (r.Apply is null) return (SelfTestVerdict.ApplyFailed, "aplicar não foi executado");
-        if (!r.Apply.Success) return (SelfTestVerdict.ApplyFailed, NonEmpty(r.Apply.Describe(), "aplicar falhou"));
+        if (r.Apply is null) return (SelfTestVerdict.ApplyFailed, "apply was not run");
+        if (!r.Apply.Success) return (SelfTestVerdict.ApplyFailed, NonEmpty(r.Apply.Describe(), "apply failed"));
 
         if (r.StateAfterApply != TweakState.Applied)
         {
@@ -39,13 +39,13 @@ public static class SelfTestEvaluator
                 .Where(a => a.AfterApply is { State: not (ActionState.Desired or ActionState.NotApplicable) })
                 .Select(a => $"{a.Type}:{a.Target} = {a.AfterApply}");
             return (SelfTestVerdict.NotAppliedAfterApply,
-                $"estado depois de aplicar: {r.StateAfterApply?.ToString() ?? "?"}; " + NonEmpty(string.Join("; ", pending), "sem detalhes"));
+                $"state after apply: {r.StateAfterApply?.ToString() ?? "?"}; " + NonEmpty(string.Join("; ", pending), "no details"));
         }
 
         if (applyOnly)
         {
-            if (!r.Backup.WrittenOnApply) return (SelfTestVerdict.BackupProblem, "o backup não foi gravado ao aplicar");
-            if (r.Backup.KeptOnReapply == false) return (SelfTestVerdict.BackupProblem, "re-aplicar alterou o backup original");
+            if (!r.Backup.WrittenOnApply) return (SelfTestVerdict.BackupProblem, "the backup was not written on apply");
+            if (r.Backup.KeptOnReapply == false) return (SelfTestVerdict.BackupProblem, "re-applying changed the original backup");
             return (SelfTestVerdict.Pass, null);
         }
 
@@ -53,36 +53,36 @@ public static class SelfTestEvaluator
         {
             return r.Backup.WrittenOnApply
                 ? (SelfTestVerdict.Pass, null)
-                : (SelfTestVerdict.BackupProblem, "o backup não foi gravado ao aplicar");
+                : (SelfTestVerdict.BackupProblem, "the backup was not written on apply");
         }
 
-        if (r.Revert is null) return (SelfTestVerdict.RevertFailed, "reverter não foi executado");
-        if (!r.Revert.Success) return (SelfTestVerdict.RevertFailed, NonEmpty(r.Revert.Describe(), "reverter falhou"));
+        if (r.Revert is null) return (SelfTestVerdict.RevertFailed, "revert was not run");
+        if (!r.Revert.Success) return (SelfTestVerdict.RevertFailed, NonEmpty(r.Revert.Describe(), "revert failed"));
 
         var notRestored = r.Actions.Where(a => a.Restored == false).ToList();
         if (notRestored.Count > 0)
         {
-            var text = string.Join("; ", notRestored.Select(a => $"{a.Type}:{a.Target} antes {a.Before}, depois {a.AfterRevert}"));
+            var text = string.Join("; ", notRestored.Select(a => $"{a.Type}:{a.Target} before {a.Before}, after {a.AfterRevert}"));
             return (SelfTestVerdict.NotRestored, text);
         }
         if (r.Actions.Any(a => a.Restored is null))
-            return (SelfTestVerdict.NotRestored, "estado depois de reverter não foi lido");
+            return (SelfTestVerdict.NotRestored, "state after revert was not read");
 
         var backupIssues = new List<string>();
-        if (!r.Backup.WrittenOnApply) backupIssues.Add("o backup não foi gravado ao aplicar");
-        if (r.Backup.KeptOnReapply == false) backupIssues.Add("re-aplicar alterou o backup original");
-        if (r.Backup.DeletedAfterRevert == false) backupIssues.Add("o backup não foi apagado depois de reverter");
+        if (!r.Backup.WrittenOnApply) backupIssues.Add("the backup was not written on apply");
+        if (r.Backup.KeptOnReapply == false) backupIssues.Add("re-applying changed the original backup");
+        if (r.Backup.DeletedAfterRevert == false) backupIssues.Add("the backup was not deleted after revert");
         if (backupIssues.Count > 0) return (SelfTestVerdict.BackupProblem, string.Join("; ", backupIssues));
 
         return (SelfTestVerdict.Pass, null);
     }
 
     /// <summary>
-    /// Registra uma conferência de persistência: grava o estado de cada ação com o rótulo e compara com o
-    /// estado lido logo depois de aplicar. Só contam as ações que ficaram Desired ao aplicar; uma ação que
-    /// não está mais Desired (ou não pôde ser lida) foi desfeita pelo Windows. Atualiza
-    /// <see cref="TweakSelfTestResult.PersistenceVerdict"/> (a última conferência vale) e
-    /// <see cref="TweakSelfTestResult.RevertedAfter"/> (a primeira conferência com algo desfeito).
+    /// Records a persistence check: stores each action's state with the label and compares it with the
+    /// state read right after applying. Only actions that were Desired after applying count; an action that
+    /// is no longer Desired (or could not be read) was undone by Windows. Updates
+    /// <see cref="TweakSelfTestResult.PersistenceVerdict"/> (the last check wins) and
+    /// <see cref="TweakSelfTestResult.RevertedAfter"/> (the first check with something undone).
     /// </summary>
     public static PersistenceCheck RecordPersistence(TweakSelfTestResult r, TweakStatus status, string label, DateTime timeUtc)
     {
@@ -97,8 +97,8 @@ public static class SelfTestEvaluator
             relevant++;
             var now = a.Checks.LastOrDefault(c => c.Label == label)?.Snapshot;
             if (now is { State: ActionState.Desired }) continue;
-            var nowText = now?.ToString() ?? (status.Message is null ? "não lido" : $"não lido: {status.Message}");
-            check.RevertedActions.Add($"{a.Type}:{a.Target}: depois de aplicar {a.AfterApply.Detail}, agora {nowText}");
+            var nowText = now?.ToString() ?? (status.Message is null ? "not read" : $"not read: {status.Message}");
+            check.RevertedActions.Add($"{a.Type}:{a.Target}: after apply {a.AfterApply.Detail}, now {nowText}");
         }
         check.Verdict = check.RevertedActions.Count == 0 ? PersistenceVerdict.Persisted
             : check.RevertedActions.Count == relevant ? PersistenceVerdict.RevertedByWindows

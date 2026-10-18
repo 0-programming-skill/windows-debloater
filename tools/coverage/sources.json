@@ -61,7 +61,7 @@
       "repo": "memstechtips/Winhance",
       "tag": "v26.06.12",
       "sha": "f23d554eb2d6400b1827bcc46b91294ffa53fbc9",
-      "license": "própria",
+      "license": "proprietary",
       "usage": "reference",
       "parser": "csharp",
       "include": [ "src/Winhance.Core/Features/**/Models/*.cs" ],
@@ -73,11 +73,11 @@
       "repo": "itsfatduck/optimizerDuck",
       "tag": "v2.29.0",
       "sha": "2f467e6e0d44704dbff68c0ecb3b3eabfd6d37b1",
-      "license": "própria",
+      "license": "proprietary",
       "usage": "reference",
       "parser": "csharp",
       "include": [ "optimizerDuck/Domain/Optimizations/**/*.cs", "optimizerDuck/Domain/Customize/**/*.cs" ],
-      "note": "Repositório oficial (itsfatduck). Cópias com o mesmo nome em outras contas foram ignoradas."
+      "note": "Official repository (itsfatduck). Copies with the same name under other accounts were ignored."
     },
     {
       "id": "atlas",

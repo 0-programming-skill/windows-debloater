@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 namespace Debloater.Core.Reference;
 
 /// <summary>
-/// Lê as páginas policy-csp-*.md da documentação da Microsoft (o Markdown que learn.microsoft.com
-/// devolve com "Accept: text/markdown"). Cada seção "## Nome" com um bloco ```Device/```User é uma
-/// política: escopo, edições, SO aplicável, formato, valores permitidos e mapeamento ADMX.
+/// Reads the policy-csp-*.md pages of the Microsoft documentation (the Markdown learn.microsoft.com
+/// returns with "Accept: text/markdown"). Each "## Name" section with a ```Device/```User block is a
+/// policy: scope, editions, applicable OS, format, allowed values and ADMX mapping.
 /// </summary>
 public static partial class CspMarkdownParser
 {
@@ -33,14 +33,14 @@ public static partial class CspMarkdownParser
     [GeneratedRegex(@"\[([^\]]*)\]\([^)]*\)")]
     private static partial Regex MdLink();
 
-    /// <summary>Lê uma página. <paramref name="page"/> é o nome sem extensão (ex.: policy-csp-system).</summary>
+    /// <summary>Reads a page. <paramref name="page"/> is the name without extension (e.g. policy-csp-system).</summary>
     public static (CspPage Page, List<CspPolicy> Policies) ParsePage(string page, string markdown)
     {
         var lines = markdown.Replace("\r\n", "\n").Split('\n');
         var info = new CspPage { Page = page };
         int start = 0;
 
-        // Frontmatter YAML entre "---".
+        // YAML frontmatter between "---".
         if (lines.Length > 0 && lines[0].Trim() == "---")
         {
             for (int i = 1; i < lines.Length; i++)
@@ -57,7 +57,7 @@ public static partial class CspMarkdownParser
         for (int i = start; i <= lines.Length; i++)
         {
             bool atEnd = i == lines.Length;
-            // Políticas ficam em "## Nome" ou, em páginas agrupadas (ex.: Update), em "### Nome".
+            // Policies are under "## Name" or, on grouped pages (e.g. Update), under "### Name".
             bool isHeading = !atEnd && (lines[i].StartsWith("## ", StringComparison.Ordinal) || lines[i].StartsWith("### ", StringComparison.Ordinal));
             if (atEnd || isHeading)
             {
@@ -81,7 +81,7 @@ public static partial class CspMarkdownParser
     {
         var policy = new CspPolicy { Page = page, Name = heading };
 
-        // Blocos de código ```Device / ```User com o URI da política.
+        // ```Device / ```User code blocks with the policy URI.
         for (int i = 0; i < lines.Length - 1; i++)
         {
             var fence = lines[i].Trim();
@@ -95,7 +95,7 @@ public static partial class CspMarkdownParser
         }
         if (policy.DeviceUri is null && policy.UserUri is null) return null;
 
-        // Tabela Scope | Editions | Applicable OS.
+        // Scope | Editions | Applicable OS table.
         for (int i = 0; i < lines.Length - 2; i++)
         {
             if (!lines[i].StartsWith("| Scope", StringComparison.Ordinal)) continue;
@@ -117,7 +117,7 @@ public static partial class CspMarkdownParser
         }
         (policy.Win11MinBuild, policy.Win11MinUbr, policy.InsiderOnly) = ComputeWin11MinBuild(policy.Applicability);
 
-        // Tabelas de propriedades, valores permitidos e mapeamento GP/ADMX.
+        // Property, allowed values and GP/ADMX mapping tables.
         for (int i = 0; i < lines.Length; i++)
         {
             var line = lines[i].Trim();
@@ -194,10 +194,10 @@ public static partial class CspMarkdownParser
     }
 
     /// <summary>
-    /// Build mínimo no Windows 11 a partir das linhas "Applicable OS":
-    /// - qualquer linha com build &lt; 22000 ("Windows 10 ... and later") vale para todo o Windows 11 → null;
-    /// - senão, o menor build ≥ 22000 (e o UBR, quando exige uma KB);
-    /// - só "Windows Insider Preview" → InsiderOnly.
+    /// Minimum Windows 11 build from the "Applicable OS" lines:
+    /// - any line with build &lt; 22000 ("Windows 10 ... and later") applies to all of Windows 11 → null;
+    /// - otherwise, the lowest build ≥ 22000 (and the UBR, when a KB is required);
+    /// - only "Windows Insider Preview" → InsiderOnly.
     /// </summary>
     public static (int? Build, int? Ubr, bool InsiderOnly) ComputeWin11MinBuild(IEnumerable<string> applicability)
     {
@@ -229,13 +229,13 @@ public static partial class CspMarkdownParser
             yield return (m.Groups[1].Value == "✅", WebUtility.HtmlDecode(m.Groups[2].Value).Trim());
     }
 
-    /// <summary>Lê as linhas de uma tabela Markdown que começa após <paramref name="from"/> (pula o cabeçalho e o separador).</summary>
+    /// <summary>Reads the rows of a Markdown table starting after <paramref name="from"/> (skips the header and the separator).</summary>
     private static IEnumerable<List<string>> ReadTable(string[] lines, int from)
     {
         int i = from;
         while (i < lines.Length && string.IsNullOrWhiteSpace(lines[i])) i++;
         if (i >= lines.Length || !lines[i].TrimStart().StartsWith('|')) yield break;
-        i += 2; // cabeçalho + separador
+        i += 2; // header + separator
         for (; i < lines.Length && lines[i].TrimStart().StartsWith('|'); i++)
             yield return SplitRow(lines[i]);
     }
@@ -258,7 +258,7 @@ public static partial class CspMarkdownParser
         return s.Length <= MaxDescription ? s : s[..(MaxDescription - 1)].TrimEnd() + "…";
     }
 
-    // ---------------- persistência ----------------
+    // ---------------- persistence ----------------
 
     public static JsonSerializerOptions JsonOptions { get; } = new()
     {
@@ -268,7 +268,7 @@ public static partial class CspMarkdownParser
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
     };
 
-    /// <summary>Monta a referência ordenada de forma determinística (para diffs limpos no git).</summary>
+    /// <summary>Builds the reference in a deterministic order (for clean git diffs).</summary>
     public static CspReference Build(IEnumerable<(CspPage Page, List<CspPolicy> Policies)> pages)
     {
         var list = pages.ToList();
@@ -287,5 +287,5 @@ public static partial class CspMarkdownParser
 
     public static CspReference Load(string file) =>
         JsonSerializer.Deserialize<CspReference>(File.ReadAllText(file), JsonOptions)
-        ?? throw new InvalidDataException($"referência vazia: {file}");
+        ?? throw new InvalidDataException($"empty reference: {file}");
 }

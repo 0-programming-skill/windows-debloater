@@ -11,8 +11,8 @@ using Microsoft.Win32;
 namespace Debloater.Core.Tests;
 
 /// <summary>
-/// Gravação real no registro, mas redirecionada para a sandbox HKCU\Software\DebloaterTests\&lt;guid&gt;
-/// (as raízes HKLM e HKCU viram subchaves dela). Nunca toca chaves de política reais e não exige elevação.
+/// Real registry writes, but redirected to the sandbox HKCU\Software\DebloaterTests\&lt;guid&gt;
+/// (the HKLM and HKCU roots become its subkeys). Never touches real policy keys and does not require elevation.
 /// </summary>
 public sealed class PolicyEngineTests : IDisposable
 {
@@ -45,7 +45,7 @@ public sealed class PolicyEngineTests : IDisposable
     private static AdmxPolicy P(string name) => PolicyWriterTests.P(name);
     private static PolicySetting S(string name, PolicyTargetState state) => new() { Policy = "Writer.admx:" + name, State = state };
 
-    /// <summary>Chave real (HKCU) correspondente a uma chave de política dentro da sandbox.</summary>
+    /// <summary>Real key (HKCU) corresponding to a policy key inside the sandbox.</summary>
     private RegistryKey? Real(string root, string key) => Registry.CurrentUser.OpenSubKey($@"{_sandbox.SubKey}\{root}\{key}");
 
     private object? RealValue(string root, string key, string name)
@@ -66,7 +66,7 @@ public sealed class PolicyEngineTests : IDisposable
     [Fact]
     public void Apply_WritesRealValues_BackupKeepsFirstOriginal_RevertRestoresExactly()
     {
-        // Estado original: um valor pré-existente da política e um valor alheio na mesma chave.
+        // Original state: a pre-existing policy value and an unrelated value on the same key.
         using (var k = _sandbox.Create($@"HKLM\{All}"))
         {
             k.SetValue("Count", 3, RegistryValueKind.DWord);
@@ -91,7 +91,7 @@ public sealed class PolicyEngineTests : IDisposable
         Assert.False(backup.Find("HKLM", All, "Lines")!.Existed);
         Assert.Contains(backup.CreatedKeys, k => k.Key == All + @"\Numbered");
 
-        // Segunda aplicação: o original (3) é preservado.
+        // Second apply: the original (3) is preserved.
         var r2 = _engine.Apply(p, S("AllElements", PolicyTargetState.Enabled).Set("Count", "20"));
         Assert.True(r2.Success, string.Join(" ", r2.Errors));
         Assert.Equal(20, RealValue("HKLM", All, "Count"));
@@ -99,7 +99,7 @@ public sealed class PolicyEngineTests : IDisposable
         Assert.Equal("3", _engine.Backups.Load(p.QualifiedName)!.Find("HKLM", All, "Count")!.Data);
         Assert.Equal(2, _engine.Backups.Load(p.QualifiedName)!.History.Count);
 
-        // Reverter: volta exatamente ao original e apaga o backup e as chaves criadas.
+        // Revert: goes back exactly to the original and deletes the backup and the created keys.
         var rv = _engine.Revert(p.QualifiedName, p);
         Assert.True(rv.Success, string.Join(" ", rv.Errors));
         Assert.Equal(3, RealValue("HKLM", All, "Count"));
@@ -110,7 +110,7 @@ public sealed class PolicyEngineTests : IDisposable
             Assert.Empty(k.GetSubKeyNames());
         }
         Assert.False(_engine.Backups.Exists(p.QualifiedName));
-        Assert.Equal(AdmxPolicyState.Enabled, rv.StateAfter);   // "Count" sozinho é evidência de habilitada
+        Assert.Equal(AdmxPolicyState.Enabled, rv.StateAfter);   // "Count" alone is evidence of enabled
     }
 
     [Fact]
@@ -123,9 +123,9 @@ public sealed class PolicyEngineTests : IDisposable
         Assert.Equal(5000000000L, RealValue("HKCU", @"Software\Policies\Test\W\Mixed\Sub", "B"));
 
         Assert.True(_engine.Revert(p.QualifiedName, p).Success);
-        // A raiz redirecionada (equivalente a HKCU) continua existindo, mas vazia: "Software\..." foi apagado.
+        // The redirected root (equivalent to HKCU) still exists, but empty: "Software\..." was deleted.
         using var root = Registry.CurrentUser.OpenSubKey($@"{_sandbox.SubKey}\HKCU");
-        Assert.True(root is null || (root.SubKeyCount == 0 && root.ValueCount == 0), "a raiz da sandbox deveria ficar vazia");
+        Assert.True(root is null || (root.SubKeyCount == 0 && root.ValueCount == 0), "the sandbox root should be left empty");
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class PolicyEngineTests : IDisposable
 
         var noop = _engine.Apply(p, S("AllElements", PolicyTargetState.NotConfigured));
         Assert.True(noop.Success);
-        Assert.Contains("nada", noop.Message);
+        Assert.Contains("nothing", noop.Message);
         Assert.False(_engine.Backups.Exists(p.QualifiedName));
     }
 
@@ -173,7 +173,7 @@ public sealed class PolicyEngineTests : IDisposable
     {
         var r = _engine.Revert("Writer.admx:Implicit");
         Assert.False(r.Success);
-        Assert.Contains("Nenhum backup", r.Message);
+        Assert.Contains("No backup", r.Message);
     }
 
     [Fact]
@@ -182,11 +182,11 @@ public sealed class PolicyEngineTests : IDisposable
         var engine = new PolicyEngine(new PolicyEngineOptions { BackupDirectory = _backupDir, System = NotElevated, Registry = _registry });
         Assert.Throws<ElevationRequiredException>(() => engine.Apply(P("Implicit"), S("Implicit", PolicyTargetState.Enabled)));
         Assert.Throws<ElevationRequiredException>(() => engine.Revert("Writer.admx:Implicit"));
-        // Planejar (somente leitura) não exige elevação.
+        // Planning (read-only) does not require elevation.
         Assert.True(engine.Plan(P("Implicit"), S("Implicit", PolicyTargetState.Enabled)).HasEffect);
     }
 
-    // ---------------- planejador ----------------
+    // ---------------- planner ----------------
 
     [Fact]
     public void Planner_BlocksInvalidAndRevertWithoutBackup_OmitsNoOps_SortsByRisk()
@@ -200,8 +200,8 @@ public sealed class PolicyEngineTests : IDisposable
         {
             new PolicyRequest(P("Implicit"), S("Implicit", PolicyTargetState.Enabled)),
             new PolicyRequest(P("AllElements"), S("AllElements", PolicyTargetState.Enabled).Set("Count", "0")),
-            new PolicyRequest(P("Mixed"), S("Mixed", PolicyTargetState.NotConfigured)),      // já está assim
-            new PolicyRequest(P("ElementsOnly"), null),                                       // reverter sem backup
+            new PolicyRequest(P("Mixed"), S("Mixed", PolicyTargetState.NotConfigured)),      // already set
+            new PolicyRequest(P("ElementsOnly"), null),                                       // revert without backup
             new PolicyRequest(defender, new PolicySetting { Policy = defender.QualifiedName, State = PolicyTargetState.Enabled }),
         };
         var plan = PolicyChangePlanner.Plan(requests, _engine, (_, _, _) => [new PolicyWarning(PolicyWarningLevel.Info, "x")]);
@@ -210,19 +210,19 @@ public sealed class PolicyEngineTests : IDisposable
         Assert.Equal("WindowsDefender.admx", plan[0].Policy.File);
         Assert.Equal(RiskLevel.High, plan[0].Risk);
         Assert.All(plan.Skip(1), c => Assert.Equal(RiskLevel.Medium, c.Risk));
-        Assert.Contains(plan, c => c.Policy.Name == "AllElements" && c.IsBlocked && c.BlockedReason!.Contains("inválida"));
-        Assert.Contains(plan, c => c.Policy.Name == "ElementsOnly" && c.IsRevert && c.BlockedReason!.Contains("Sem backup"));
+        Assert.Contains(plan, c => c.Policy.Name == "AllElements" && c.IsBlocked && c.BlockedReason!.Contains("Invalid setting"));
+        Assert.Contains(plan, c => c.Policy.Name == "ElementsOnly" && c.IsRevert && c.BlockedReason!.Contains("No backup"));
         var ok = Assert.Single(plan, c => c.Policy.Name == "Implicit");
         Assert.False(ok.IsBlocked);
         Assert.Single(ok.Preview);
         Assert.Single(ok.Warnings);
         Assert.Equal(RiskLevel.High, PolicyChangePlanner.MaxRisk(plan));
 
-        // Com backup, reverter vira uma mudança executável com prévia dos originais.
+        // With a backup, revert becomes an executable change with a preview of the originals.
         Assert.True(_engine.Apply(P("ElementsOnly"), S("ElementsOnly", PolicyTargetState.Enabled).Set("Level", "1")).Success);
         var revert = Assert.Single(PolicyChangePlanner.Plan([new PolicyRequest(P("ElementsOnly"), null)], _engine));
         Assert.False(revert.IsBlocked);
-        Assert.Contains(revert.Preview, l => l.Contains("Level (não existia)"));
+        Assert.Contains(revert.Preview, l => l.Contains("Level (did not exist)"));
     }
 }
 
@@ -239,10 +239,12 @@ public class PolicyAdvisorTests
     [Theory]
     [InlineData("WindowsDefender.admx", @"Software\Policies\X", "", RiskLevel.High)]
     [InlineData("X.admx", @"Software\Policies\Microsoft\Windows\WindowsUpdate\AU", "", RiskLevel.High)]
-    [InlineData("X.admx", @"Software\Policies\X", "Componentes do Windows/Segurança do Windows", RiskLevel.High)]
+    [InlineData("X.admx", @"Software\Policies\X", "Windows Components/Windows Security", RiskLevel.High)]
+    [InlineData("X.admx", @"Software\Policies\X", "Componentes do Windows/Segurança do Windows", RiskLevel.High)]   // pt-BR ADML
     [InlineData("X.admx", @"Software\Policies\Microsoft\FVE", "", RiskLevel.High)]
     [InlineData("X.admx", @"Software\Policies\X\Collapse", "Start Menu", RiskLevel.Medium)]
-    [InlineData("DataCollection.admx", @"Software\Policies\Microsoft\Windows\DataCollection", "Componentes do Windows/Coleta de Dados", RiskLevel.Medium)]
+    [InlineData("DataCollection.admx", @"Software\Policies\Microsoft\Windows\DataCollection", "Windows Components/Data Collection", RiskLevel.Medium)]
+    [InlineData("DataCollection.admx", @"Software\Policies\Microsoft\Windows\DataCollection", "Componentes do Windows/Coleta de Dados", RiskLevel.Medium)]   // pt-BR ADML
     public void Risk_IsHighOnlyForSecurityUpdateDefender(string file, string key, string category, RiskLevel expected) =>
         Assert.Equal(expected, PolicyAdvisor.Risk(Policy(file, key, null, category.Split('/', StringSplitOptions.RemoveEmptyEntries))));
 
@@ -261,12 +263,12 @@ public class PolicyAdvisorTests
     {
         var csp = new CspPolicy { Area = "A", Name = "N", Page = "p", Editions = ["Enterprise", "Education"], Win11MinBuild = 26300, Deprecated = true };
         var w = PolicyAdvisor.Warnings(Policy(), csp, Env(), PolicyTargetState.Enabled, PolicyScope.Machine).Select(x => x.Text).ToList();
-        Assert.Contains(w, t => t.Contains("só tem efeito em: Enterprise, Education") && t.Contains("Pro"));
+        Assert.Contains(w, t => t.Contains("only takes effect on: Enterprise, Education") && t.Contains("Pro"));
         Assert.Contains(w, t => t.Contains("26300"));
-        Assert.Contains(w, t => t.Contains("obsoleta"));
-        Assert.Contains(w, t => t.Contains("gpedit.msc continua"));
+        Assert.Contains(w, t => t.Contains("deprecated"));
+        Assert.Contains(w, t => t.Contains("gpedit.msc keeps"));
 
-        // Não configurada só apaga: avisos de edição/build não se aplicam.
+        // Not configured only deletes: edition/build warnings do not apply.
         Assert.Empty(PolicyAdvisor.Warnings(Policy(), csp, Env("Core"), PolicyTargetState.NotConfigured, PolicyScope.Machine));
 
         var pro = new CspPolicy { Area = "A", Name = "N", Page = "p", Editions = ["Pro", "Enterprise"] };
@@ -275,18 +277,18 @@ public class PolicyAdvisorTests
 
         Assert.Contains(PolicyAdvisor.Warnings(Policy(), null, Env("Core"), PolicyTargetState.Enabled, PolicyScope.Machine), x => x.Text.Contains("Home"));
         Assert.Contains(PolicyAdvisor.Warnings(Policy(supported: "Windows Server 2003 only"), null, Env(), PolicyTargetState.Enabled, PolicyScope.Machine),
-            x => x.Text.Contains("sem efeito"));
+            x => x.Text.Contains("no effect"));
         Assert.Contains(PolicyAdvisor.Warnings(Policy(supported: "At least Windows Server 2012"), null, Env(), PolicyTargetState.Enabled, PolicyScope.Machine),
             x => x.Text.Contains("Windows Server"));
         Assert.DoesNotContain(PolicyAdvisor.Warnings(Policy(supported: "At least Windows Server 2012, Windows 8 or Windows RT"), null, Env(), PolicyTargetState.Enabled, PolicyScope.Machine),
             x => x.Level == PolicyWarningLevel.Warning);
         Assert.Contains(PolicyAdvisor.Warnings(Policy(supported: "At least Windows 10 Enterprise"), null, Env(), PolicyTargetState.Enabled, PolicyScope.Machine),
-            x => x.Text.Contains("pode ignorar"));
-        Assert.Contains(PolicyAdvisor.Warnings(Policy(), null, Env(domain: true), PolicyTargetState.Enabled, PolicyScope.Machine), x => x.Text.Contains("domínio"));
+            x => x.Text.Contains("may ignore"));
+        Assert.Contains(PolicyAdvisor.Warnings(Policy(), null, Env(domain: true), PolicyTargetState.Enabled, PolicyScope.Machine), x => x.Text.Contains("domain"));
 
         var gpo = new[] { new RegistryPolEntry(@"Software\Policies\X", "**del.V", 1, []) };
-        Assert.Contains(PolicyAdvisor.Warnings(Policy(), null, Env(gpo: gpo), PolicyTargetState.Disabled, PolicyScope.Machine), x => x.Text.Contains("GPO local"));
-        Assert.DoesNotContain(PolicyAdvisor.Warnings(Policy(), null, Env(gpo: gpo), PolicyTargetState.Disabled, PolicyScope.User), x => x.Text.Contains("GPO local"));
+        Assert.Contains(PolicyAdvisor.Warnings(Policy(), null, Env(gpo: gpo), PolicyTargetState.Disabled, PolicyScope.Machine), x => x.Text.Contains("local GPO"));
+        Assert.DoesNotContain(PolicyAdvisor.Warnings(Policy(), null, Env(gpo: gpo), PolicyTargetState.Disabled, PolicyScope.User), x => x.Text.Contains("local GPO"));
     }
 
     [Fact]
@@ -296,7 +298,7 @@ public class PolicyAdvisorTests
         {
             new RegistryPolEntry(@"Software\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 4, BitConverter.GetBytes(0)),
             new RegistryPolEntry(@"Software\Policies\X\List", "**delvals.", 1, [0x20, 0]),
-            new RegistryPolEntry(@"Software\Policies\X", "Name", 1, System.Text.Encoding.Unicode.GetBytes("valor;[]\0")),
+            new RegistryPolEntry(@"Software\Policies\X", "Name", 1, System.Text.Encoding.Unicode.GetBytes("value;[]\0")),
         };
         var bytes = RegistryPolFile.Build(entries);
         var parsed = RegistryPolFile.Parse(bytes);
@@ -306,7 +308,7 @@ public class PolicyAdvisorTests
             Assert.Equal((entries[i].Key, entries[i].ValueName, entries[i].Type), (parsed[i].Key, parsed[i].ValueName, parsed[i].Type));
             Assert.Equal(entries[i].Data, parsed[i].Data);
         }
-        Assert.True(RegistryPolFile.Touches(parsed[1], @"Software\Policies\X\List", "qualquer"));
+        Assert.True(RegistryPolFile.Touches(parsed[1], @"Software\Policies\X\List", "anything"));
         Assert.True(RegistryPolFile.Touches(parsed[0], @"SOFTWARE\Policies\Microsoft\Windows\DataCollection", "allowtelemetry"));
         Assert.False(RegistryPolFile.Touches(parsed[0], @"Software\Policies\Microsoft\Windows\DataCollection", "Other"));
 
@@ -320,7 +322,7 @@ public class PolicyAdvisorTests
 public class ProfilePolicyTests
 {
     private const string Yaml = """
-        name: Políticas
+        name: Policies
         policies:
           - { policy: "Writer.admx:Implicit", state: enabled }
           - policy: writer.admx:allelements
@@ -352,16 +354,16 @@ public class ProfilePolicyTests
         var (requests, unknown) = ProfileStore.ResolvePolicies(p, PolicyWriterTests.Catalog.Policies);
         Assert.Equal(["Nope.admx:Missing"], unknown);
         Assert.Equal(3, requests.Count);
-        Assert.Equal("Writer.admx:AllElements", requests[1].Setting!.Policy);   // nome normalizado pela definição
+        Assert.Equal("Writer.admx:AllElements", requests[1].Setting!.Policy);   // name normalized by the definition
         Assert.True(PolicyWriter.Plan(requests[1].Policy, requests[1].Setting!, new MemoryPolicyRegistry()).IsValid);
 
         Assert.Equal(4, ProfileStore.Resolve(p, []).Policies.Count);
     }
 
     [Theory]
-    [InlineData("name: X\npolicies:\n  - { policy: SemDoisPontos, state: enabled }", "'policy' inválido")]
-    [InlineData("name: X\npolicies:\n  - { policy: \"A.admx:B\" }\n  - { policy: \"a.admx:b\" }", "repetida")]
-    [InlineData("name: X\npolicies:\n  - { policy: \"A.admx:B\", state: talvez }", "Perfil inválido")]
+    [InlineData("name: X\npolicies:\n  - { policy: NoColon, state: enabled }", "invalid 'policy'")]
+    [InlineData("name: X\npolicies:\n  - { policy: \"A.admx:B\" }\n  - { policy: \"a.admx:b\" }", "duplicate policy")]
+    [InlineData("name: X\npolicies:\n  - { policy: \"A.admx:B\", state: maybe }", "Invalid profile")]
     [InlineData("name: X\npolicies: []", "'policies'")]
     public void Parse_InvalidPolicies(string yaml, string fragment)
     {
@@ -378,7 +380,7 @@ public class ProfilePolicyTests
                 .Set("Count", "7").Set("Lines", "a", "b").Set("Path", "%SystemRoot%").Set("Pairs", "x=1"),
             new PolicySetting { Policy = "Writer.admx:Implicit", State = PolicyTargetState.Disabled },
         };
-        var profile = ProfileStore.FromSelection("Com políticas", null, [new("a.one", DesiredState.Applied)], settings);
+        var profile = ProfileStore.FromSelection("With policies", null, [new("a.one", DesiredState.Applied)], settings);
         var text = ProfileStore.Serialize(profile);
         Assert.Contains("policies:", text);
         Assert.Contains("state: disabled", text);
@@ -391,7 +393,7 @@ public class ProfilePolicyTests
         Assert.True(back[1].SameAs(settings[1], AdmxClass.Machine));
         Assert.Equal(["x=1"], back[0].Values["Pairs"]);
 
-        // Sem políticas, o YAML não ganha a seção.
-        Assert.DoesNotContain("policies", ProfileStore.Serialize(ProfileStore.FromSelection("Só tweaks", null, [new("a", DesiredState.Applied)])));
+        // Without policies, the YAML does not get the section.
+        Assert.DoesNotContain("policies", ProfileStore.Serialize(ProfileStore.FromSelection("Tweaks only", null, [new("a", DesiredState.Applied)])));
     }
 }

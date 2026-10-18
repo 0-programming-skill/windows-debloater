@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Debloater.Core.Admx;
 
-/// <summary>Classe da política: onde ela é gravada (HKLM, HKCU ou ambos).</summary>
+/// <summary>Policy class: where it is written (HKLM, HKCU or both).</summary>
 public enum AdmxClass
 {
     Machine,
@@ -18,25 +18,25 @@ public enum AdmxValueKind
     LongDecimal,
     /// <summary>REG_SZ.</summary>
     String,
-    /// <summary>Apaga o valor.</summary>
+    /// <summary>Deletes the value.</summary>
     Delete,
 }
 
-/// <summary>Um valor de registro definido no ADMX (&lt;decimal value="1"/&gt;, &lt;string&gt;x&lt;/string&gt;, &lt;delete/&gt;).</summary>
+/// <summary>A registry value defined in the ADMX (&lt;decimal value="1"/&gt;, &lt;string&gt;x&lt;/string&gt;, &lt;delete/&gt;).</summary>
 public sealed record AdmxValue(AdmxValueKind Kind, string? Data)
 {
     public override string ToString() => Kind switch
     {
-        AdmxValueKind.Delete => "(apagar)",
+        AdmxValueKind.Delete => "(delete)",
         AdmxValueKind.String => $"\"{Data}\"",
         _ => Data ?? "",
     };
 }
 
-/// <summary>Item de &lt;enabledList&gt;/&lt;disabledList&gt;/valueList: grava um valor numa chave (que pode ser outra).</summary>
+/// <summary>Item of &lt;enabledList&gt;/&lt;disabledList&gt;/valueList: writes a value to a key (which may be a different one).</summary>
 public sealed record AdmxListItem(string Key, string ValueName, AdmxValue Value);
 
-/// <summary>Opção de um elemento &lt;enum&gt;.</summary>
+/// <summary>Option of an &lt;enum&gt; element.</summary>
 public sealed class AdmxEnumItem
 {
     public string DisplayName { get; set; } = "";
@@ -46,19 +46,19 @@ public sealed class AdmxEnumItem
     public List<AdmxListItem>? ValueList { get; set; }
 }
 
-/// <summary>Elemento de uma política (decimal, longDecimal, boolean, enum, text, multiText, list).</summary>
+/// <summary>Element of a policy (decimal, longDecimal, boolean, enum, text, multiText, list).</summary>
 public sealed class AdmxElement
 {
     public string Type { get; set; } = "";
     public string Id { get; set; } = "";
 
-    /// <summary>Chave do elemento (a da política, se o elemento não definir outra).</summary>
+    /// <summary>Key of the element (the policy's, if the element does not define another).</summary>
     public string Key { get; set; } = "";
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ValueName { get; set; }
 
-    /// <summary>Rótulo da apresentação (ADML), quando houver.</summary>
+    /// <summary>Presentation (ADML) label, if any.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Label { get; set; }
 
@@ -70,11 +70,11 @@ public sealed class AdmxElement
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ulong? MaxValue { get; set; }
 
-    /// <summary>decimal/longDecimal: grava como REG_SZ.</summary>
+    /// <summary>decimal/longDecimal: written as REG_SZ.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool StoreAsText { get; set; }
 
-    /// <summary>text/list: grava como REG_EXPAND_SZ.</summary>
+    /// <summary>text/list: written as REG_EXPAND_SZ.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Expandable { get; set; }
 
@@ -84,11 +84,11 @@ public sealed class AdmxElement
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<AdmxEnumItem>? Items { get; set; }
 
-    /// <summary>boolean: valor gravado quando marcado (padrão: decimal 1).</summary>
+    /// <summary>boolean: value written when checked (default: decimal 1).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AdmxValue? TrueValue { get; set; }
 
-    /// <summary>boolean: valor gravado quando desmarcado (padrão: decimal 0).</summary>
+    /// <summary>boolean: value written when unchecked (default: decimal 0).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AdmxValue? FalseValue { get; set; }
 
@@ -98,7 +98,7 @@ public sealed class AdmxElement
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<AdmxListItem>? FalseList { get; set; }
 
-    /// <summary>list: prefixo dos nomes dos valores (ex.: "1", "2"...).</summary>
+    /// <summary>list: prefix of the value names (e.g. "1", "2"...).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ValuePrefix { get; set; }
 
@@ -109,17 +109,17 @@ public sealed class AdmxElement
     public bool ExplicitValue { get; set; }
 
     /// <summary>
-    /// list: nomes de valores da chave da lista que alguma política do catálogo grava como valor fixo
-    /// (valueName, enabledList, elementos...). Não são itens da lista: ex. DefaultConsent, de
-    /// WerDefaultConsent, mora na mesma chave que a lista explicitValue de WerConsentCustomize.
-    /// Preenchido pelo <see cref="AdmxParser"/> depois de ler todas as políticas.
+    /// list: value names in the list's key that some policy in the catalog writes as a fixed value
+    /// (valueName, enabledList, elements...). They are not list items: e.g. DefaultConsent, from
+    /// WerDefaultConsent, lives in the same key as the explicitValue list of WerConsentCustomize.
+    /// Filled in by <see cref="AdmxParser"/> after reading all policies.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? ReservedValueNames { get; set; }
 
     /// <summary>
-    /// list: o valor pertence à lista? Com explicitValue ou sem valuePrefix, todo valor nomeado da chave
-    /// pertence; com valuePrefix "P", só "P1", "P2"... (prefixo vazio: "1", "2"...). Nunca os nomes de
+    /// list: does the value belong to the list? With explicitValue or without valuePrefix, every named value
+    /// in the key belongs; with valuePrefix "P", only "P1", "P2"... (empty prefix: "1", "2"...). Never the names in
     /// <see cref="ReservedValueNames"/>.
     /// </summary>
     public bool OwnsListValue(string valueName)
@@ -130,7 +130,7 @@ public sealed class AdmxElement
         return ListIndex(ValuePrefix, valueName) is not null;
     }
 
-    /// <summary>Índice do item numa lista com prefixo ("P12" → 12), ou null.</summary>
+    /// <summary>Index of the item in a prefixed list ("P12" → 12), or null.</summary>
     public static int? ListIndex(string prefix, string valueName)
     {
         if (!valueName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
@@ -139,42 +139,42 @@ public sealed class AdmxElement
             && int.TryParse(rest, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n) && n > 0 ? n : null;
     }
 
-    /// <summary>multiText: número máximo de linhas (0 ou null = sem limite).</summary>
+    /// <summary>multiText: maximum number of lines (0 or null = no limit).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? MaxStrings { get; set; }
 
     /// <summary>
-    /// Controle da apresentação (ADML) que edita o elemento: decimalTextBox, longDecimalTextBox, textBox,
-    /// comboBox, checkBox, dropdownList, listBox, multiTextBox. Null quando a política não tem apresentação.
+    /// Presentation (ADML) control that edits the element: decimalTextBox, longDecimalTextBox, textBox,
+    /// comboBox, checkBox, dropdownList, listBox, multiTextBox. Null when the policy has no presentation.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PresentationType { get; set; }
 
     /// <summary>
-    /// Valor padrão da apresentação, em texto: número (decimalTextBox), texto (textBox/comboBox),
-    /// "true"/"false" (checkBox) ou "#índice" (dropdownList defaultItem).
+    /// Presentation default value, as text: number (decimalTextBox), text (textBox/comboBox),
+    /// "true"/"false" (checkBox) or "#index" (dropdownList defaultItem).
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? DefaultValue { get; set; }
 
-    /// <summary>comboBox: sugestões da apresentação.</summary>
+    /// <summary>comboBox: presentation suggestions.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? Suggestions { get; set; }
 }
 
-/// <summary>Um controle da apresentação (ADML), na ordem em que o gpedit o mostra.</summary>
-/// <param name="Type">Nome do controle (decimalTextBox, checkBox, text...).</param>
-/// <param name="RefId">Elemento editado (null para &lt;text&gt;, que é só um texto).</param>
-/// <param name="Text">Rótulo ou texto.</param>
+/// <summary>A presentation (ADML) control, in the order gpedit shows it.</summary>
+/// <param name="Type">Control name (decimalTextBox, checkBox, text...).</param>
+/// <param name="RefId">Edited element (null for &lt;text&gt;, which is just text).</param>
+/// <param name="Text">Label or text.</param>
 public sealed record AdmxPresentationControl(string Type, string? RefId, string? Text);
 
-/// <summary>Uma política de Grupo definida num arquivo ADMX, com os textos do ADML resolvidos.</summary>
+/// <summary>A Group Policy defined in an ADMX file, with the ADML texts resolved.</summary>
 public sealed class AdmxPolicy
 {
-    /// <summary>Nome do arquivo (ex.: DataCollection.admx).</summary>
+    /// <summary>File name (e.g. DataCollection.admx).</summary>
     public string File { get; set; } = "";
 
-    /// <summary>Namespace alvo do ADMX (ex.: Microsoft.Policies.DataCollection).</summary>
+    /// <summary>Target namespace of the ADMX (e.g. Microsoft.Policies.DataCollection).</summary>
     public string Namespace { get; set; } = "";
 
     public string Name { get; set; } = "";
@@ -182,7 +182,7 @@ public sealed class AdmxPolicy
     public string DisplayName { get; set; } = "";
     public string ExplainText { get; set; } = "";
 
-    /// <summary>Caminho de categorias (nomes exibidos), da raiz até a categoria da política.</summary>
+    /// <summary>Category path (display names), from the root to the policy's category.</summary>
     public List<string> CategoryPath { get; set; } = [];
 
     public string Key { get; set; } = "";
@@ -204,29 +204,29 @@ public sealed class AdmxPolicy
 
     public List<AdmxElement> Elements { get; set; } = [];
 
-    /// <summary>Controles da apresentação na ordem do ADML (inclui os &lt;text&gt; descritivos).</summary>
+    /// <summary>Presentation controls in ADML order (includes the descriptive &lt;text&gt; items).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<AdmxPresentationControl>? Presentation { get; set; }
 
-    /// <summary>Texto "Com suporte em" resolvido (ex.: "At least Windows 10").</summary>
+    /// <summary>Resolved "Supported on" text (e.g. "At least Windows 10").</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SupportedOn { get; set; }
 
-    /// <summary>Referência crua do supportedOn (ex.: windows:SUPPORTED_Windows_10_0).</summary>
+    /// <summary>Raw supportedOn reference (e.g. windows:SUPPORTED_Windows_10_0).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SupportedOnRef { get; set; }
 
-    /// <summary>Estado atual no PC (preenchido só quando pedido, ex.: 'admx export --with-state').</summary>
+    /// <summary>Current state on the PC (filled in only on request, e.g. 'admx export --with-state').</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<AdmxScopeState>? LiveState { get; set; }
 
-    /// <summary>Identificador único "Arquivo.admx:Nome".</summary>
+    /// <summary>Unique identifier "File.admx:Name".</summary>
     [JsonIgnore]
     public string QualifiedName => $"{File}:{Name}";
 
     /// <summary>
-    /// Valores fixos (chave, nome) que a política grava, sem os itens das listas: valueName, enabledList,
-    /// disabledList e, de cada elemento, valueName, trueList/falseList e valueList dos itens de enum.
+    /// Fixed values (key, name) the policy writes, excluding list items: valueName, enabledList,
+    /// disabledList and, for each element, valueName, trueList/falseList and the valueList of enum items.
     /// </summary>
     public IEnumerable<(string Key, string Name, AdmxElement? Element)> StaticValues()
     {
@@ -246,12 +246,12 @@ public sealed class AdmxPolicy
     public override string ToString() => QualifiedName;
 }
 
-/// <summary>Resultado da leitura de uma pasta PolicyDefinitions.</summary>
+/// <summary>Result of reading a PolicyDefinitions folder.</summary>
 public sealed class AdmxCatalog
 {
     public string Directory { get; set; } = "";
 
-    /// <summary>Idioma do ADML efetivamente usado em cada arquivo é registrado em <see cref="Languages"/>.</summary>
+    /// <summary>The ADML languages actually used across the files.</summary>
     public List<string> Languages { get; set; } = [];
 
     public int FileCount { get; set; }

@@ -3,46 +3,46 @@ using System.Text.RegularExpressions;
 
 namespace Debloater.Core.Fingerprint;
 
-/// <summary>Tipo de uma cadeia "interessante" encontrada num binário.</summary>
+/// <summary>Kind of an "interesting" string found in a binary.</summary>
 public enum StringKind
 {
     None,
 
-    /// <summary>Caminho de registro sob ...\Policies\... (política de Grupo/MDM).</summary>
+    /// <summary>Registry path under ...\Policies\... (Group Policy/MDM).</summary>
     PolicyPath,
 
-    /// <summary>Outro caminho de registro (Software\..., SYSTEM\...).</summary>
+    /// <summary>Other registry path (Software\..., SYSTEM\...).</summary>
     RegistryPath,
 
-    /// <summary>Caminho de CSP (./Device/Vendor/MSFT/Policy/Config/...).</summary>
+    /// <summary>CSP path (./Device/Vendor/MSFT/Policy/Config/...).</summary>
     CspPath,
 
-    /// <summary>SubscribedContent-NNNNNEnabled (ContentDeliveryManager: sugestões e anúncios).</summary>
+    /// <summary>SubscribedContent-NNNNNEnabled (ContentDeliveryManager: suggestions and ads).</summary>
     SubscribedContent,
 
-    /// <summary>Nome de valor de registro que casa com um padrão (Disable*, Allow*, *Enabled, Taskbar*...).</summary>
+    /// <summary>Registry value name that matches a pattern (Disable*, Allow*, *Enabled, Taskbar*...).</summary>
     ValueName,
 
-    /// <summary>Nome de estado WNF (WNF_XXX_...).</summary>
+    /// <summary>WNF state name (WNF_XXX_...).</summary>
     Wnf,
 
-    /// <summary>Nome de feature (Feature_...).</summary>
+    /// <summary>Feature name (Feature_...).</summary>
     Feature,
 
-    /// <summary>Identificador perto de um caminho de registro, sem casar com os padrões (NearNames).</summary>
+    /// <summary>Identifier near a registry path that does not match the patterns (NearNames).</summary>
     NearName,
 }
 
 /// <summary>
-/// Decide se uma cadeia extraída de um binário interessa para debloat e de que tipo ela é.
-/// Usado na varredura (o que guardar) e no diff (pontuação).
+/// Decides whether a string extracted from a binary matters for debloating and what kind it is.
+/// Used by the scan (what to keep) and by the diff (scoring).
 /// </summary>
 public static partial class StringClassifier
 {
     public const int MinRegistryPathLength = 10;
     public const int MaxStringLength = 400;
 
-    // Início de um caminho de registro (sem diferenciar maiúsculas).
+    // Start of a registry path (case-insensitive).
     private static readonly string[] RegistryRootTokens =
         ["software\\", "system\\", "policies\\", "currentversion\\", "currentcontrolset\\"];
 
@@ -55,11 +55,11 @@ public static partial class StringClassifier
     private static readonly SearchValues<string> RegistryRootSearch =
         SearchValues.Create(RegistryRootTokens, StringComparison.OrdinalIgnoreCase);
 
-    // Prefixos de nomes de valor (o caractere seguinte precisa ser maiúscula, dígito ou '_').
+    // Value name prefixes (the next character must be uppercase, a digit or '_').
     private static readonly string[] ValuePrefixes =
         ["Disable", "Allow", "Enable", "Show", "Hide", "Taskbar", "TurnOff", "TurnOn", "Prevent", "DoNot", "Block", "Start_"];
 
-    // Palavras que tornam qualquer identificador relevante, onde quer que apareçam.
+    // Words that make any identifier relevant, wherever they appear.
     internal static readonly string[] HotWords =
         ["Copilot", "Recall", "Widget", "Advertis", "Suggest", "Recommend", "Spotlight", "Telemetry", "Bing", "AIData", "WindowsAI"];
 
@@ -72,7 +72,7 @@ public static partial class StringClassifier
     [GeneratedRegex(@"^Feature_[A-Za-z0-9_]{4,}$")]
     private static partial Regex FeatureRegex();
 
-    /// <summary>Classifica uma cadeia já recortada (veja <see cref="ExtractRegistryPath"/>).</summary>
+    /// <summary>Classifies an already trimmed string (see <see cref="ExtractRegistryPath"/>).</summary>
     public static StringKind Classify(string s)
     {
         if (s.Length < 5 || s.Length > MaxStringLength) return StringKind.None;
@@ -97,22 +97,22 @@ public static partial class StringClassifier
     public static bool IsCspPath(ReadOnlySpan<char> s) =>
         s.Contains("/Vendor/MSFT/", StringComparison.OrdinalIgnoreCase) && s.IndexOfAny(" \t\"<>|\\") < 0;
 
-    /// <summary>Caminho de registro plausível: tem uma raiz conhecida, não é caminho de arquivo nem texto.</summary>
+    /// <summary>Plausible registry path: has a known root and is neither a file path nor prose.</summary>
     public static bool IsRegistryPath(ReadOnlySpan<char> s)
     {
         if (s.Length < MinRegistryPathLength || s.Length > MaxStringLength) return false;
         if (s.IndexOfAny(RegistryRootSearch) < 0) return false;
-        if (s.Contains(":\\", StringComparison.Ordinal)) return false;          // C:\..., caminho de arquivo
+        if (s.Contains(":\\", StringComparison.Ordinal)) return false;          // C:\..., file path
         if (s.IndexOfAny("<>\"|\t\r\n") >= 0) return false;
-        if (s.Contains("\\\\", StringComparison.Ordinal)) return false;          // \\servidor ou escape duplo
-        // Texto corrido ("Software\Microsoft é ..."): no máximo alguns espaços.
+        if (s.Contains("\\\\", StringComparison.Ordinal)) return false;          // \\server or double escape
+        // Prose ("Software\Microsoft is ..."): at most a few spaces.
         int spaces = s.Count(' ');
         if (spaces > 6) return false;
-        // Caminho de código-fonte ou de arquivo (chrome\browser\...\policies\x.cc, ...\x.dll).
+        // Source-code or file path (chrome\browser\...\policies\x.cc, ...\x.dll).
         int lastSep = s.LastIndexOf('\\');
         int dot = s.LastIndexOf('.');
         if (dot > lastSep && SourceOrFileExtensions.Contains(s[(dot + 1)..].ToString())) return false;
-        // Precisa ter ao menos dois segmentos não vazios.
+        // Must have at least two non-empty segments.
         int segments = 0;
         foreach (var range in s.Split('\\'))
             if (range.End.Value > range.Start.Value) segments++;
@@ -120,15 +120,15 @@ public static partial class StringClassifier
     }
 
     /// <summary>
-    /// Recorta o caminho de registro dentro de uma sequência de caracteres (bytes soltos antes do
-    /// caminho são comuns em ASCII): começa na raiz conhecida mais à esquerda, incluindo os segmentos
-    /// imediatamente anteriores (HKEY_LOCAL_MACHINE\, \Registry\Machine\). null se não houver caminho.
+    /// Cuts the registry path out of a character run (stray bytes before the path are common in
+    /// ASCII): starts at the leftmost known root, including the segments immediately before it
+    /// (HKEY_LOCAL_MACHINE\, \Registry\Machine\). null if there is no path.
     /// </summary>
     public static string? ExtractRegistryPath(ReadOnlySpan<char> run)
     {
         int t = run.IndexOfAny(RegistryRootSearch);
         if (t < 0) return null;
-        if (run[..t].Contains(":\\", StringComparison.Ordinal)) return null;   // C:\...\Software\x.dll: caminho de arquivo
+        if (run[..t].Contains(":\\", StringComparison.Ordinal)) return null;   // C:\...\Software\x.dll: file path
         int start = t;
         while (start > 0 && run[start - 1] == '\\')
         {
@@ -141,7 +141,7 @@ public static partial class StringClassifier
         return IsRegistryPath(candidate) ? candidate.ToString() : null;
     }
 
-    /// <summary>Identificador (letra, depois letras/dígitos/_), 5 a 80 caracteres.</summary>
+    /// <summary>Identifier (a letter, then letters/digits/_), 5 to 80 characters.</summary>
     public static bool IsIdentifier(ReadOnlySpan<char> s)
     {
         if (s.Length < 5 || s.Length > 80 || !char.IsAsciiLetter(s[0])) return false;
@@ -150,7 +150,7 @@ public static partial class StringClassifier
         return true;
     }
 
-    /// <summary>Nome de valor que casa com os padrões de debloat.</summary>
+    /// <summary>Value name that matches the debloat patterns.</summary>
     public static bool IsValueNameLike(ReadOnlySpan<char> s)
     {
         if (!IsIdentifier(s)) return false;
@@ -163,8 +163,8 @@ public static partial class StringClassifier
             }
         }
         if (s.Length > 9 && char.IsAsciiLetterUpper(s[0]) && s.EndsWith("Enabled", StringComparison.Ordinal)) return true;
-        // Palavra quente em qualquer lugar: só sem "_" (Account_Copilot_Title, CopilotCard_Footer_X... são
-        // chaves de recursos de texto, não valores de registro).
+        // Hot word anywhere: only without "_" (Account_Copilot_Title, CopilotCard_Footer_X... are
+        // string resource keys, not registry values).
         if (char.IsAsciiLetterUpper(s[0]) && HasLower(s) && !s.Contains('_'))
             foreach (var w in HotWords)
                 if (s.Contains(w, StringComparison.Ordinal)) return true;
@@ -172,14 +172,14 @@ public static partial class StringClassifier
     }
 
     /// <summary>
-    /// Identificador com cara de nome de valor (PascalCase, 6 a 64 caracteres), usado para os
-    /// nomes perto de um caminho de registro.
+    /// Identifier that looks like a value name (PascalCase, 6 to 64 characters), used for the
+    /// names near a registry path.
     /// </summary>
     public static bool IsNearNameCandidate(ReadOnlySpan<char> s)
     {
         if (s.Length < 6 || s.Length > 64 || !IsIdentifier(s) || !char.IsAsciiLetterUpper(s[0])) return false;
         if (!HasLower(s)) return false;
-        // Sequências longas de consoantes/hex costumam ser lixo binário.
+        // Long runs of consonants/hex are usually binary garbage.
         int upper = 0;
         foreach (var c in s) if (char.IsAsciiLetterUpper(c)) upper++;
         return upper * 2 <= s.Length + 2;
@@ -191,7 +191,7 @@ public static partial class StringClassifier
         return false;
     }
 
-    /// <summary>Ordem de prioridade quando o limite por arquivo corta o resultado (menor = mais importante).</summary>
+    /// <summary>Priority order when the per-file limit cuts the result (lower = more important).</summary>
     public static int Priority(StringKind kind) => kind switch
     {
         StringKind.PolicyPath => 0,

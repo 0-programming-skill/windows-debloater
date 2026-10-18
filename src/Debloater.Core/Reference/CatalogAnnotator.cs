@@ -5,9 +5,9 @@ using Debloater.Core.Model;
 namespace Debloater.Core.Reference;
 
 /// <summary>
-/// Escreve 'confidence' e 'sources' nos arquivos YAML do catálogo por inserção de texto (sem
-/// reserializar), preservando comentários, ordem e formatação. As linhas entram logo após 'risk:'.
-/// Tweaks que já têm 'confidence' são mantidos, a menos que <c>force</c> seja true.
+/// Writes 'confidence' and 'sources' into the catalog YAML files by text insertion (without
+/// reserializing), preserving comments, order and formatting. The lines go right after 'risk:'.
+/// Tweaks that already have 'confidence' are left alone unless <c>force</c> is true.
 /// </summary>
 public static partial class CatalogAnnotator
 {
@@ -16,7 +16,7 @@ public static partial class CatalogAnnotator
     [GeneratedRegex(@"^(?<indent>\s*)-\s+id:\s*(?<id>\S+)\s*$")]
     private static partial Regex TweakStart();
 
-    /// <summary>Aplica as anotações a um arquivo. Devolve o texto novo e quantos tweaks mudaram.</summary>
+    /// <summary>Applies the annotations to a file. Returns the new text and how many tweaks changed.</summary>
     public static (string Text, int Changed) Annotate(string text, IReadOnlyDictionary<string, Annotation> annotations, bool force)
     {
         var newline = text.Contains("\r\n") ? "\r\n" : "\n";
@@ -36,7 +36,7 @@ public static partial class CatalogAnnotator
 
             var newLines = Render(prop, ann);
 
-            // Remove confidence/sources existentes (force).
+            // Remove existing confidence/sources (force).
             int insertAt = -1;
             var removed = new List<string>();
             foreach (var name in new[] { "confidence", "sources" })
@@ -99,7 +99,7 @@ public static partial class CatalogAnnotator
         return TrimTrailingBlank(lines, start, lines.Count);
     }
 
-    /// <summary>Fim do bloco sem as linhas em branco/comentários finais (que pertencem ao próximo item).</summary>
+    /// <summary>End of the block without the trailing blank/comment lines (they belong to the next item).</summary>
     private static int TrimTrailingBlank(List<string> lines, int start, int end)
     {
         while (end - 1 > start && (lines[end - 1].Trim().Length == 0 || lines[end - 1].TrimStart().StartsWith('#'))) end--;

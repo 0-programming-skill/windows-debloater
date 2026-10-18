@@ -5,21 +5,21 @@ using System.Text.RegularExpressions;
 
 namespace Debloater.Coverage;
 
-/// <summary>Uma ferramenta comparada (entrada de sources.json).</summary>
+/// <summary>A compared tool (an entry of sources.json).</summary>
 public sealed class SourceSpec
 {
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string Repo { get; set; } = "";
-    /// <summary>Tag da versão (informativo); o que vale para baixar é <see cref="Sha"/>.</summary>
+    /// <summary>Version tag (informational); what counts for downloading is <see cref="Sha"/>.</summary>
     public string? Tag { get; set; }
     public string Sha { get; set; } = "";
     public string License { get; set; } = "";
-    /// <summary>"reference": licença que não permite copiar (AGPL, GPL, CC-BY-SA, própria). Só nomes e caminhos entram no relatório.</summary>
+    /// <summary>"reference": license that does not allow copying (AGPL, GPL, CC-BY-SA, proprietary). Only names and paths go into the report.</summary>
     public string Usage { get; set; } = "reference";
     /// <summary>Parser: winutil | privacysexy | win11debloat | sophia | csharp | playbook.</summary>
     public string Parser { get; set; } = "";
-    /// <summary>Padrões (glob com ** e *) dos arquivos a baixar e ler.</summary>
+    /// <summary>Patterns (glob with ** and *) of the files to download and read.</summary>
     public List<string> Include { get; set; } = [];
     public List<string> Exclude { get; set; } = [];
     public string? Note { get; set; }
@@ -30,7 +30,7 @@ public sealed class SourcesFile
     public List<SourceSpec> Sources { get; set; } = [];
 }
 
-/// <summary>Baixa os arquivos de cada fonte do GitHub, fixados no commit (sha), com cache local.</summary>
+/// <summary>Downloads the files of each source from GitHub, pinned to the commit (sha), with a local cache.</summary>
 public sealed class SourceFetcher(string cacheDir) : IDisposable
 {
     public static readonly JsonSerializerOptions Json = new()
@@ -55,12 +55,12 @@ public sealed class SourceFetcher(string cacheDir) : IDisposable
 
     public string SourceDir(SourceSpec s) => Path.Combine(cacheDir, s.Id, s.Sha);
 
-    /// <summary>Glob simples: ** = qualquer coisa (inclusive /), * = qualquer coisa sem /.</summary>
+    /// <summary>Simple glob: ** = anything (including /), * = anything without /.</summary>
     public static Regex Glob(string pattern) =>
         new("^" + Regex.Escape(pattern).Replace(@"\*\*/", "(?:.*/)?").Replace(@"\*\*", ".*").Replace(@"\*", "[^/]*") + "$",
             RegexOptions.IgnoreCase);
 
-    /// <summary>Lista os arquivos (pela árvore do commit) que casam com Include e não com Exclude.</summary>
+    /// <summary>Lists the files (from the commit tree) that match Include and not Exclude.</summary>
     public async Task<List<string>> ListAsync(SourceSpec s, CancellationToken ct)
     {
         var listFile = Path.Combine(SourceDir(s), ".files.json");
@@ -81,7 +81,7 @@ public sealed class SourceFetcher(string cacheDir) : IDisposable
         return files;
     }
 
-    /// <summary>Baixa (se ainda não estão no cache) e devolve (caminho no repositório, bytes).</summary>
+    /// <summary>Downloads (if not cached yet) and returns (path in the repository, bytes).</summary>
     public async Task<List<(string Path, byte[] Bytes)>> FetchAsync(SourceSpec s, CancellationToken ct)
     {
         var files = await ListAsync(s, ct);
@@ -102,7 +102,7 @@ public sealed class SourceFetcher(string cacheDir) : IDisposable
         return [.. result];
     }
 
-    /// <summary>Última versão publicada (release) e o commit dela; sem release, o HEAD do ramo padrão.</summary>
+    /// <summary>Latest published version (release) and its commit; without a release, the HEAD of the default branch.</summary>
     public async Task<(string? Tag, string Sha)> LatestAsync(SourceSpec s, CancellationToken ct)
     {
         string? tag = null;

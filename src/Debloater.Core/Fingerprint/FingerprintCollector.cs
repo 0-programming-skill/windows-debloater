@@ -11,12 +11,12 @@ namespace Debloater.Core.Fingerprint;
 
 public sealed class FingerprintOptions
 {
-    /// <summary>Raiz da instalação (C:\ ou a pasta onde uma imagem foi montada).</summary>
+    /// <summary>Installation root (C:\ or the folder where an image was mounted).</summary>
     public string Root { get; init; } = Path.GetPathRoot(Environment.SystemDirectory) ?? @"C:\";
 
     public string BinaryMode { get; init; } = BinaryScanModes.Default;
 
-    /// <summary>Catálogo para anotar o inventário (opcional).</summary>
+    /// <summary>Catalog used to annotate the inventory (optional).</summary>
     public IReadOnlyList<Tweak>? Catalog { get; init; }
 
     public bool CollectInventory { get; init; } = true;
@@ -27,23 +27,23 @@ public sealed class FingerprintOptions
 }
 
 /// <summary>
-/// Cria a impressão digital de uma instalação. Somente leitura: lê arquivos, registro (Windows em
-/// execução) e as APIs de inventário; não altera nada.
+/// Creates the fingerprint of an installation. Read-only: reads files, the registry (running
+/// Windows) and the inventory APIs; changes nothing.
 ///
-/// Com uma raiz que não é o Windows em execução (imagem montada), só as partes baseadas em
-/// arquivos são coletadas: versão do ntoskrnl.exe (build/UBR), ADMX, binários e tarefas
-/// agendadas (XML em System32\Tasks). Serviços, drivers, appx, recursos e capacidades exigiriam
-/// carregar as colmeias offline (SYSTEM/SOFTWARE) e ficam de fora.
+/// With a root that is not the running Windows (mounted image), only the file-based parts are
+/// collected: ntoskrnl.exe version (build/UBR), ADMX, binaries and scheduled tasks (XML in
+/// System32\Tasks). Services, drivers, appx, features and capabilities would require loading the
+/// offline hives (SYSTEM/SOFTWARE) and are left out.
 /// </summary>
 public static class FingerprintCollector
 {
     public static async Task<WindowsFingerprint> CreateAsync(FingerprintOptions o, CancellationToken ct = default)
     {
         if (!BinaryScanModes.IsKnown(o.BinaryMode))
-            throw new ArgumentException($"--binaries inválido '{o.BinaryMode}' (default|all|none).");
+            throw new ArgumentException($"invalid --binaries '{o.BinaryMode}' (default|all|none).");
         var root = Path.GetFullPath(o.Root);
         if (!Directory.Exists(Path.Combine(root, "Windows")))
-            throw new ArgumentException($"'{root}' não parece a raiz de uma instalação do Windows (falta a pasta Windows).");
+            throw new ArgumentException($"'{root}' does not look like the root of a Windows installation (no Windows folder).");
 
         var fp = new WindowsFingerprint
         {
@@ -55,17 +55,17 @@ public static class FingerprintCollector
         if (fp.Live) fp.MachineName = Environment.MachineName;
         var total = Stopwatch.StartNew();
 
-        // ---- SO ----
+        // ---- OS ----
         var sw = Stopwatch.StartNew();
         fp.Os = ReadOs(root, fp.Live, fp.Notes);
         fp.TimingsMs["os"] = sw.ElapsedMilliseconds;
-        o.Log?.Invoke($"Windows {fp.Os.FullBuild} {fp.Os.Edition} ({(fp.Live ? "em execução" : "offline")}, {(fp.Elevated ? "elevado" : "sem elevação")})");
+        o.Log?.Invoke($"Windows {fp.Os.FullBuild} {fp.Os.Edition} ({(fp.Live ? "running" : "offline")}, {(fp.Elevated ? "elevated" : "not elevated")})");
 
-        // ---- binários (em paralelo com o resto) ----
+        // ---- binaries (in parallel with the rest) ----
         var binaryTimings = new Dictionary<string, long>();
         var binariesTask = Task.Run(() => ScanBinaries(root, o, fp, binaryTimings), ct);
 
-        // ---- inventário ----
+        // ---- inventory ----
         if (o.CollectInventory)
         {
             sw.Restart();
@@ -76,24 +76,24 @@ public static class FingerprintCollector
             else
             {
                 fp.Inventory = CollectOfflineInventory(root);
-                fp.Notes.Add("raiz offline: inventário só de tarefas agendadas (XML); serviços, drivers, appx, recursos e capacidades exigem carregar as colmeias offline (não implementado).");
+                fp.Notes.Add("offline root: inventory of scheduled tasks only (XML); services, drivers, appx, features and capabilities require loading the offline hives (not implemented).");
             }
             if (o.Catalog is not null) CatalogCrossReference.Annotate(fp.Inventory, o.Catalog);
             foreach (var s in fp.Inventory.Sections.Where(s => !s.Available || s.Note is not null))
-                fp.Notes.Add($"inventário {s.Kind}: {(s.Available ? "" : "INDISPONÍVEL ")}{s.Note}");
+                fp.Notes.Add($"inventory {s.Kind}: {(s.Available ? "" : "UNAVAILABLE ")}{s.Note}");
             fp.TimingsMs["inventory"] = sw.ElapsedMilliseconds;
-            o.Log?.Invoke($"Inventário: {fp.Inventory.Sections.Sum(s => s.Items.Count)} itens em {sw.ElapsedMilliseconds} ms");
+            o.Log?.Invoke($"Inventory: {fp.Inventory.Sections.Sum(s => s.Items.Count)} items in {sw.ElapsedMilliseconds} ms");
         }
 
         // ---- ADMX ----
         sw.Restart();
         var admxDir = Path.Combine(root, "Windows", "PolicyDefinitions");
-        // en-US primeiro: textos iguais em instalações de idiomas diferentes (o diff compara as referências cruas).
+        // en-US first: same texts across installations in different languages (the diff compares the raw references).
         var admx = AdmxParser.ParseDirectory(admxDir, ["en-US", .. AdmxParser.DefaultLanguages]);
         fp.Policies = [.. admx.Policies.Select(ToFingerprintPolicy).OrderBy(p => p.QualifiedName, StringComparer.OrdinalIgnoreCase)];
-        if (admx.FileCount == 0) fp.Notes.Add($"nenhum ADMX em {admxDir}");
+        if (admx.FileCount == 0) fp.Notes.Add($"no ADMX in {admxDir}");
         fp.TimingsMs["admx"] = sw.ElapsedMilliseconds;
-        o.Log?.Invoke($"ADMX: {fp.Policies.Count} políticas de {admx.FileCount} arquivos em {sw.ElapsedMilliseconds} ms");
+        o.Log?.Invoke($"ADMX: {fp.Policies.Count} policies from {admx.FileCount} files in {sw.ElapsedMilliseconds} ms");
 
         await binariesTask.ConfigureAwait(false);
         foreach (var (k, v) in binaryTimings) fp.TimingsMs[k] = v;
@@ -113,7 +113,7 @@ public static class FingerprintCollector
         var candidates = BinaryScanner.Enumerate(root, o.BinaryMode, roots);
         info.FilesConsidered = candidates.Count;
         timings["binaries.enumerate"] = sw.ElapsedMilliseconds;
-        o.Log?.Invoke($"Binários ({o.BinaryMode}): {candidates.Count} arquivos para ler...");
+        o.Log?.Invoke($"Binaries ({o.BinaryMode}): {candidates.Count} files to read...");
 
         sw.Restart();
         var result = BinaryScanner.Scan(candidates, o.Extractor, progress: new Progress<int>(n => o.Log?.Invoke($"  {n}/{candidates.Count}")));
@@ -122,8 +122,8 @@ public static class FingerprintCollector
         info.Errors = result.Errors.Count;
         info.ErrorSamples = [.. result.Errors.Take(20)];
         timings["binaries.scan"] = sw.ElapsedMilliseconds;
-        o.Log?.Invoke($"Binários: {result.Files.Count} PE, {result.TotalBytes / 1048576.0:N0} MB, " +
-                      $"{result.Files.Sum(f => f.Strings.Count + (f.NearNames?.Count ?? 0)):N0} cadeias, {result.Errors.Count} erros, " +
+        o.Log?.Invoke($"Binaries: {result.Files.Count} PE, {result.TotalBytes / 1048576.0:N0} MB, " +
+                      $"{result.Files.Sum(f => f.Strings.Count + (f.NearNames?.Count ?? 0)):N0} strings, {result.Errors.Count} errors, " +
                       $"{sw.ElapsedMilliseconds} ms ({result.TotalBytes / 1048576.0 / Math.Max(0.001, sw.Elapsed.TotalSeconds):N0} MB/s)");
     }
 
@@ -142,18 +142,18 @@ public static class FingerprintCollector
             return new FingerprintOs
             {
                 Build = s.Build, Ubr = s.Ubr, Edition = s.Edition, DisplayVersion = s.DisplayVersion,
-                ProductName = s.ProductName, Source = "registro (HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion)",
+                ProductName = s.ProductName, Source = "registry (HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion)",
             };
         }
         var kernel = Path.Combine(root, "Windows", "System32", "ntoskrnl.exe");
         if (File.Exists(kernel))
         {
             var v = FileVersionInfo.GetVersionInfo(kernel);
-            notes.Add("raiz offline: build/UBR lidos da versão do ntoskrnl.exe; edição e versão de exibição exigem a colmeia SOFTWARE (não lida).");
-            return new FingerprintOs { Build = v.ProductBuildPart, Ubr = v.ProductPrivatePart, Source = "versão do ntoskrnl.exe" };
+            notes.Add("offline root: build/UBR read from the ntoskrnl.exe version; edition and display version require the SOFTWARE hive (not read).");
+            return new FingerprintOs { Build = v.ProductBuildPart, Ubr = v.ProductPrivatePart, Source = "ntoskrnl.exe version" };
         }
-        notes.Add("raiz offline sem ntoskrnl.exe: build desconhecido.");
-        return new FingerprintOs { Source = "desconhecido" };
+        notes.Add("offline root without ntoskrnl.exe: unknown build.");
+        return new FingerprintOs { Source = "unknown" };
     }
 
     internal static FingerprintPolicy ToFingerprintPolicy(AdmxPolicy p)
@@ -187,7 +187,7 @@ public static class FingerprintCollector
         };
     }
 
-    // ---------------- offline: tarefas a partir dos XML ----------------
+    // ---------------- offline: tasks from the XML files ----------------
 
     internal static InventorySnapshot CollectOfflineInventory(string root)
     {
@@ -219,16 +219,16 @@ public static class FingerprintCollector
         else
         {
             section.Available = false;
-            section.Note = "pasta System32\\Tasks não encontrada";
+            section.Note = "System32\\Tasks folder not found";
         }
-        if (denied > 0) section.Note = $"{denied} arquivo(s) de tarefa ilegíveis";
+        if (denied > 0) section.Note = $"{denied} unreadable task file(s)";
         section.Items.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
         snapshot.Sections.Add(section);
         return snapshot;
     }
 }
 
-/// <summary>Grava e lê impressões digitais (JSON, compactado com gzip se o arquivo terminar em .gz).</summary>
+/// <summary>Saves and loads fingerprints (JSON, gzip-compressed if the file name ends in .gz).</summary>
 public static class FingerprintStore
 {
     public static JsonSerializerOptions JsonOptions { get; } = new(InventoryDiff.JsonOptions) { WriteIndented = false };
@@ -259,7 +259,7 @@ public static class FingerprintStore
         using (s == fs ? null : s)
         {
             return JsonSerializer.Deserialize<WindowsFingerprint>(s, JsonOptions)
-                ?? throw new InvalidDataException($"impressão digital vazia: {file}");
+                ?? throw new InvalidDataException($"empty fingerprint: {file}");
         }
     }
 }

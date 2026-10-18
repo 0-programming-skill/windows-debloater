@@ -1,132 +1,132 @@
-# Comparação manual com ferramentas de código fechado: SÓ a lista de recursos da página/documentação oficial
-# (nenhum programa foi baixado ou executado). Um "recurso" é um grupo de ajustes descrito por eles; "tweaks" são os
-# nossos que cobrem o grupo (vazio = não coberto). Textos são resumos nossos.
+# Manual comparison with closed-source tools: ONLY the feature list from the official page/documentation
+# (no program was downloaded or run). A "feature" is a group of settings they describe; "tweaks" are
+# ours that cover the group (empty = not covered). Texts are our own summaries.
 tools:
   - name: O&O ShutUp10++
     url: https://www.oo-software.com/en/shutup10
-    license: proprietária (gratuita)
-    version: "3.6.1135 (29/09/2026), segundo a página oficial"
+    license: proprietary (free)
+    version: "3.6.1135 (2026-09-29), according to the official page"
     note: >
-      A página oficial não publica a lista completa de configurações; os grupos abaixo vêm dela e dos anúncios de
-      versão no blog oficial da O&O (blog.oo-software.com). Comparação por grupo, não por configuração.
+      The official page does not publish the full list of settings; the groups below come from it and from the
+      release announcements on the official O&O blog (blog.oo-software.com). Comparison by group, not by setting.
     features:
-      - name: Privacidade geral (telemetria, ID de anúncio, idioma para sites)
+      - name: General privacy (telemetry, advertising ID, language list for websites)
         tweaks: [privacy.telemetry.allow-telemetry, privacy.ads.advertising-id, privacy.ads.language-list]
-      - name: Histórico de atividades e área de transferência
+      - name: Activity history and clipboard
         tweaks: [privacy.telemetry.activity-history, privacy.clipboard.disable-history, privacy.clipboard.disable-cloud-sync]
-      - name: Privacidade de apps (câmera, microfone, localização, diagnósticos, voz)
+      - name: App privacy (camera, microphone, location, diagnostics, voice)
         tweaks: [privacy.camera.deny-apps, privacy.microphone.deny-apps, privacy.location.deny-apps, privacy.app-diagnostics.deny, privacy.voice-activation.deny]
-      - name: Segurança (Assistência Remota, revelar senha e afins)
+      - name: Security (Remote Assistance, password reveal and the like)
         tweaks: []
-        note: Fora do foco atual (endurecimento de segurança); candidato a categoria futura.
-      - name: Microsoft Edge (políticas de privacidade, Copilot e IA no Edge)
+        note: Outside the current focus (security hardening); candidate for a future category.
+      - name: Microsoft Edge (privacy policies, Copilot and AI in Edge)
         tweaks: [edge.diagnostic-data-off, edge.disable-personalization-reporting, edge.disable-copilot-page-context, edge.disable-ai-features, edge.disable-sidebar]
-      - name: Microsoft Edge legado (EdgeHTML)
+      - name: Legacy Microsoft Edge (EdgeHTML)
         tweaks: []
-        note: O Edge legado não existe mais no Windows 11.
-      - name: Sincronização das configurações do Windows
+        note: Legacy Edge no longer exists in Windows 11.
+      - name: Windows settings sync
         tweaks: [privacy.settings-sync.disable]
-      - name: Cortana e Pesquisa do Windows (web, nuvem, histórico)
+      - name: Cortana and Windows Search (web, cloud, history)
         tweaks: [ui.search.disable-web-search, ui.search.disable-cloud-search, privacy.search.disable-history]
-      - name: Windows AI (Copilot, Recall, Clique para Fazer)
+      - name: Windows AI (Copilot, Recall, Click to Do)
         tweaks: [ai.copilot.turn-off-policy, ai.copilot.remove-app, ai.recall.disable-snapshots, ai.recall.disallow, ai.click-to-do.disable]
-      - name: Serviços de localização
+      - name: Location services
         tweaks: [privacy.location.disable, privacy.find-my-device.disable]
-      - name: Comportamento do usuário (experiências personalizadas, rastreamento de apps)
+      - name: User behavior (tailored experiences, app tracking)
         tweaks: [privacy.telemetry.tailored-experiences, privacy.telemetry.app-launch-tracking]
-      - name: Windows Update (P2P, drivers, reinicialização)
+      - name: Windows Update (P2P, drivers, restart)
         tweaks: [perf.delivery-optimization.http-only, update.exclude-drivers, update.no-auto-restart-logged-on]
-      - name: Explorador (anúncios do provedor de sincronização)
+      - name: Explorer (sync provider ads)
         tweaks: [privacy.ads.explorer-sync-provider]
-      - name: Microsoft Defender e SpyNet (MAPS, amostras)
+      - name: Microsoft Defender and SpyNet (MAPS, samples)
         tweaks: [security.defender.disable-cloud-reporting]
-      - name: Tela de bloqueio (dicas, Spotlight)
+      - name: Lock screen (tips, Spotlight)
         tweaks: [privacy.ads.lock-screen-tips, privacy.ads.spotlight]
-      - name: Dispositivos móveis (Vincular ao Celular)
+      - name: Mobile devices (Phone Link)
         tweaks: [apps.remove.phone-link]
-      - name: Barra de tarefas (Widgets, Chat)
+      - name: Taskbar (Widgets, Chat)
         tweaks: [ui.taskbar.disable-widgets, ui.taskbar.hide-chat]
-      - name: Diversos (feedback, mapas offline)
+      - name: Miscellaneous (feedback, offline maps)
         tweaks: [privacy.telemetry.feedback-requests, services.maps-broker.disable]
 
   - name: Wintoys
     url: https://apps.microsoft.com/detail/9P8LTPGCBZXD
-    license: proprietária (gratuita, Microsoft Store; Bogdan Pătrăucean)
-    version: "atualização de 22/08/2026, segundo a ficha da Microsoft Store"
+    license: proprietary (free, Microsoft Store; Bogdan Pătrăucean)
+    version: "update of 2026-08-22, according to the Microsoft Store listing"
     note: >
-      Recursos tirados da ficha oficial da Microsoft Store. Ignoramos a organização "Wintoys-Performance-Settings"
-      do GitHub, que não é do desenvolvedor. Vários recursos (limpeza, reparo, informações do hardware) não são
-      ajustes e ficam fora do escopo de um catálogo de tweaks.
+      Features taken from the official Microsoft Store listing. We ignore the "Wintoys-Performance-Settings"
+      GitHub organization, which does not belong to the developer. Several features (cleanup, repair, hardware
+      information) are not settings and are outside the scope of a tweak catalog.
     features:
-      - name: Ajustes de desempenho (incluindo para jogos)
+      - name: Performance tweaks (including for games)
         tweaks: [perf.game-dvr.disable, gaming.hags.enable, power.plan.high-performance, power.throttling.disable, services.sysmain.disable]
-      - name: Configurações ocultas do sistema
+      - name: Hidden system settings
         tweaks: [ui.explorer.classic-context-menu, ui.taskbar.end-task, system.long-paths.enable]
-      - name: Limpeza de disco
+      - name: Disk cleanup
         tweaks: []
-        note: Fora do escopo (não é um ajuste reversível). Candidato a ferramenta à parte.
-      - name: Ferramentas de reparo (SFC, DISM, CHKDSK)
+        note: Out of scope (not a reversible setting). Candidate for a separate tool.
+      - name: Repair tools (SFC, DISM, CHKDSK)
         tweaks: []
-        note: Fora do escopo.
-      - name: Anúncios e privacidade
+        note: Out of scope.
+      - name: Ads and privacy
         tweaks: [privacy.ads.tips-suggestions, privacy.ads.start-suggestions, privacy.telemetry.allow-telemetry, privacy.ads.advertising-id]
-      - name: Personalização da área de trabalho
+      - name: Desktop personalization
         tweaks: [ui.theme.dark-mode, ui.desktop.show-this-pc, ui.taskbar.align-left]
-      - name: Desinstalar qualquer app (inclusive os sem opção de desinstalar)
+      - name: Uninstall any app (including those without an uninstall option)
         tweaks: [apps.remove.bing-news, edge.remove, apps.onedrive.uninstall, ai.copilot.remove-app]
-        note: Só a lista curada do catálogo, não "qualquer app".
-      - name: Desativar serviços desnecessários
+        note: Only the catalog's curated list, not "any app".
+      - name: Disable unnecessary services
         tweaks: [services.xbox.disable, services.fax.disable, services.maps-broker.disable, privacy.telemetry.diagtrack-service]
-      - name: Informações do hardware em tempo real
+      - name: Real-time hardware information
         tweaks: []
-        note: Fora do escopo.
+        note: Out of scope.
 
   - name: Microsoft PC Manager
     url: https://pcmanager.microsoft.com/en-us
-    license: proprietária (gratuita, Microsoft)
-    version: "página oficial lida em 17/10/2026 (sem número de versão)"
-    note: Ferramenta de manutenção da própria Microsoft; quase nada dela é ajuste de configuração.
+    license: proprietary (free, Microsoft)
+    version: "official page read on 2026-10-17 (no version number)"
+    note: Microsoft's own maintenance tool; almost none of it is a configuration setting.
     features:
-      - name: 'Otimizar ("Boost": liberar memória e arquivos temporários)'
+      - name: 'Boost (free up memory and temporary files)'
         tweaks: []
-        note: Ação pontual, não ajuste; fora do escopo.
-      - name: Gerenciamento de armazenamento (arquivos grandes, Sensor de Armazenamento)
+        note: One-off action, not a setting; out of scope.
+      - name: Storage management (large files, Storage Sense)
         tweaks: []
-        note: Fora do escopo; o Sensor de Armazenamento pode virar tweak futuro.
-      - name: Controle de pop-ups (anúncios e notificações de apps)
+        note: Out of scope; Storage Sense may become a future tweak.
+      - name: Pop-up control (ads and app notifications)
         tweaks: [privacy.ads.tips-suggestions, privacy.ads.settings-suggestions, privacy.ads.account-notifications]
-      - name: Verificação de saúde (problemas e ameaças)
+      - name: Health check (issues and threats)
         tweaks: []
-        note: Fora do escopo.
-      - name: Caixa de ferramentas e mini barra
+        note: Out of scope.
+      - name: Toolbox and mini bar
         tweaks: []
-        note: Fora do escopo.
+        note: Out of scope.
 
   - name: NTLite
     url: https://www.ntlite.com/features/
-    license: proprietária (gratuita e paga)
-    version: "página de recursos lida em 17/10/2026"
+    license: proprietary (free and paid)
+    version: "features page read on 2026-10-17"
     note: >
-      O NTLite edita principalmente imagens (WIM/ESD/ISO) antes da instalação, além do Windows em execução. Só a
-      parte de "Configurações e ajustes" e "Serviços" é comparável hoje; o resto vira backlog do modo ISO offline.
+      NTLite mainly edits images (WIM/ESD/ISO) before installation, as well as the running Windows. Only the
+      "Settings and tweaks" and "Services" parts are comparable today; the rest becomes backlog for the offline ISO mode.
     features:
-      - name: Ajustes de privacidade e telemetria
+      - name: Privacy and telemetry tweaks
         tweaks: [privacy.telemetry.allow-telemetry, privacy.telemetry.diagtrack-service, privacy.telemetry.limit-diagnostics]
-      - name: Copilot e IA (inclusive no Edge)
+      - name: Copilot and AI (including in Edge)
         tweaks: [ai.copilot.remove-app, ai.recall.disallow, edge.disable-ai-features]
-      - name: Desempenho e interface
+      - name: Performance and interface
         tweaks: [perf.background-apps.deny, ui.visual.disable-window-animations, ui.explorer.show-file-extensions]
-      - name: Endurecimento de segurança, rede e firewall
+      - name: Security, network and firewall hardening
         tweaks: [network.llmnr.disable, network.netbios.disable-resolution, ui.explorer.disable-autorun-policy]
-        note: Cobertura parcial; regras de firewall não estão no catálogo.
-      - name: Tipo de inicialização de serviços
+        note: Partial coverage; firewall rules are not in the catalog.
+      - name: Service startup type
         tweaks: [services.sysmain.disable, services.xbox.disable, privacy.telemetry.wer-service]
-      - name: Recursos opcionais e recursos sob demanda
+      - name: Optional features and features on demand
         tweaks: [features.smb1.disable, features.work-folders.disable, features.media-player-legacy.disable]
     backlog:
-      - Remoção de componentes do Windows na imagem (mais de 500, com análise de dependências)
-      - Integração de atualizações cumulativas e de definições do Defender na imagem
-      - Integração de drivers (INF) na imagem
-      - Instalação autônoma (OOBE, contas locais, regiões, particionamento)
-      - Scripts e instaladores pós-instalação
-      - Conversão WIM/ESD/ISO e remoção de edições
+      - Removal of Windows components in the image (more than 500, with dependency analysis)
+      - Integration of cumulative updates and Defender definitions into the image
+      - Integration of drivers (INF) into the image
+      - Unattended installation (OOBE, local accounts, regions, partitioning)
+      - Post-installation scripts and installers
+      - WIM/ESD/ISO conversion and edition removal

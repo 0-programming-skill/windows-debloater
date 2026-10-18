@@ -3,37 +3,37 @@ using Debloater.Core.Inventory;
 
 namespace Debloater.Core.Fingerprint;
 
-/// <summary>Modo da varredura de binários.</summary>
+/// <summary>Binary scan mode.</summary>
 public static class BinaryScanModes
 {
-    /// <summary>Lista curada de binários relevantes para debloat (shell, barra, Iniciar, busca, IA...).</summary>
+    /// <summary>Curated list of binaries relevant to debloating (shell, taskbar, Start, search, AI...).</summary>
     public const string Default = "default";
 
-    /// <summary>Todo PE sob as raízes.</summary>
+    /// <summary>Every PE under the roots.</summary>
     public const string All = "all";
 
-    /// <summary>Sem varredura de binários.</summary>
+    /// <summary>No binary scan.</summary>
     public const string None = "none";
 
     public static bool IsKnown(string mode) => mode is Default or All or None;
 }
 
 /// <summary>
-/// "Impressão digital" de uma instalação do Windows: o que existe (inventário, políticas ADMX) e,
-/// para cada binário relevante, os nomes de registro/políticas/CSP que ele contém. Gravada em
-/// JSON compactado (gzip) por 'fingerprint create' e comparada por 'fingerprint diff'.
-/// Contém só nomes, caminhos, versões e hashes; nunca conteúdo dos binários além das cadeias
-/// que casam com os padrões de <see cref="StringClassifier"/>.
+/// "Fingerprint" of a Windows installation: what exists (inventory, ADMX policies) and, for each
+/// relevant binary, the registry/policy/CSP names it contains. Saved as compressed JSON (gzip) by
+/// 'fingerprint create' and compared by 'fingerprint diff'.
+/// Contains only names, paths, versions and hashes; never binary content beyond the strings that
+/// match the <see cref="StringClassifier"/> patterns.
 /// </summary>
 public sealed class WindowsFingerprint
 {
     public int SchemaVersion { get; set; } = 1;
     public DateTime CreatedUtc { get; set; }
 
-    /// <summary>Raiz lida (ex.: C:\ ou a pasta de uma imagem montada).</summary>
+    /// <summary>Root that was read (e.g. C:\ or the folder of a mounted image).</summary>
     public string Root { get; set; } = "";
 
-    /// <summary>true quando a raiz é o Windows em execução (inventário e registro disponíveis).</summary>
+    /// <summary>true when the root is the running Windows (inventory and registry available).</summary>
     public bool Live { get; set; }
 
     public bool Elevated { get; set; }
@@ -41,7 +41,7 @@ public sealed class WindowsFingerprint
 
     public FingerprintOs Os { get; set; } = new();
 
-    /// <summary>Inventário (serviços, tarefas, appx...). Offline: só o que dá para ler de arquivos.</summary>
+    /// <summary>Inventory (services, tasks, appx...). Offline: only what can be read from files.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public InventorySnapshot? Inventory { get; set; }
 
@@ -49,10 +49,10 @@ public sealed class WindowsFingerprint
 
     public BinaryScanInfo Binaries { get; set; } = new();
 
-    /// <summary>Observações da coleta (o que não pôde ser lido e por quê).</summary>
+    /// <summary>Collection notes (what could not be read and why).</summary>
     public List<string> Notes { get; set; } = [];
 
-    /// <summary>Tempo de cada fase, em milissegundos.</summary>
+    /// <summary>Duration of each phase, in milliseconds.</summary>
     public SortedDictionary<string, long> TimingsMs { get; set; } = new(StringComparer.Ordinal);
 
     [JsonIgnore]
@@ -67,14 +67,14 @@ public sealed class FingerprintOs
     public string? DisplayVersion { get; set; }
     public string? ProductName { get; set; }
 
-    /// <summary>De onde veio (registro do sistema em execução ou versão do ntoskrnl.exe).</summary>
+    /// <summary>Where it came from (registry of the running system or the ntoskrnl.exe version).</summary>
     public string Source { get; set; } = "";
 
     [JsonIgnore]
     public string FullBuild => $"{Build}.{Ubr}";
 }
 
-/// <summary>Política ADMX resumida: o que importa para comparar builds.</summary>
+/// <summary>Summarized ADMX policy: what matters for comparing builds.</summary>
 public sealed class FingerprintPolicy
 {
     public string File { get; set; } = "";
@@ -91,14 +91,14 @@ public sealed class FingerprintPolicy
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SupportedOn { get; set; }
 
-    /// <summary>Referência crua do supportedOn (ex.: windows:SUPPORTED_Windows_10_0_2004), independente do idioma do ADML.</summary>
+    /// <summary>Raw supportedOn reference (e.g. windows:SUPPORTED_Windows_10_0_2004), independent of the ADML language.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SupportedOnRef { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Category { get; set; }
 
-    /// <summary>Todos os valores gravados (chave\valor), inclusive de elementos e listas.</summary>
+    /// <summary>All written values (key\value), including those of elements and lists.</summary>
     public List<string> Values { get; set; } = [];
 
     [JsonIgnore]
@@ -109,26 +109,26 @@ public sealed class BinaryScanInfo
 {
     public string Mode { get; set; } = BinaryScanModes.None;
 
-    /// <summary>Pastas varridas, relativas à raiz.</summary>
+    /// <summary>Scanned folders, relative to the root.</summary>
     public List<string> Roots { get; set; } = [];
 
     public int FilesConsidered { get; set; }
     public int Errors { get; set; }
     public long TotalBytes { get; set; }
 
-    /// <summary>Limites usados (cadeias por arquivo).</summary>
+    /// <summary>Limits used (strings per file).</summary>
     public int MaxStringsPerFile { get; set; }
 
     public List<BinaryEntry> Files { get; set; } = [];
 
-    /// <summary>Primeiros erros de leitura (arquivo: motivo).</summary>
+    /// <summary>First read errors (file: reason).</summary>
     public List<string> ErrorSamples { get; set; } = [];
 }
 
-/// <summary>Um binário PE e as cadeias "interessantes" encontradas nele.</summary>
+/// <summary>A PE binary and the "interesting" strings found in it.</summary>
 public sealed class BinaryEntry
 {
-    /// <summary>Caminho relativo à raiz (ex.: Windows\System32\shell32.dll).</summary>
+    /// <summary>Path relative to the root (e.g. Windows\System32\shell32.dll).</summary>
     public string Path { get; set; } = "";
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -137,25 +137,25 @@ public sealed class BinaryEntry
     public long Size { get; set; }
     public string Sha256 { get; set; } = "";
 
-    /// <summary>Está na lista curada (relevante para debloat)?</summary>
+    /// <summary>Is it in the curated list (relevant to debloating)?</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Curated { get; set; }
 
-    /// <summary>Cadeias que casam com os padrões (caminhos de registro, nomes de valores, CSP, WNF...).</summary>
+    /// <summary>Strings that match the patterns (registry paths, value names, CSP, WNF...).</summary>
     public List<string> Strings { get; set; } = [];
 
     /// <summary>
-    /// Identificadores que não casam com os padrões, mas estão perto (no arquivo) de um caminho de
-    /// registro: prováveis nomes de valores lidos daquela chave.
+    /// Identifiers that do not match the patterns but are near (in the file) a registry path:
+    /// likely names of values read from that key.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? NearNames { get; set; }
 
-    /// <summary>Nome de valor → caminho de registro mais próximo no arquivo (contexto para a camada 2).</summary>
+    /// <summary>Value name → nearest registry path in the file (context for layer 2).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SortedDictionary<string, string>? Context { get; set; }
 
-    /// <summary>true quando o limite de cadeias por arquivo cortou o resultado.</summary>
+    /// <summary>true when the per-file string limit cut the result short.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Truncated { get; set; }
 

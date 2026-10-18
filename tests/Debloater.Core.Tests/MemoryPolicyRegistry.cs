@@ -3,7 +3,7 @@ using RegValue = Debloater.Core.Admx.AdmxPolicyStateReader.RegValue;
 
 namespace Debloater.Core.Tests;
 
-/// <summary>Registro em memória para testar o gravador de políticas sem tocar no registro real.</summary>
+/// <summary>In-memory registry to test the policy writer without touching the real registry.</summary>
 public sealed class MemoryPolicyRegistry : IPolicyRegistry
 {
     private readonly Dictionary<(PolicyScope, string), Dictionary<string, (string Name, RegValue Value)>> _keys = [];
@@ -48,7 +48,7 @@ public sealed class MemoryPolicyRegistry : IPolicyRegistry
 
     public string Describe(PolicyScope scope) => scope == PolicyScope.Machine ? "HKLM" : "HKCU";
 
-    /// <summary>Executa o plano (como o engine faz, sem backup).</summary>
+    /// <summary>Runs the plan (as the engine does, without backup).</summary>
     public void Execute(PolicyWritePlan plan)
     {
         foreach (var c in plan.Effective)
@@ -59,7 +59,7 @@ public sealed class MemoryPolicyRegistry : IPolicyRegistry
         foreach (var k in plan.KeysToDelete) DeleteKeyIfEmpty(plan.Scope, k);
     }
 
-    /// <summary>Instantâneo de todos os valores: "ESCOPO\chave\nome" → descrição.</summary>
+    /// <summary>Snapshot of all values: "SCOPE\key\name" → description.</summary>
     public SortedDictionary<string, string> Snapshot(PolicyScope? only = null)
     {
         var result = new SortedDictionary<string, string>(StringComparer.Ordinal);

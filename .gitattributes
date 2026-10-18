@@ -1,2 +1,2 @@
-# A referência gerada usa LF (o RefGen grava LF); evita diffs só de fim de linha.
+# The generated reference uses LF (RefGen writes LF); avoids line-ending-only diffs.
 reference/*.json text eol=lf

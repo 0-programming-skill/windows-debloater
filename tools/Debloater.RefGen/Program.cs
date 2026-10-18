@@ -7,27 +7,27 @@ using Debloater.Core.Reference;
 namespace Debloater.RefGen;
 
 /// <summary>
-/// Gera reference/msdocs-policy-csp.json a partir da documentação da Policy CSP.
+/// Generates reference/msdocs-policy-csp.json from the Policy CSP documentation.
 ///
-/// Onde estão os docs: o repositório público MicrosoftDocs/windows-itpro-docs não existe mais
-/// (404); as páginas vêm de um repositório privado (MicrosoftDocs/windows-docs-pr). Por isso
-/// lemos direto do learn.microsoft.com, que devolve o Markdown da página quando a requisição
-/// envia "Accept: text/markdown". A lista de páginas vem do índice (toc.json) da seção MDM.
+/// Where the docs live: the public MicrosoftDocs/windows-itpro-docs repository no longer exists
+/// (404); the pages come from a private repository (MicrosoftDocs/windows-docs-pr). So we
+/// read straight from learn.microsoft.com, which returns the page's Markdown when the request
+/// sends "Accept: text/markdown". The page list comes from the index (toc.json) of the MDM section.
 /// </summary>
 internal static partial class Program
 {
     private const string BaseUrl = "https://learn.microsoft.com/en-us/windows/client-management/mdm/";
 
     private const string Usage = """
-        Debloater.RefGen - gera a referência da Policy CSP (Microsoft Learn)
+        Debloater.RefGen - generates the Policy CSP reference (Microsoft Learn)
 
-        Uso:
+        Usage:
           Debloater.RefGen [--out reference/msdocs-policy-csp.json] [--cache DIR] [--from-cache DIR] [--parallel 6]
-        Debloater.RefGen compare <antigo.json> <novo.json> [--markdown saida.md]
+        Debloater.RefGen compare <old.json> <new.json> [--markdown output.md]
 
-        --out DIR/arquivo  destino do JSON (padrão: reference/msdocs-policy-csp.json na raiz do repositório)
-        --cache DIR        também grava o Markdown baixado em DIR (útil para depurar o parser)
-        --from-cache DIR   não acessa a rede: lê os *.md de DIR
+        --out DIR/file     JSON destination (default: reference/msdocs-policy-csp.json at the repository root)
+        --cache DIR        also writes the downloaded Markdown to DIR (useful for debugging the parser)
+        --from-cache DIR   does not access the network: reads the *.md files from DIR
         """;
 
     [GeneratedRegex(@"""href""\s*:\s*""(policy-csp-[a-z0-9-]+)""")]
@@ -43,7 +43,7 @@ internal static partial class Program
         int parallel = 6;
         for (int i = 0; i < args.Length; i++)
         {
-            string Next() => i + 1 < args.Length ? args[++i] : throw new ArgumentException($"'{args[i]}' exige um valor.");
+            string Next() => i + 1 < args.Length ? args[++i] : throw new ArgumentException($"'{args[i]}' requires a value.");
             switch (args[i])
             {
                 case "--out": outFile = Path.GetFullPath(Next()); break;
@@ -51,7 +51,7 @@ internal static partial class Program
                 case "--from-cache": fromCache = Path.GetFullPath(Next()); break;
                 case "--parallel": parallel = int.Parse(Next()); break;
                 case "-h" or "--help": Console.WriteLine(Usage); return 0;
-                default: Console.Error.WriteLine($"Opção desconhecida '{args[i]}'.\n\n{Usage}"); return 2;
+                default: Console.Error.WriteLine($"Unknown option '{args[i]}'.\n\n{Usage}"); return 2;
             }
         }
         outFile ??= Path.Combine(FindRepoRoot() ?? Directory.GetCurrentDirectory(), "reference", "msdocs-policy-csp.json");
@@ -63,17 +63,17 @@ internal static partial class Program
         }
         catch (HttpRequestException ex)
         {
-            Console.Error.WriteLine($"Falha ao baixar a documentação: {ex.Message}");
+            Console.Error.WriteLine($"Failed to download the documentation: {ex.Message}");
             return 1;
         }
 
         var parsed = pages.Select(p => CspMarkdownParser.ParsePage(p.Page, p.Markdown)).ToList();
         var reference = CspMarkdownParser.Build(parsed);
 
-        // Proteção: não sobrescrever a referência com algo claramente quebrado (site fora do ar, formato mudou...).
+        // Safeguard: do not overwrite the reference with something clearly broken (site down, format changed...).
         if (reference.Pages.Count < 100 || reference.Policies.Count < 1000)
         {
-            Console.Error.WriteLine($"Resultado suspeito ({reference.Pages.Count} páginas, {reference.Policies.Count} políticas); arquivo NÃO gravado.");
+            Console.Error.WriteLine($"Suspicious result ({reference.Pages.Count} pages, {reference.Policies.Count} policies); file NOT written.");
             return 1;
         }
         var empty = reference.Pages.Where(p => p.PolicyCount == 0).Select(p => p.Page).ToList();
@@ -81,18 +81,18 @@ internal static partial class Program
         Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
         File.WriteAllText(outFile, CspMarkdownParser.Serialize(reference), new UTF8Encoding(false));
 
-        Console.WriteLine($"{reference.Pages.Count} páginas, {reference.Policies.Count} políticas → {outFile}");
-        Console.WriteLine($"  com mapeamento GP/ADMX: {reference.Policies.Count(p => p.GpMappings is not null)}");
+        Console.WriteLine($"{reference.Pages.Count} pages, {reference.Policies.Count} policies → {outFile}");
+        Console.WriteLine($"  with GP/ADMX mapping: {reference.Policies.Count(p => p.GpMappings is not null)}");
         Console.WriteLine($"  ADMX-backed: {reference.Policies.Count(p => p.AdmxBacked)}");
-        Console.WriteLine($"  só Insider: {reference.Policies.Count(p => p.InsiderOnly)}; obsoletas: {reference.Policies.Count(p => p.Deprecated)}");
-        Console.WriteLine($"  com notas de edição: {reference.Policies.Count(p => p.EditionNotes is not null)}");
-        if (empty.Count > 0) Console.WriteLine($"  páginas sem políticas reconhecidas ({empty.Count}): {string.Join(", ", empty)}");
+        Console.WriteLine($"  Insider only: {reference.Policies.Count(p => p.InsiderOnly)}; deprecated: {reference.Policies.Count(p => p.Deprecated)}");
+        Console.WriteLine($"  with edition notes: {reference.Policies.Count(p => p.EditionNotes is not null)}");
+        if (empty.Count > 0) Console.WriteLine($"  pages without recognized policies ({empty.Count}): {string.Join(", ", empty)}");
         return 0;
     }
 
     /// <summary>
-    /// compare: diferenças por política entre duas referências (adicionadas, removidas, alteradas e
-    /// quais campos mudaram). Escreve Markdown (para o corpo da issue do CI) e devolve 0 se igual, 1 se mudou.
+    /// compare: per-policy differences between two references (added, removed, changed and
+    /// which fields changed). Writes Markdown (for the CI issue body) and returns 0 if equal, 1 if changed.
     /// </summary>
     private static int Compare(string[] args)
     {
@@ -125,18 +125,18 @@ internal static partial class Program
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Políticas: {oldRef.Policies.Count} → {newRef.Policies.Count} | adicionadas {added.Count} | removidas {removed.Count} | alteradas {changed.Count}");
+        sb.AppendLine($"Policies: {oldRef.Policies.Count} → {newRef.Policies.Count} | added {added.Count} | removed {removed.Count} | changed {changed.Count}");
         void Section(string title, IEnumerable<string> items)
         {
             var list = items.ToList();
             if (list.Count == 0) return;
             sb.AppendLine().AppendLine($"### {title} ({list.Count})").AppendLine();
             foreach (var item in list.Take(300)) sb.AppendLine($"- {item}");
-            if (list.Count > 300) sb.AppendLine($"- … e mais {list.Count - 300}");
+            if (list.Count > 300) sb.AppendLine($"- … and {list.Count - 300} more");
         }
-        Section("Adicionadas", added.Select(k => $"`{k}`"));
-        Section("Removidas", removed.Select(k => $"`{k}`"));
-        Section("Alteradas", changed.Select(c => $"`{c.Key}`: {string.Join(", ", c.Fields)}"));
+        Section("Added", added.Select(k => $"`{k}`"));
+        Section("Removed", removed.Select(k => $"`{k}`"));
+        Section("Changed", changed.Select(c => $"`{c.Key}`: {string.Join(", ", c.Fields)}"));
 
         var text = sb.ToString();
         Console.WriteLine(text);
@@ -170,7 +170,7 @@ internal static partial class Program
 
         var toc = await GetWithRetryAsync(http, BaseUrl + "toc.json", "application/json");
         var names = TocHref().Matches(toc).Select(m => m.Groups[1].Value).Distinct().OrderBy(n => n, StringComparer.Ordinal).ToList();
-        Console.WriteLine($"{names.Count} páginas policy-csp-* no índice.");
+        Console.WriteLine($"{names.Count} policy-csp-* pages in the index.");
         if (cacheDir is not null) Directory.CreateDirectory(cacheDir);
 
         var results = new (string, string)[names.Count];
@@ -209,7 +209,7 @@ internal static partial class Program
                 resp.EnsureSuccessStatusCode();
                 var body = await resp.Content.ReadAsStringAsync();
                 if (accept == "text/markdown" && !body.TrimStart().StartsWith("---", StringComparison.Ordinal))
-                    throw new HttpRequestException($"{url}: resposta não é Markdown (o servidor ignorou Accept: text/markdown?).");
+                    throw new HttpRequestException($"{url}: response is not Markdown (did the server ignore Accept: text/markdown?).");
                 return body;
             }
             catch (Exception ex) when (attempt < 4 && ex is HttpRequestException or TaskCanceledException)

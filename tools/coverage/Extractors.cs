@@ -4,13 +4,13 @@ using System.Text.RegularExpressions;
 namespace Debloater.Coverage;
 
 /// <summary>
-/// Extratores heurísticos de alvos a partir de texto: arquivos .reg, PowerShell, cmd/batch e C#.
-/// Não entendem a linguagem; procuram as formas usuais de mexer em registro, serviços, tarefas,
-/// pacotes appx, recursos opcionais e capacidades. O resultado é aproximado (ver docs/coverage).
+/// Heuristic target extractors for text: .reg files, PowerShell, cmd/batch and C#.
+/// They do not understand the language; they look for the usual ways of changing the registry, services, tasks,
+/// appx packages, optional features and capabilities. The result is approximate (see the coverage report).
 /// </summary>
 public static partial class Extractors
 {
-    /// <summary>Lê texto respeitando a BOM (os .reg costumam ser UTF-16 LE).</summary>
+    /// <summary>Reads text honoring the BOM (.reg files are usually UTF-16 LE).</summary>
     public static string ReadText(byte[] bytes)
     {
         if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) return Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2);
@@ -52,7 +52,7 @@ public static partial class Extractors
 
     // ---------------------------------------------------------------- PowerShell / cmd
 
-    /// <summary>Valor de um parâmetro nomeado numa linha de comando ("-Path 'x'", "-Name x").</summary>
+    /// <summary>Value of a named parameter in a command line ("-Path 'x'", "-Name x").</summary>
     private static string? Param(string line, params string[] names)
     {
         foreach (var n in names)
@@ -67,14 +67,14 @@ public static partial class Extractors
         return null;
     }
 
-    /// <summary>Primeiros argumentos posicionais depois do comando (sem os que começam com "-").</summary>
+    /// <summary>First positional arguments after the command (excluding those starting with "-").</summary>
     private static List<string> Positional(string afterCommand)
     {
         var list = new List<string>();
         foreach (Match m in Regex.Matches(afterCommand, @"""([^""]*)""|'([^']*)'|([^\s;|)]+)"))
         {
             var v = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Success ? m.Groups[2].Value : m.Groups[3].Value;
-            if (v.StartsWith('-')) break; // depois do primeiro parâmetro nomeado, a ordem não é confiável
+            if (v.StartsWith('-')) break; // after the first named parameter, the order is not reliable
             list.Add(v);
             if (list.Count == 3) break;
         }
@@ -114,11 +114,11 @@ public static partial class Extractors
     [GeneratedRegex(@"""([^""\r\n]+)""|'([^'\r\n]+)'")]
     private static partial Regex QuotedString();
 
-    /// <summary>Extrai alvos de um script PowerShell ou cmd/batch.</summary>
+    /// <summary>Extracts targets from a PowerShell or cmd/batch script.</summary>
     public static IEnumerable<Target> FromScript(string text)
     {
         var results = new List<Target>();
-        // Junta continuações de linha (` no PowerShell, ^ no cmd).
+        // Joins line continuations (` in PowerShell, ^ in cmd).
         var joined = Regex.Replace(text, @"[`^]\r?\n\s*", " ");
         foreach (var raw in joined.Split('\n'))
         {
@@ -194,7 +194,7 @@ public static partial class Extractors
             if (pa.Success)
             {
                 var rest = pa.Groups[1].Value;
-                // Nome posicional pode vir depois de chaves como -AllUsers: pega o primeiro token que parece um pacote.
+                // The positional name may come after switches like -AllUsers: takes the first token that looks like a package.
                 var name = Param(rest, "Name", "PackageName")
                     ?? Regex.Matches(rest, @"(?<![\w-])['""]?\*?([A-Za-z0-9][\w\-]*\.[\w.\-]+?)\*?['""]?(?=[\s|;)]|$)")
                         .Select(m => m.Groups[1].Value).FirstOrDefault();
@@ -207,7 +207,7 @@ public static partial class Extractors
                 if (Targets.Capability(m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value) is { } t) results.Add(t);
         }
 
-        // Listas: $Apps = @('Microsoft.BingNews', ...), $Tasks = @(...), $Services = @(...).
+        // Lists: $Apps = @('Microsoft.BingNews', ...), $Tasks = @(...), $Services = @(...).
         foreach (Match m in PsArray().Matches(text))
         {
             var var = m.Groups[1].Value.ToLowerInvariant();
@@ -232,14 +232,14 @@ public static partial class Extractors
     [GeneratedRegex(@"const\s+string\s+(\w+)\s*=\s*(@?)""((?:[^""\\]|\\.|"""")*)""")]
     private static partial Regex CsConst();
 
-    /// <summary>Literal de cadeia C# (verbatim, normal) ou identificador; com a posição.</summary>
+    /// <summary>C# string literal (verbatim, regular) or identifier; with its position.</summary>
     [GeneratedRegex(@"@""((?:[^""]|"""")*)""|(?<!@)""((?:[^""\\\r\n]|\\.)*)""|\b([A-Z_][A-Z0-9_]{2,})\b")]
     private static partial Regex CsToken();
 
     private static string CsUnescape(string body, bool verbatim) =>
         verbatim ? body.Replace("\"\"", "\"") : Regex.Replace(body, @"\\(.)", m => m.Groups[1].Value switch { "n" => "\n", "t" => "\t", var c => c });
 
-    /// <summary>Constantes de cadeia ("const string X = ...") de um conjunto de arquivos C#.</summary>
+    /// <summary>String constants ("const string X = ...") from a set of C# files.</summary>
     public static Dictionary<string, string> CsConstants(IEnumerable<string> texts)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -271,11 +271,11 @@ public static partial class Extractors
     private static partial Regex CsTaskProp();
 
     /// <summary>
-    /// Extrai alvos de código C#: um literal (ou constante) que é caminho de registro seguido, a poucos
-    /// caracteres, do literal com o nome do valor (KeyPath/ValueName, RegistryItem(path, name, ...)),
-    /// chamadas com RegistryHive.X, propriedades de appx/recurso/capacidade/serviço/tarefa e
-    /// cadeias que parecem caminhos do Agendador (\Microsoft\Windows\...). Scripts PowerShell
-    /// embutidos em literais também passam pelo extrator de scripts.
+    /// Extracts targets from C# code: a literal (or constant) that is a registry path followed, within a few
+    /// characters, by the literal with the value name (KeyPath/ValueName, RegistryItem(path, name, ...)),
+    /// calls with RegistryHive.X, appx/feature/capability/service/task properties and
+    /// strings that look like Task Scheduler paths (\Microsoft\Windows\...). PowerShell scripts
+    /// embedded in literals also go through the script extractor.
     /// </summary>
     public static IEnumerable<Target> FromCSharp(string text, IReadOnlyDictionary<string, string> constants)
     {
@@ -289,7 +289,7 @@ public static partial class Extractors
             return constants.TryGetValue(m.Groups[3].Value, out var v) ? v : null;
         }
 
-        // Ignora comentários de linha para não pegar exemplos.
+        // Ignores line comments so examples are not picked up.
         var code = Regex.Replace(text, @"(?m)^\s*//.*$", "");
         var tokens = CsToken().Matches(code).ToList();
         for (int i = 0; i < tokens.Count; i++)
@@ -302,7 +302,7 @@ public static partial class Extractors
                 for (int j = i + 1; j < tokens.Count && tokens[j].Index - tokens[i].Index < 260; j++)
                 {
                     var next = Resolve(tokens[j], out _);
-                    if (next is null) continue; // identificador sem constante conhecida
+                    if (next is null) continue; // identifier without a known constant
                     if (LooksLikeRegistryPath(next)) break;
                     if (next.Length is > 0 and < 100 && !next.Contains('\\') && !next.Contains('\n')) { name = next; }
                     break;

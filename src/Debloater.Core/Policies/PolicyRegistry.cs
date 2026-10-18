@@ -4,14 +4,14 @@ using RegValue = Debloater.Core.Admx.AdmxPolicyStateReader.RegValue;
 namespace Debloater.Core.Policies;
 
 /// <summary>
-/// Acesso ao registro usado pelo gravador de políticas. Chaves são relativas à raiz do escopo
-/// (HKLM ou HKCU). A implementação pode redirecionar as raízes (testes gravam numa sandbox).
+/// Registry access used by the policy writer. Keys are relative to the scope root
+/// (HKLM or HKCU). The implementation may redirect the roots (tests write to a sandbox).
 /// </summary>
 public interface IPolicyRegistry
 {
     RegValue? Read(PolicyScope scope, string key, string name);
 
-    /// <summary>Nomes dos valores da chave (vazio se ela não existir).</summary>
+    /// <summary>Value names of the key (empty if it does not exist).</summary>
     IReadOnlyList<string> ValueNames(PolicyScope scope, string key);
 
     bool KeyExists(PolicyScope scope, string key);
@@ -20,18 +20,18 @@ public interface IPolicyRegistry
 
     void Delete(PolicyScope scope, string key, string name);
 
-    /// <summary>Apaga a chave se ela existir e não tiver valores nem subchaves. Devolve se apagou.</summary>
+    /// <summary>Deletes the key if it exists and has no values or subkeys. Returns whether it was deleted.</summary>
     bool DeleteKeyIfEmpty(PolicyScope scope, string key);
 
     void CreateKey(PolicyScope scope, string key);
 
-    /// <summary>Texto da raiz para mensagens (ex.: HKLM, ou o caminho da sandbox).</summary>
+    /// <summary>Root text for messages (e.g. HKLM, or the sandbox path).</summary>
     string Describe(PolicyScope scope);
 }
 
 /// <summary>
-/// Registro real do Windows (visão de 64 bits). Por padrão Machine → HKLM e User → HKCU; com
-/// <see cref="Redirected"/> as duas raízes viram subchaves de HKCU (para testes sem elevação).
+/// The real Windows registry (64-bit view). By default Machine → HKLM and User → HKCU; with
+/// <see cref="Redirected"/> both roots become subkeys of HKCU (for tests without elevation).
 /// </summary>
 public sealed class WindowsPolicyRegistry : IPolicyRegistry
 {
@@ -46,7 +46,7 @@ public sealed class WindowsPolicyRegistry : IPolicyRegistry
         _user = user;
     }
 
-    /// <summary>Raízes redirecionadas para HKCU\&lt;base&gt;\HKLM e HKCU\&lt;base&gt;\HKCU.</summary>
+    /// <summary>Roots redirected to HKCU\&lt;base&gt;\HKLM e HKCU\&lt;base&gt;\HKCU.</summary>
     public static WindowsPolicyRegistry Redirected(string hkcuBaseSubKey) => new(
         (RegistryHive.CurrentUser, hkcuBaseSubKey.TrimEnd('\\') + @"\HKLM"),
         (RegistryHive.CurrentUser, hkcuBaseSubKey.TrimEnd('\\') + @"\HKCU"));
@@ -95,7 +95,7 @@ public sealed class WindowsPolicyRegistry : IPolicyRegistry
         var (hive, path) = Map(scope, key);
         using var b = Base(hive);
         using var k = b.CreateSubKey(path, writable: true)
-            ?? throw new InvalidOperationException($@"Não foi possível criar a chave {Describe(scope)}\{key}.");
+            ?? throw new InvalidOperationException($@"Could not create key {Describe(scope)}\{key}.");
         k.SetValue(name, value.Data, value.Kind);
     }
 

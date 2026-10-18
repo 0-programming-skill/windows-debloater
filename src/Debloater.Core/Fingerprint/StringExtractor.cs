@@ -6,44 +6,44 @@ namespace Debloater.Core.Fingerprint;
 
 public sealed class StringExtractorOptions
 {
-    /// <summary>Tamanho mínimo de uma sequência ASCII.</summary>
+    /// <summary>Minimum length of an ASCII run.</summary>
     public int MinAscii { get; init; } = 6;
 
-    /// <summary>Tamanho mínimo (em caracteres) de uma sequência UTF-16LE.</summary>
+    /// <summary>Minimum length (in characters) of a UTF-16LE run.</summary>
     public int MinUtf16 { get; init; } = 5;
 
-    /// <summary>Sequências mais longas que isso são texto (ajuda, licença...) e são ignoradas.</summary>
+    /// <summary>Runs longer than this are prose (help, license...) and are ignored.</summary>
     public int MaxRunChars { get; init; } = 1024;
 
-    /// <summary>Distância máxima, em bytes, entre um nome e um caminho de registro para contar como "perto".</summary>
+    /// <summary>Maximum distance, in bytes, between a name and a registry path for it to count as "near".</summary>
     public int NearWindowBytes { get; init; } = 512;
 
-    /// <summary>Limite de cadeias que casam com os padrões, por arquivo.</summary>
+    /// <summary>Limit of pattern-matching strings, per file.</summary>
     public int MaxStrings { get; init; } = 3000;
 
-    /// <summary>Limite de nomes "perto de um caminho", por arquivo.</summary>
+    /// <summary>Limit of "near a path" names, per file.</summary>
     public int MaxNearNames { get; init; } = 1500;
 
     public static StringExtractorOptions Default { get; } = new();
 }
 
-/// <summary>Resultado da extração de um arquivo.</summary>
+/// <summary>Extraction result for one file.</summary>
 public sealed class ExtractedStrings
 {
     public List<string> Strings { get; } = [];
     public List<string> NearNames { get; } = [];
 
-    /// <summary>Nome de valor → caminho de registro mais próximo.</summary>
+    /// <summary>Value name → nearest registry path.</summary>
     public SortedDictionary<string, string> Context { get; } = new(StringComparer.Ordinal);
 
     public bool Truncated { get; set; }
 }
 
 /// <summary>
-/// Extrai de um binário (bytes) as cadeias ASCII e UTF-16LE que interessam para debloat: caminhos
-/// de registro, nomes de valores com padrões conhecidos, caminhos de CSP, nomes WNF e de features,
-/// mais identificadores que aparecem perto de um caminho de registro. Não guarda nada além disso:
-/// o resultado é limitado e deduplicado (sem diferenciar maiúsculas).
+/// Extracts from a binary (bytes) the ASCII and UTF-16LE strings that matter for debloating:
+/// registry paths, value names with known patterns, CSP paths, WNF and feature names, plus
+/// identifiers that appear near a registry path. Keeps nothing else: the result is capped and
+/// deduplicated (case-insensitive).
 /// </summary>
 public static class StringExtractor
 {
@@ -55,7 +55,7 @@ public static class StringExtractor
     {
         var o = options ?? StringExtractorOptions.Default;
         var found = new List<Found>();
-        var identifiers = new List<Run>();   // UTF-16 identificadores (avaliados depois, com a proximidade)
+        var identifiers = new List<Run>();   // UTF-16 identifiers (evaluated later, with proximity)
         var pathOffsets = new List<(int Offset, string Path)>();
 
         ScanUtf16(data, 0, o, found, identifiers, pathOffsets);
@@ -118,7 +118,7 @@ public static class StringExtractor
 
     private static StringKind Classify(ReadOnlySpan<char> identifier)
     {
-        // Identificadores puros: só os tipos sem '\' ou '/'.
+        // Plain identifiers: only the kinds without '\' or '/'.
         if (identifier.StartsWith("WNF_") || identifier.StartsWith("Feature_"))
             return StringClassifier.Classify(identifier.ToString());
         return StringClassifier.IsValueNameLike(identifier) ? StringKind.ValueName : StringKind.None;
@@ -149,7 +149,7 @@ public static class StringExtractor
         List<Found> found, List<Run> identifiers, List<(int, string)> pathOffsets)
     {
         if (data.Length - alignment < 2) return;
-        // Caractere UTF-16LE imprimível = ushort entre 0x20 e 0x7E (byte alto zero): busca vetorizada.
+        // Printable UTF-16LE character = ushort between 0x20 and 0x7E (high byte zero): vectorized search.
         var units = MemoryMarshal.Cast<byte, ushort>(data[alignment..]);
         int pos = 0;
         while (pos < units.Length)
@@ -176,9 +176,9 @@ public static class StringExtractor
 
     private static void ScanAscii(ReadOnlySpan<byte> data, StringExtractorOptions o, List<Found> found)
     {
-        // Em ASCII só interessam caminhos (\ ou /) e nomes com marcadores (WNF_, Feature_,
-        // SubscribedContent-): identificadores soltos em ASCII são quase sempre nomes de funções
-        // importadas/exportadas. Então a busca parte dos separadores e expande até as bordas da sequência.
+        // In ASCII only paths (\ or /) and names with markers (WNF_, Feature_, SubscribedContent-)
+        // matter: standalone ASCII identifiers are almost always imported/exported function names.
+        // So the search starts from the separators and expands to the edges of the run.
         Span<char> buffer = stackalloc char[o.MaxRunChars];
         int pos = 0;
         while (pos < data.Length)
@@ -210,7 +210,7 @@ public static class StringExtractor
             HandleComplex(chars, start, found, null);
         }
     }
-    /// <summary>Sequência com separadores: caminho de registro, caminho de CSP ou SubscribedContent.</summary>
+    /// <summary>Run with separators: registry path, CSP path or SubscribedContent.</summary>
     private static void HandleComplex(ReadOnlySpan<char> span, int offset, List<Found> found, List<(int, string)>? pathOffsets)
     {
         if (span.Contains('\\'))

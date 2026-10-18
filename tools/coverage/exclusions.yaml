@@ -1,66 +1,66 @@
-# Itens que outras ferramentas alteram e que o catálogo NÃO vai incluir, com o motivo.
-# "match" é uma expressão regular sobre "<Tipo>:<alvo>", ex.: "Registry:HKLM\SYSTEM\...\Valor", "Service:UCPD".
-# Tipos: Registry, RegistryKey, Service, Task, Appx, Feature, Capability. Sem diferenciar maiúsculas.
+# Items that other tools change and that the catalog will NOT include, with the reason.
+# "match" is a regular expression over "<Type>:<target>", e.g. "Registry:HKLM\SYSTEM\...\Value", "Service:UCPD".
+# Types: Registry, RegistryKey, Service, Task, Appx, Feature, Capability. Case-insensitive.
 items:
   - match: '\\Tcpip\\Parameters\\Interfaces\\.*\\(TcpAckFrequency|TCPNoDelay|TcpDelAckTicks)$|\\MSMQ\\Parameters\\TCPNoDelay$'
     reason: >
-      Placebo ("desligar o algoritmo de Nagle"): afeta só conexões TCP que não definem TCP_NODELAY; jogos usam UDP
-      ou já desligam o Nagle no próprio socket. Sem ganho mensurável documentado.
+      Placebo ("disable Nagle's algorithm"): only affects TCP connections that do not set TCP_NODELAY; games use UDP
+      or already disable Nagle on their own socket. No documented measurable gain.
   - match: '\\Multimedia\\SystemProfile\\(NetworkThrottlingIndex|SystemResponsiveness)$|\\Multimedia\\SystemProfile\\Tasks\\'
     reason: >
-      Ajustes do MMCSS vendidos como "menos latência em jogos": só valem para programas que se registram no MMCSS
-      (áudio profissional) e não têm ganho comprovado; NetworkThrottlingIndex só limitava a rede durante reprodução.
+      MMCSS tweaks sold as "lower latency in games": they only apply to programs that register with MMCSS
+      (professional audio) and have no proven gain; NetworkThrottlingIndex only throttled the network during playback.
   - match: '\\PriorityControl\\Win32PrioritySeparation$'
     reason: >
-      O padrão do Windows cliente já favorece o programa em primeiro plano; os valores "otimizados" que circulam não
-      têm ganho mensurável documentado.
+      The Windows client default already favors the foreground program; the "optimized" values that circulate have
+      no documented measurable gain.
   - match: '\\Control\\SvcHostSplitThresholdInKB$'
     reason: >
-      Só agrupa serviços em menos processos svchost: economiza pouca memória e reduz o isolamento entre serviços
-      (uma falha derruba vários). Não é debloat.
+      Only groups services into fewer svchost processes: saves little memory and reduces isolation between services
+      (one failure brings down several). Not debloat.
   - match: '\\Memory Management\\(LargeSystemCache|DisablePagingExecutive)$'
-    reason: Mito de desempenho para PCs de mesa; o Windows atual gerencia isso melhor sozinho e pode piorar a memória disponível.
+    reason: Performance myth for desktop PCs; current Windows manages this better on its own, and it can reduce available memory.
   - match: '\\Memory Management\\FeatureSettingsOverride(Mask)?$|\\Session Manager\\kernel\\DisableExceptionChainValidation$|\\Virtualization\\MinVmVersionForCpuBasedMitigations$'
     reason: >
-      Desliga mitigações de segurança do processador (Spectre/Meltdown) ou do kernel (SEHOP). Fora do escopo: o
-      programa não reduz proteções de segurança do sistema por desempenho.
+      Turns off processor (Spectre/Meltdown) or kernel (SEHOP) security mitigations. Out of scope: the
+      program does not reduce system security protections for performance.
   - match: '\\DeviceGuard\\(EnableVirtualizationBasedSecurity|RequirePlatformSecurityFeatures|Locked)$|\\HypervisorEnforcedCodeIntegrity\\|\\CI\\Policy\\VerifiedAndReputablePolicyState$'
     reason: >
-      VBS/HVCI e Controle Inteligente de Aplicativos são proteções do kernel; desligá-las é decisão de segurança,
-      não de "desinchar". Fora do escopo por enquanto.
+      VBS/HVCI and Smart App Control are kernel protections; turning them off is a security decision,
+      not "debloating". Out of scope for now.
   - match: '^Service:UCPD$|UCPD velocity'
     reason: >
-      O UCPD protege associações de arquivos e alguns valores da barra de tarefas contra programas que os alteram.
-      O programa não desliga nem contorna proteções do sistema.
+      UCPD protects file associations and some taskbar values against programs that change them.
+      The program does not turn off or bypass system protections.
   - match: '^Service:GpuEnergyDrv$'
-    reason: Driver do sistema (energia da GPU); desativar drivers não traz ganho comprovado e pode quebrar o Gerenciador de Tarefas.
+    reason: System driver (GPU power); disabling drivers brings no proven gain and can break Task Manager.
   - match: '\\(OEMInformation|CurrentVersion)\\(Manufacturer|Model|SupportURL|SupportPhone|SupportHours|Logo|RegisteredOrganization|RegisteredOwner)$'
-    reason: Personalização de marca/OEM do próprio playbook; não é ajuste do Windows.
+    reason: Brand/OEM customization of the playbook itself; not a Windows tweak.
   - match: '\\(BraveSoftware|NVIDIA Corporation|Mozilla|Google\\Chrome|Adobe)\\'
-    reason: Configura programas de terceiros; fora do escopo do catálogo (só Windows e apps da Microsoft).
+    reason: Configures third-party programs; outside the catalog's scope (only Windows and Microsoft apps).
   - match: '^Registry(Key)?:HKCR\\WindowsCleanup'
-    reason: Protocolo registrado pelo próprio Sophia Script para a tarefa dele; não é ajuste do Windows.
+    reason: Protocol registered by Sophia Script itself for its own task; not a Windows tweak.
   - match: '\\Keyboard Layout\\Scancode Map$'
-    reason: Remapeamento de teclas (preferência pessoal); fora do escopo.
+    reason: Key remapping (personal preference); out of scope.
   - match: '\\GameConfigStore\\GameDVR_(FSEBehaviorMode|FSEBehavior|HonorUserFSEBehaviorMode|DXGIHonorFSEWindowsCompatible|EFSEFeatureFlags)$'
     reason: >
-      "Desativar otimizações de tela cheia": efeito contestado; no Windows 11 o modo de apresentação flip costuma ser
-      igual ou melhor que a tela cheia exclusiva. Não incluído por falta de ganho comprovado.
+      "Disable fullscreen optimizations": disputed effect; on Windows 11 the flip presentation model is usually
+      equal to or better than exclusive fullscreen. Not included for lack of proven gain.
   - match: '\\GameBar\\(AutoGameModeEnabled|AllowAutoGameMode)$'
-    reason: O Modo de Jogo ligado é o padrão e não piora o desempenho; ligar/desligar não é debloat.
+    reason: Game Mode on is the default and does not hurt performance; turning it on/off is not debloat.
   - match: '\\Schedule\\Maintenance\\MaintenanceDisabled$'
     reason: >
-      Desliga a manutenção automática inteira (otimização/TRIM de unidades, verificações de disco, limpeza); mais
-      prejudica que ajuda. Tarefas específicas são tratadas uma a uma no catálogo.
+      Turns off automatic maintenance entirely (drive optimization/TRIM, disk checks, cleanup); it does more
+      harm than good. Specific tasks are handled one by one in the catalog.
   - match: '\\Tcpip6\\Parameters\\DisabledComponents$|\\TCPIP\\v6Transition\\|Teredo'
     reason: >
-      Desligar IPv6/Teredo não melhora desempenho e quebra recursos (Xbox Live, Grupo Doméstico, alguns VPNs); a
-      Microsoft desaconselha desativar o IPv6.
+      Turning off IPv6/Teredo does not improve performance and breaks features (Xbox Live, HomeGroup, some VPNs);
+      Microsoft advises against disabling IPv6.
   - match: '^Appx:(Microsoft\.WindowsStore|Microsoft\.DesktopAppInstaller|Microsoft\.WindowsNotepad|Microsoft\.WindowsTerminal|Microsoft\.WindowsCalculator|Microsoft\.Windows\.Photos|Microsoft\.StorePurchaseApp|Microsoft\.SecHealthUI)$'
     reason: >
-      Apps essenciais mantidos de propósito (Store, winget/Instalador de Aplicativos, Bloco de Notas, Terminal,
-      Calculadora, Fotos, Segurança do Windows): removê-los quebra a instalação/atualização de apps ou funções básicas.
+      Essential apps kept on purpose (Store, winget/App Installer, Notepad, Terminal,
+      Calculator, Photos, Windows Security): removing them breaks app installation/updates or basic functions.
   - match: '\\Explorer\\Advanced\\TaskbarDa$|\\Policies\\Microsoft\\Dsh\\AllowNewsAndInterests$'
     reason: >
-      No 26300 o Windows nega a gravação desses valores (proteção do driver UCPD). O catálogo usa a política
-      DisableWidgetsBoard (ui.taskbar.disable-widgets) e não contorna a proteção (ver docs/vm-test-results.md).
+      On 26300 Windows denies writes to these values (UCPD driver protection). The catalog uses the
+      DisableWidgetsBoard policy (ui.taskbar.disable-widgets) and does not bypass the protection (see the VM test results).

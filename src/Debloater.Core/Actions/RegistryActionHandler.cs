@@ -7,7 +7,7 @@ using Microsoft.Win32;
 namespace Debloater.Core.Actions;
 
 /// <summary>
-/// Ação "registry": garante que um valor exista com tipo/dado específicos, ou (delete: true) que não exista.
+/// "registry" action: ensures a value exists with a specific type/data, or (delete: true) that it does not exist.
 /// </summary>
 public sealed class RegistryActionHandler : IActionHandler
 {
@@ -20,25 +20,25 @@ public sealed class RegistryActionHandler : IActionHandler
     {
         ActionHandlers.RequireField(spec.Path, "path", Type, errors);
         if (spec.Path is not null && !TryParsePath(spec.Path, out _, out _))
-            errors.Add($"ação 'registry': path inválido '{spec.Path}' (use HKLM\\..., HKCU\\..., HKCR\\... ou HKU\\...).");
+            errors.Add($"action 'registry': invalid path '{spec.Path}' (use HKLM\\..., HKCU\\..., HKCR\\... or HKU\\...).");
         if (spec.Name is null)
-            errors.Add("ação 'registry' exige o campo 'name' (use \"\" para o valor padrão da chave).");
+            errors.Add("action 'registry' requires the field 'name' (use \"\" for the key's default value).");
         if (spec.Delete)
         {
             if (spec.Value is not null || spec.Kind is not null)
-                errors.Add("ação 'registry': 'delete: true' não pode ter 'kind' nem 'value'.");
+                errors.Add("action 'registry': 'delete: true' cannot have 'kind' or 'value'.");
             return;
         }
         ActionHandlers.RequireOneOf(spec.Kind, "kind", Type, errors, s_kinds);
         if (spec.Value is null)
         {
-            errors.Add("ação 'registry' exige 'value' (ou 'delete: true').");
+            errors.Add("action 'registry' requires 'value' (or 'delete: true').");
             return;
         }
         if (spec.Kind is not null && s_kinds.Contains(spec.Kind, StringComparer.OrdinalIgnoreCase))
         {
             try { _ = ToRegistryValue(ParseKind(spec.Kind), spec.Value); }
-            catch (FormatException ex) { errors.Add($"ação 'registry' ({spec.Path}\\{spec.Name}): {ex.Message}"); }
+            catch (FormatException ex) { errors.Add($"action 'registry' ({spec.Path}\\{spec.Name}): {ex.Message}"); }
         }
     }
 
@@ -54,22 +54,22 @@ public sealed class RegistryActionHandler : IActionHandler
             if (spec.Delete)
             {
                 return Task.FromResult(current is null
-                    ? Detection.Desired("ausente")
-                    : Detection.NotDesired($"presente: {Describe(current.Value.Kind, current.Value.Data)}"));
+                    ? Detection.Desired("absent")
+                    : Detection.NotDesired($"present: {Describe(current.Value.Kind, current.Value.Data)}"));
             }
 
-            if (current is null) return Task.FromResult(Detection.NotDesired("ausente"));
+            if (current is null) return Task.FromResult(Detection.NotDesired("absent"));
 
             var kind = ParseKind(spec.Kind!);
             var desired = ToRegistryValue(kind, spec.Value!);
             var (curKind, curData) = current.Value;
             bool match = curKind == kind && ValuesEqual(curData, desired);
-            var detail = $"atual: {Describe(curKind, curData)}";
+            var detail = $"current: {Describe(curKind, curData)}";
             return Task.FromResult(match ? Detection.Desired(detail) : Detection.NotDesired(detail));
         }
         catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)
         {
-            return Task.FromResult(Detection.Error($"sem acesso ao registro: {ex.Message}"));
+            return Task.FromResult(Detection.Error($"no registry access: {ex.Message}"));
         }
     }
 
@@ -123,13 +123,13 @@ public sealed class RegistryActionHandler : IActionHandler
 
         var kind = ParseKind(spec.Kind!);
         using var key = baseKey.CreateSubKey(subKey, writable: true)
-            ?? throw new InvalidOperationException($"Não foi possível criar a chave {spec.Path}.");
+            ?? throw new InvalidOperationException($"Could not create key {spec.Path}.");
         key.SetValue(spec.Name!, ToRegistryValue(kind, spec.Value!), kind);
     }
 
     public Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default)
     {
-        if (backup is null) throw new InvalidOperationException($"Sem backup para {spec}.");
+        if (backup is null) throw new InvalidOperationException($"No backup for {spec}.");
         try
         {
             Restore(spec, backup, ctx);
@@ -148,7 +148,7 @@ public sealed class RegistryActionHandler : IActionHandler
 
         if (backup.Existed)
         {
-            var kind = ParseKind(backup.Kind ?? throw new InvalidOperationException("Backup sem 'kind'."));
+            var kind = ParseKind(backup.Kind ?? throw new InvalidOperationException("Backup has no 'kind'."));
             object data = kind == RegistryValueKind.MultiString
                 ? (backup.MultiData ?? []).ToArray()
                 : StringToData(kind, backup.Data ?? "");
@@ -157,21 +157,21 @@ public sealed class RegistryActionHandler : IActionHandler
             return;
         }
 
-        // O valor não existia: remove-o e apaga as chaves que o apply criou, se ficaram vazias.
+        // The value did not exist: remove it and delete the keys that apply created, if they are now empty.
         using (var key = baseKey.OpenSubKey(subKey, writable: true))
             key?.DeleteValue(spec.Name!, throwOnMissingValue: false);
 
         if (backup.Extra is { Length: > 0 } firstCreated)
         {
-            // Limpeza das chaves que o apply criou: best-effort. Chave vazia que sobra não muda nada, e o
-            // Windows às vezes não deixa apagar (ex.: Policies\Microsoft\Dsh, protegida pelo UCPD no 26300).
+            // Cleanup of the keys that apply created: best-effort. A leftover empty key changes nothing, and
+            // Windows sometimes refuses to delete it (e.g. Policies\Microsoft\Dsh, protected by UCPD on 26300).
             try
             {
                 DeleteEmptyKeysUpTo(baseKey, subKey, firstCreated);
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException)
             {
-                ctx.AddNote($"a chave vazia {RootName(hive)}\\{subKey} foi mantida: o Windows não permitiu apagá-la ({ex.Message}).");
+                ctx.AddNote($"the empty key {RootName(hive)}\\{subKey} was kept: Windows did not allow deleting it ({ex.Message}).");
             }
         }
     }
@@ -208,7 +208,7 @@ public sealed class RegistryActionHandler : IActionHandler
     private static (RegistryHive, string) ParsePathOrThrow(string? path) =>
         path is not null && TryParsePath(path, out var hive, out var sub)
             ? (hive, sub)
-            : throw new InvalidOperationException($"Caminho de registro inválido: '{path}'.");
+            : throw new InvalidOperationException($"Invalid registry path: '{path}'.");
 
     private static (RegistryValueKind Kind, object Data)? ReadValue(RegistryKey? key, string name)
     {
@@ -226,7 +226,7 @@ public sealed class RegistryActionHandler : IActionHandler
         "expandstring" => RegistryValueKind.ExpandString,
         "multistring" => RegistryValueKind.MultiString,
         "binary" => RegistryValueKind.Binary,
-        _ => throw new FormatException($"kind desconhecido '{kind}'."),
+        _ => throw new FormatException($"unknown kind '{kind}'."),
     };
 
     public static string KindToString(RegistryValueKind kind) => kind switch
@@ -240,7 +240,7 @@ public sealed class RegistryActionHandler : IActionHandler
         _ => kind.ToString(),
     };
 
-    /// <summary>Converte o valor do YAML no objeto .NET esperado por <see cref="RegistryKey.SetValue(string?, object, RegistryValueKind)"/>.</summary>
+    /// <summary>Converts the YAML value into the .NET object expected by <see cref="RegistryKey.SetValue(string?, object, RegistryValueKind)"/>.</summary>
     public static object ToRegistryValue(RegistryValueKind kind, object value)
     {
         switch (kind)
@@ -248,7 +248,7 @@ public sealed class RegistryActionHandler : IActionHandler
             case RegistryValueKind.DWord:
             {
                 long n = ParseInteger(Scalar(value));
-                if (n is < int.MinValue or > uint.MaxValue) throw new FormatException($"valor dword fora do intervalo: {n}.");
+                if (n is < int.MinValue or > uint.MaxValue) throw new FormatException($"dword value out of range: {n}.");
                 return unchecked((int)(uint)(n & 0xFFFFFFFF));
             }
             case RegistryValueKind.QWord:
@@ -263,14 +263,14 @@ public sealed class RegistryActionHandler : IActionHandler
             case RegistryValueKind.Binary:
                 return ParseHex(Scalar(value));
             default:
-                throw new FormatException($"kind não suportado: {kind}.");
+                throw new FormatException($"unsupported kind: {kind}.");
         }
     }
 
     private static string Scalar(object value) => value switch
     {
         string s => s,
-        IEnumerable<object> => throw new FormatException("esperado um valor escalar, não uma lista."),
+        IEnumerable<object> => throw new FormatException("expected a scalar value, not a list."),
         _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? "",
     };
 
@@ -283,14 +283,14 @@ public sealed class RegistryActionHandler : IActionHandler
         }
         else if (long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var dec)) return dec;
         else if (ulong.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var udec)) return unchecked((long)udec);
-        throw new FormatException($"número inválido '{s}'.");
+        throw new FormatException($"invalid number '{s}'.");
     }
 
     private static byte[] ParseHex(string s)
     {
         var clean = new string(s.Where(Uri.IsHexDigit).ToArray());
         if (clean.Length % 2 != 0 || clean.Length != s.Count(c => !char.IsWhiteSpace(c) && c != ',' && c != '-'))
-            throw new FormatException($"hex binário inválido '{s}'.");
+            throw new FormatException($"invalid binary hex '{s}'.");
         return Convert.FromHexString(clean);
     }
 
@@ -328,7 +328,7 @@ public sealed class RegistryActionHandler : IActionHandler
         return $"{(text.Length == 0 ? "\"\"" : text)} ({KindToString(kind)})";
     }
 
-    /// <summary>Retorna o subcaminho da primeira chave (de cima para baixo) que ainda não existe.</summary>
+    /// <summary>Returns the subpath of the first key (top-down) that does not exist yet.</summary>
     private static string? FirstMissingKey(RegistryKey baseKey, string subKey)
     {
         var parts = subKey.Split('\\', StringSplitOptions.RemoveEmptyEntries);
@@ -360,15 +360,15 @@ public sealed class RegistryActionHandler : IActionHandler
 }
 
 /// <summary>
-/// O Windows negou a gravação de um valor de registro mesmo para administrador: chave com ACL restrita
-/// (ex.: TrustedInstaller) ou valor protegido por um filtro do kernel (ex.: o driver UCPD, que bloqueia
-/// valores como HKCU\...\Explorer\Advanced\TaskbarDa e HKLM\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests
-/// em builds recentes). O programa NÃO toma posse de chaves do sistema.
+/// Windows denied writing a registry value even for an administrator: key with a restricted ACL
+/// (e.g. TrustedInstaller) or value protected by a kernel filter (e.g. the UCPD driver, which blocks
+/// values such as HKCU\...\Explorer\Advanced\TaskbarDa and HKLM\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests
+/// on recent builds). The program does NOT take ownership of system keys.
 /// </summary>
 public sealed class ProtectedRegistryException(ActionSpec spec, Exception inner) : InvalidOperationException(
-    $"chave protegida pelo sistema: o Windows negou a gravação de {spec.Target} mesmo como administrador " +
-    "(ACL restrita ou proteção do sistema, como o driver UCPD). O programa não toma posse de chaves do sistema; " +
-    "este ajuste não pode ser aplicado por este mecanismo neste build.", inner)
+    $"key protected by the system: Windows denied writing {spec.Target} even as administrator " +
+    "(restricted ACL or system protection, such as the UCPD driver). The program does not take ownership of system keys; " +
+    "this tweak cannot be applied by this mechanism on this build.", inner)
 {
     public ActionSpec Spec { get; } = spec;
 }

@@ -2,7 +2,7 @@ using Debloater.Core.Inventory;
 
 namespace Debloater.Core.Fingerprint;
 
-/// <summary>O que o filtro de privacidade tirou do diff (contagens por seção).</summary>
+/// <summary>What the privacy filter removed from the diff (counts per section).</summary>
 public sealed class FingerprintPrivacyInfo
 {
     public const string Binaries = "binaries";
@@ -11,7 +11,7 @@ public sealed class FingerprintPrivacyInfo
     public const string OldBinaryReferences = "oldBinaryReferences";
     public static string Inventory(string kind) => $"inventory:{kind}";
 
-    /// <summary>Itens omitidos por seção (chaves: <see cref="Binaries"/>, <see cref="Inventory"/>...).</summary>
+    /// <summary>Omitted items per section (keys: <see cref="Binaries"/>, <see cref="Inventory"/>...).</summary>
     public SortedDictionary<string, int> Omitted { get; set; } = new(StringComparer.Ordinal);
 
     public int Get(string key) => Omitted.GetValueOrDefault(key);
@@ -24,25 +24,25 @@ public sealed class FingerprintPrivacyInfo
 }
 
 /// <summary>
-/// Filtro de privacidade do diff (ligado por padrão no <c>fingerprint diff</c>): o relatório costuma ir
-/// para um repositório público e um dos lados pode ser o PC pessoal de alguém. Tira o que revela o
-/// software/hardware de uma máquina e mantém o que é do Windows:
+/// Privacy filter for the diff (on by default in <c>fingerprint diff</c>): reports are no longer
+/// committed, but they may still be shared, and one of the sides may be someone's personal PC. Removes
+/// what reveals a machine's software/hardware and keeps what belongs to Windows:
 /// <list type="bullet">
-/// <item>itens de inventário marcados como ruído de ambiente (terceiros, hardware, frameworks, idiomas,
-/// inicialização automática, SID/GUID), dos dois lados; ficam só os ruídos de elevação e de alvo do catálogo;</item>
-/// <item>itens que só existem no lado antigo (removidos) sem evidência de serem do Windows: serviço/driver
-/// cujo binário não existe no build novo, tarefa fora de <c>\Microsoft\Windows\</c>, appx que não é pacote
-/// do sistema, capacidades (instaladas à parte);</item>
-/// <item>binários removidos fora de <c>Windows\SystemApps</c>; cadeias que sumiram e referências a binários
-/// antigos que não existem no build novo; políticas de arquivos ADMX que só existem no antigo (modelos
-/// instalados à parte);</item>
-/// <item>o nome das máquinas.</item>
+/// <item>inventory items flagged as environment noise (third party, hardware, frameworks, languages,
+/// autoruns, SID/GUID), on both sides; only the elevation and catalog-target noise is kept;</item>
+/// <item>items that only exist on the old side (removed) with no evidence of being part of Windows: a
+/// service/driver whose binary does not exist in the new build, a task outside <c>\Microsoft\Windows\</c>,
+/// an appx that is not a system package, capabilities (installed separately);</item>
+/// <item>removed binaries outside <c>Windows\SystemApps</c>; strings that disappeared and references to old
+/// binaries that do not exist in the new build; policies from ADMX files that only exist on the old side
+/// (separately installed templates);</item>
+/// <item>the machine names.</item>
 /// </list>
-/// As quantidades omitidas ficam em <see cref="FingerprintDiffResult.Privacy"/> e aparecem no relatório.
+/// The omitted counts are stored in <see cref="FingerprintDiffResult.Privacy"/> and shown in the report.
 /// </summary>
 public static class FingerprintPrivacy
 {
-    /// <summary>Ruídos que não dizem nada da máquina (são do Windows ou do catálogo): ficam.</summary>
+    /// <summary>Noise that says nothing about the machine (it comes from Windows or the catalog): kept.</summary>
     private static readonly HashSet<string> KeptNoise = new(StringComparer.Ordinal)
     {
         FingerprintDiff.ElevationNoise, FingerprintDiff.CatalogTargetNoise, FingerprintDiff.CatalogAppNoise,
@@ -62,7 +62,7 @@ public static class FingerprintPrivacy
         bool InBoxOldBinary(string path) =>
             path.StartsWith(SystemApps, StringComparison.OrdinalIgnoreCase) || newPaths.Contains(path);
 
-        // ---- inventário ----
+        // ---- inventory ----
         var inventory = new List<InventoryChange>();
         foreach (var i in d.Inventory)
         {
@@ -72,7 +72,7 @@ public static class FingerprintPrivacy
         }
         d.Inventory = inventory;
 
-        // ---- binários removidos: só os de pacotes do sistema ----
+        // ---- removed binaries: only those from system packages ----
         var binaries = new List<BinaryChange>();
         foreach (var b in d.Binaries)
         {
@@ -81,7 +81,7 @@ public static class FingerprintPrivacy
         }
         d.Binaries = binaries;
 
-        // ---- cadeias que sumiram: só as de binários que continuam no build novo ----
+        // ---- strings that disappeared: only those from binaries still present in the new build ----
         var removed = new List<Candidate>();
         foreach (var c in d.RemovedStrings)
         {
@@ -93,7 +93,7 @@ public static class FingerprintPrivacy
         }
         d.RemovedStrings = removed;
 
-        // ---- referências a binários do lado antigo ----
+        // ---- references to old-side binaries ----
         foreach (var c in d.Candidates.Where(c => c.OldBinaries is { Count: > 0 }))
         {
             var kept = c.OldBinaries!.Where(InBoxOldBinary).ToList();
@@ -107,7 +107,7 @@ public static class FingerprintPrivacy
             t.OldBinaries = kept;
         }
 
-        // ---- políticas de modelos ADMX que só existem no antigo ----
+        // ---- policies from ADMX templates that only exist on the old side ----
         var policies = new List<PolicyChange>();
         foreach (var p in d.Policies)
         {
@@ -121,7 +121,7 @@ public static class FingerprintPrivacy
         d.Privacy = info;
         return d;
 
-        // "caminho versão" (tweaks obsoletos) → caminho: o caminho é o binário antigo mais longo que for prefixo.
+        // "path version" (obsolete tweaks) → path: the path is the longest old binary that is a prefix.
         string PathOf(string s) =>
             oldPaths.Where(p => s.Equals(p, StringComparison.OrdinalIgnoreCase) || s.StartsWith(p + " ", StringComparison.OrdinalIgnoreCase))
                 .MaxBy(p => p.Length) ?? s;
@@ -138,7 +138,7 @@ public static class FingerprintPrivacy
                     var raw = item.Info?.GetValueOrDefault("serviceDll") ?? item.Properties.GetValueOrDefault("imagePath")
                               ?? (i.Kind == InventoryKinds.Drivers ? $@"\SystemRoot\System32\drivers\{item.Id}.sys" : null);
                     var path = FingerprintDiff.ResolveImagePath(raw);
-                    // svchost sem ServiceDll não diz de quem é o serviço.
+                    // svchost without a ServiceDll does not tell whose service it is.
                     return path is not null && !path.EndsWith(@"\svchost.exe", StringComparison.OrdinalIgnoreCase) && InBoxOldBinary(path);
                 }
                 case InventoryKinds.Tasks:
@@ -149,9 +149,9 @@ public static class FingerprintPrivacy
                         || oldPaths.Any(p => p.StartsWith($@"{SystemApps}{i.Id}_", StringComparison.OrdinalIgnoreCase)
                                           || p.StartsWith($@"{SystemApps}SxS\{i.Id}_", StringComparison.OrdinalIgnoreCase));
                 case InventoryKinds.Features:
-                    return true;   // recursos opcionais são do Windows por definição
+                    return true;   // optional features belong to Windows by definition
                 default:
-                    return false;  // capacidades instaladas à parte, autoruns...
+                    return false;  // separately installed capabilities, autoruns...
             }
         }
     }

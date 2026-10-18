@@ -8,9 +8,9 @@ using Microsoft.Win32;
 namespace Debloater.Core.Actions;
 
 /// <summary>
-/// Ação "service": define o tipo de inicialização de um serviço via
+/// "service" action: sets a service's startup type via
 /// HKLM\SYSTEM\CurrentControlSet\Services\&lt;name&gt;\Start (+ DelayedAutostart).
-/// Ao desativar, tenta parar o serviço (best-effort). Serviço inexistente = NotApplicable.
+/// When disabling, tries to stop the service (best-effort). Missing service = NotApplicable.
 /// </summary>
 public sealed class ServiceActionHandler : IActionHandler
 {
@@ -25,14 +25,14 @@ public sealed class ServiceActionHandler : IActionHandler
         ActionHandlers.RequireOneOf(spec.Startup, "startup", Type, errors, "disabled", "manual", "automatic", "automaticDelayed");
     }
 
-    /// <summary>Converte o "startup" do YAML em (Start, DelayedAutostart).</summary>
+    /// <summary>Converts the YAML "startup" into (Start, DelayedAutostart).</summary>
     internal static (int Start, int Delayed) ToStartValues(string startup) => startup.ToLowerInvariant() switch
     {
         "disabled" => (4, 0),
         "manual" => (3, 0),
         "automatic" => (2, 0),
         "automaticdelayed" => (2, 1),
-        _ => throw new FormatException($"startup inválido '{startup}'."),
+        _ => throw new FormatException($"invalid startup '{startup}'."),
     };
 
     internal static string Describe(int start, int delayed) => start switch
@@ -63,15 +63,15 @@ public sealed class ServiceActionHandler : IActionHandler
         try
         {
             var (exists, start, delayed) = Read(spec.Name!);
-            if (!exists) return Task.FromResult(Detection.NotApplicable("serviço não existe"));
+            if (!exists) return Task.FromResult(Detection.NotApplicable("service does not exist"));
             var (wantStart, wantDelayed) = ToStartValues(spec.Startup!);
             bool match = start == wantStart && (wantStart != 2 || delayed == wantDelayed);
-            var detail = $"atual: {Describe(start, delayed)}";
+            var detail = $"current: {Describe(start, delayed)}";
             return Task.FromResult(match ? Detection.Desired(detail) : Detection.NotDesired(detail));
         }
         catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException)
         {
-            return Task.FromResult(Detection.Error($"sem acesso: {ex.Message}"));
+            return Task.FromResult(Detection.Error($"no access: {ex.Message}"));
         }
     }
 
@@ -91,7 +91,7 @@ public sealed class ServiceActionHandler : IActionHandler
     public async Task ApplyAsync(ActionSpec spec, ScanContext ctx, CancellationToken ct = default)
     {
         var (exists, _, _) = Read(spec.Name!);
-        if (!exists) return; // NotApplicable: nada a fazer.
+        if (!exists) return; // NotApplicable: nothing to do.
         var (start, delayed) = ToStartValues(spec.Startup!);
         Write(spec.Name!, start, delayed);
         if (start == 4) await TryStopAsync(spec.Name!, ctx, ct).ConfigureAwait(false);
@@ -99,7 +99,7 @@ public sealed class ServiceActionHandler : IActionHandler
 
     public Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default)
     {
-        if (backup is null) throw new InvalidOperationException($"Sem backup para {spec}.");
+        if (backup is null) throw new InvalidOperationException($"No backup for {spec}.");
         if (!backup.Existed || backup.Data is null) return Task.CompletedTask;
         var (exists, _, _) = Read(spec.Name!);
         if (!exists) return Task.CompletedTask;
@@ -113,20 +113,20 @@ public sealed class ServiceActionHandler : IActionHandler
     {
         using var root = OpenServicesRoot();
         using var key = root.OpenSubKey($@"{ServicesKey}\{name}", writable: true)
-            ?? throw new InvalidOperationException($"Serviço '{name}' não encontrado.");
+            ?? throw new InvalidOperationException($"Service '{name}' not found.");
         key.SetValue("Start", start, RegistryValueKind.DWord);
         if (start == 2) key.SetValue("DelayedAutostart", delayed, RegistryValueKind.DWord);
         else if (key.GetValue("DelayedAutostart") is not null) key.SetValue("DelayedAutostart", 0, RegistryValueKind.DWord);
     }
 
-    /// <summary>Quanto esperar o serviço parar ao desativá-lo. O que importa é o tipo de inicialização.</summary>
+    /// <summary>How long to wait for the service to stop when disabling it. What matters is the startup type.</summary>
     public static TimeSpan StopTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
     /// <summary>
-    /// Tenta parar o serviço, esperando no máximo <see cref="StopTimeout"/> no total. ServiceController.Stop()
-    /// pode bloquear (o SCM espera o serviço responder ao controle, e os dependentes são parados um a um),
-    /// por isso a chamada inteira roda em segundo plano e a espera é limitada. Se não parar a tempo,
-    /// registra um aviso: a inicialização já foi alterada e o serviço não volta a iniciar depois de reiniciar.
+    /// Tries to stop the service, waiting at most <see cref="StopTimeout"/> in total. ServiceController.Stop()
+    /// can block (the SCM waits for the service to respond to the control, and dependents are stopped one by one),
+    /// so the whole call runs in the background and the wait is bounded. If it does not stop in time,
+    /// a note is recorded: the startup type was already changed and the service will not start again after a restart.
     /// </summary>
     private static async Task TryStopAsync(string name, ScanContext ctx, CancellationToken ct)
     {
@@ -149,17 +149,17 @@ public sealed class ServiceActionHandler : IActionHandler
             var finished = await Task.WhenAny(stop, Task.Delay(StopTimeout, ct)).ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
             problem = finished != stop
-                ? $"não parou em {StopTimeout.TotalSeconds:0} s"
-                : await stop.ConfigureAwait(false) ? null : "não aceita o comando de parar agora";
+                ? $"did not stop within {StopTimeout.TotalSeconds:0} s"
+                : await stop.ConfigureAwait(false) ? null : "does not accept the stop command right now";
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ServiceProcess.TimeoutException or System.ComponentModel.Win32Exception)
         {
-            problem = ex is System.ServiceProcess.TimeoutException ? $"não parou em {StopTimeout.TotalSeconds:0} s" : ex.Message;
+            problem = ex is System.ServiceProcess.TimeoutException ? $"did not stop within {StopTimeout.TotalSeconds:0} s" : ex.Message;
         }
-        // Não deixa exceção sem observação na tarefa abandonada.
+        // Do not leave an unobserved exception on the abandoned task.
         _ = stop.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
 
         if (problem is not null)
-            ctx.AddNote($"serviço {name} desativado, mas ainda em execução ({problem}); ele para ao reiniciar o Windows.");
+            ctx.AddNote($"service {name} disabled, but still running ({problem}); it stops when Windows restarts.");
     }
 }

@@ -5,9 +5,9 @@ using Debloater.Core.Platform;
 namespace Debloater.Core.Actions;
 
 /// <summary>
-/// Ação "powershell": válvula de escape para o que não cabe nos outros tipos.
-/// "detect" deve imprimir True (estado desejado) ou False na última linha;
-/// também aceita NotApplicable. "apply" aplica e "revert" desfaz.
+/// "powershell" action: escape hatch for what does not fit the other types.
+/// "detect" must print True (desired state) or False on its last line;
+/// NotApplicable is also accepted. "apply" applies and "revert" undoes.
 /// </summary>
 public sealed class PowerShellActionHandler : IActionHandler
 {
@@ -31,17 +31,17 @@ public sealed class PowerShellActionHandler : IActionHandler
                 "true" => Detection.Desired("detect: True"),
                 "false" => Detection.NotDesired("detect: False"),
                 "notapplicable" => Detection.NotApplicable("detect: NotApplicable"),
-                _ => Detection.Error($"detect retornou '{last}' (esperado True/False). {result.StdErr.Trim()}".Trim()),
+                _ => Detection.Error($"detect returned '{last}' (expected True/False). {result.StdErr.Trim()}".Trim()),
             };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Detection.Error($"falha ao executar detect: {ex.Message}");
+            return Detection.Error($"failed to run detect: {ex.Message}");
         }
     }
 
     public Task<ActionBackup?> CaptureBackupAsync(ActionSpec spec, ScanContext ctx, CancellationToken ct = default) =>
-        // O "backup" de um script é o próprio script de revert.
+        // The "backup" of a script is its revert script.
         Task.FromResult<ActionBackup?>(new ActionBackup { Type = Type, Target = spec.Target, Existed = true });
 
     public Task ApplyAsync(ActionSpec spec, ScanContext ctx, CancellationToken ct = default) =>
@@ -49,7 +49,7 @@ public sealed class PowerShellActionHandler : IActionHandler
 
     public Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default) =>
         string.IsNullOrWhiteSpace(spec.Revert)
-            ? throw new NotSupportedException("Esta ação powershell não define 'revert'.")
+            ? throw new NotSupportedException("This powershell action does not define 'revert'.")
             : RunAsync(spec.Revert!, "revert", ct);
 
     private static async Task RunAsync(string script, string what, CancellationToken ct)
@@ -57,6 +57,6 @@ public sealed class PowerShellActionHandler : IActionHandler
         var wrapped = "$ErrorActionPreference = 'Stop'\n" + script;
         var result = await ProcessRunner.RunPowerShellAsync(wrapped, ct).ConfigureAwait(false);
         if (result.ExitCode != 0)
-            throw new InvalidOperationException($"script {what} falhou ({result.ExitCode}): {result.StdErr.Trim()}");
+            throw new InvalidOperationException($"{what} script failed ({result.ExitCode}): {result.StdErr.Trim()}");
     }
 }

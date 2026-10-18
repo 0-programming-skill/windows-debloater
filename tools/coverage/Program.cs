@@ -2,21 +2,23 @@ using System.Text.Json;
 using Debloater.Core.Catalog;
 using Debloater.Coverage;
 
-// Debloater.Coverage: compara o catálogo com outras ferramentas de "debloat" (ver docs/coverage/README.md).
+// Debloater.Coverage: compares the catalog with other "debloat" tools.
 //
-//   dotnet run --project tools/coverage -- report [--record [--label X]] [--catalog DIR]
+//   dotnet run --project tools/coverage -- report [--record [--label X]] [--catalog DIR] [--out DIR]
 //   dotnet run --project tools/coverage -- latest [--write]
 //
-// report  baixa (com cache em tools/coverage/.cache) os arquivos de cada fonte fixada em sources.json,
-//         extrai os alvos (registro, serviços, tarefas, appx, recursos, capacidades), casa com o catálogo
-//         e grava docs/coverage/README.md. --record acrescenta a linha do dia em docs/coverage/history.json.
-// latest  mostra a última versão (release) de cada fonte; --write atualiza tag/sha em sources.json.
+// report  downloads (cached in tools/coverage/.cache) the files of each source pinned in sources.json,
+//         extracts the targets (registry, services, tasks, appx, features, capabilities), matches them against
+//         the catalog and writes README.md to .claude/docs/coverage (git-ignored; --out DIR overrides it).
+//         --record appends the day's row to tools/coverage/history.json.
+// latest  shows the latest version (release) of each source; --write updates tag/sha in sources.json.
 
 var root = FindRepoRoot();
 var toolDir = Path.Combine(root, "tools", "coverage");
 var sourcesPath = Path.Combine(toolDir, "sources.json");
 var cacheDir = Path.Combine(toolDir, ".cache");
-var docsDir = Path.Combine(root, "docs", "coverage");
+var historyPath = Path.Combine(toolDir, "history.json");
+var outDir = ArgValue(args, "--out") is { } o ? Path.GetFullPath(o) : Path.Combine(root, ".claude", "docs", "coverage");
 var command = args.FirstOrDefault() ?? "report";
 var sources = JsonSerializer.Deserialize<SourcesFile>(File.ReadAllText(sourcesPath), SourceFetcher.Json)!;
 using var fetcher = new SourceFetcher(cacheDir);
@@ -31,19 +33,19 @@ switch (command)
         {
             var (tag, sha) = await fetcher.LatestAsync(s, cts.Token);
             var changed = sha != s.Sha;
-            Console.WriteLine($"{s.Id,-14} {s.Tag ?? "-",-16} {s.Sha[..10]}  ->  {tag ?? "(sem release)",-16} {sha[..10]} {(changed ? "MUDOU" : "")}");
+            Console.WriteLine($"{s.Id,-14} {s.Tag ?? "-",-16} {s.Sha[..10]}  ->  {tag ?? "(no release)",-16} {sha[..10]} {(changed ? "CHANGED" : "")}");
             if (write && changed) { s.Tag = tag; s.Sha = sha; }
         }
         if (write)
         {
             File.WriteAllText(sourcesPath, JsonSerializer.Serialize(sources, SourceFetcher.Json) + Environment.NewLine);
-            Console.WriteLine($"Gravado: {sourcesPath}. Rode 'report' de novo.");
+            Console.WriteLine($"Written: {sourcesPath}. Run 'report' again.");
         }
         return 0;
     }
     case "report":
     {
-        // --catalog DIR: outro catálogo (ex.: o de um commit antigo, para registrar a linha de base no histórico).
+        // --catalog DIR: another catalog (e.g. from an old commit, to record the baseline in the history).
         var catalogDir = ArgValue(args, "--catalog") ?? Path.Combine(root, "catalog");
         bool alternateCatalog = ArgValue(args, "--catalog") is not null;
         var catalog = CatalogLoader.LoadDirectory(catalogDir);
@@ -61,7 +63,7 @@ switch (command)
             {
                 var unknown = f.Tweaks.Where(id => !known.Contains(id)).ToList();
                 if (unknown.Count == 0) continue;
-                if (!alternateCatalog) Console.WriteLine($"AVISO manual.yaml ({m.Name} / {f.Name}): tweaks inexistentes: {string.Join(", ", unknown)}");
+                if (!alternateCatalog) Console.WriteLine($"WARNING manual.yaml ({m.Name} / {f.Name}): unknown tweaks: {string.Join(", ", unknown)}");
                 f.Tweaks.RemoveAll(unknown.Contains);
             }
 
@@ -73,13 +75,12 @@ switch (command)
             var texts = files.Select(f => (f.Path, Extractors.ReadText(f.Bytes))).ToList();
             var targets = Parsers.Parse(s.Parser, texts);
             perTool.Add(new ToolResult(s, files.Count, targets));
-            Console.WriteLine($"{files.Count} arquivos, {targets.Count} alvos");
+            Console.WriteLine($"{files.Count} files, {targets.Count} targets");
         }
 
         var report = Report.Build(perTool, index, exclusions, catalog.Tweaks.Count);
         report.ToolSourceMismatches.AddRange(ToolSourceCheck.Check(catalog.Tweaks, perTool));
-        foreach (var m in report.ToolSourceMismatches) Console.WriteLine($"AVISO fonte tool sem correspondência: {m}");
-        var historyPath = Path.Combine(docsDir, "history.json");
+        foreach (var m in report.ToolSourceMismatches) Console.WriteLine($"WARNING unmatched tool source: {m}");
         var history = File.Exists(historyPath)
             ? JsonSerializer.Deserialize<List<HistoryEntry>>(File.ReadAllText(historyPath), SourceFetcher.Json)!
             : [];
@@ -88,25 +89,24 @@ switch (command)
             var label = ArgValue(args, "--label") ?? "";
             history.RemoveAll(h => h.Date == report.Date && h.Label == label);
             history.Add(report.ToHistory(label));
-            Directory.CreateDirectory(docsDir);
             File.WriteAllText(historyPath, JsonSerializer.Serialize(history, SourceFetcher.Json) + Environment.NewLine);
         }
         if (alternateCatalog)
         {
-            Console.WriteLine("Catálogo alternativo: o relatório não foi regravado (só o histórico, com --record).");
+            Console.WriteLine("Alternate catalog: the report was not rewritten (only the history, with --record).");
             return 0;
         }
-        Directory.CreateDirectory(docsDir);
-        File.WriteAllText(Path.Combine(docsDir, "README.md"), Report.Markdown(report, history, manual));
-        // Lista completa do que falta (para o mantenedor), fora do git.
+        Directory.CreateDirectory(outDir);
+        File.WriteAllText(Path.Combine(outDir, "README.md"), Report.Markdown(report, history, manual));
+        // Full list of what is missing (for the maintainer), outside git.
         File.WriteAllText(Path.Combine(cacheDir, "missing.json"), JsonSerializer.Serialize(report.Missing, SourceFetcher.Json));
         Console.WriteLine();
-        foreach (var t in report.Tools) Console.WriteLine($"{t.Spec.Id,-14} {t.Covered,5}/{t.Total,-5} {t.Percent,6:0.0}%  (decidido {t.DecidedPercent:0.0}%)");
-        Console.WriteLine($"Relatório: {Path.Combine(docsDir, "README.md")}");
+        foreach (var t in report.Tools) Console.WriteLine($"{t.Spec.Id,-14} {t.Covered,5}/{t.Total,-5} {t.Percent,6:0.0}%  (decided {t.DecidedPercent:0.0}%)");
+        Console.WriteLine($"Report: {Path.Combine(outDir, "README.md")}");
         return 0;
     }
     default:
-        Console.Error.WriteLine("Uso: Debloater.Coverage report [--record [--label X]] [--catalog DIR] | latest [--write]");
+        Console.Error.WriteLine("Usage: Debloater.Coverage report [--record [--label X]] [--catalog DIR] [--out DIR] | latest [--write]");
         return 2;
 }
 

@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Debloater.Core.Platform;
 
-/// <summary>Se o PC está ingressado num domínio do Active Directory (GPOs de domínio sobrescrevem políticas locais).</summary>
+/// <summary>Whether the PC is joined to an Active Directory domain (domain GPOs override local policies).</summary>
 public static partial class DomainInfo
 {
     private const int NetSetupDomainName = 3;

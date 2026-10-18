@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Debloater.Core.Inventory;
 
-/// <summary>Tipos de item enumerados pelo inventário.</summary>
+/// <summary>Item kinds enumerated by the inventory.</summary>
 public static class InventoryKinds
 {
     public const string Services = "services";
@@ -19,14 +19,14 @@ public static class InventoryKinds
 }
 
 /// <summary>
-/// Um item existente no sistema (serviço, tarefa, pacote...). <see cref="Properties"/> entra na
-/// comparação de snapshots; <see cref="Info"/> é informativo (ex.: versão) e não gera "alterado".
+/// An item present on the system (service, task, package...). <see cref="Properties"/> takes part in
+/// snapshot comparison; <see cref="Info"/> is informational (e.g. version) and never yields "changed".
 /// </summary>
 public sealed class InventoryItem
 {
     public string Kind { get; set; } = "";
 
-    /// <summary>Identificador estável dentro do tipo (nome do serviço, caminho da tarefa, nome do pacote...).</summary>
+    /// <summary>Stable identifier within the kind (service name, task path, package name...).</summary>
     public string Id { get; set; } = "";
 
     public string? DisplayName { get; set; }
@@ -36,7 +36,7 @@ public sealed class InventoryItem
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SortedDictionary<string, string>? Info { get; set; }
 
-    /// <summary>Ids dos tweaks do catálogo que mexem neste item (vazio = não catalogado).</summary>
+    /// <summary>Ids of the catalog tweaks that touch this item (empty = not catalogued).</summary>
     public List<string> TweakIds { get; set; } = [];
 
     [JsonIgnore]
@@ -45,22 +45,22 @@ public sealed class InventoryItem
     public override string ToString() => $"{Kind}:{Id}";
 }
 
-/// <summary>Resultado da enumeração de um tipo.</summary>
+/// <summary>Result of enumerating one kind.</summary>
 public sealed class InventorySection
 {
     public string Kind { get; set; } = "";
 
-    /// <summary>false quando não foi possível enumerar (ex.: exige administrador).</summary>
+    /// <summary>false when it could not be enumerated (e.g. requires administrator).</summary>
     public bool Available { get; set; } = true;
 
-    /// <summary>Observação (ex.: "somente usuário atual; provisionados exigem administrador").</summary>
+    /// <summary>Remark (e.g. "current user only; provisioned packages require administrator").</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Note { get; set; }
 
     public List<InventoryItem> Items { get; set; } = [];
 }
 
-/// <summary>Snapshot completo do inventário (gravado em JSON por 'inventory snapshot').</summary>
+/// <summary>Full inventory snapshot (saved as JSON by 'inventory snapshot').</summary>
 public sealed class InventorySnapshot
 {
     public int SchemaVersion { get; set; } = 1;

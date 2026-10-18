@@ -3,7 +3,7 @@ using Microsoft.Win32;
 
 namespace Debloater.Core.Platform;
 
-/// <summary>Informações do Windows em execução.</summary>
+/// <summary>Information about the running Windows.</summary>
 public sealed record SystemInfo(int Build, int Ubr, string Edition, string DisplayVersion, string ProductName, bool IsElevated)
 {
     public string FullBuild => $"{Build}.{Ubr}";
@@ -21,7 +21,7 @@ public sealed record SystemInfo(int Build, int Ubr, string Edition, string Displ
         string edition = key?.GetValue("EditionID") as string ?? "?";
         string display = key?.GetValue("DisplayVersion") as string ?? "";
         string product = key?.GetValue("ProductName") as string ?? "Windows";
-        // ProductName ainda diz "Windows 10" no Windows 11; corrigimos pelo build.
+        // ProductName still says "Windows 10" on Windows 11; we fix it by build.
         if (build >= 22000) product = product.Replace("Windows 10", "Windows 11");
 
         return new SystemInfo(build, ubr, edition, display, product, IsProcessElevated());
@@ -34,5 +34,5 @@ public sealed record SystemInfo(int Build, int Ubr, string Edition, string Displ
     }
 
     public override string ToString() =>
-        $"{ProductName} {DisplayVersion} (build {FullBuild}, edição {Edition}){(IsElevated ? " [administrador]" : "")}";
+        $"{ProductName} {DisplayVersion} (build {FullBuild}, edition {Edition}){(IsElevated ? " [administrator]" : "")}";
 }

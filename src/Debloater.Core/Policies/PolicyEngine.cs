@@ -7,32 +7,32 @@ namespace Debloater.Core.Policies;
 
 public sealed class PolicyEngineOptions
 {
-    /// <summary>Pasta de backups dos tweaks; os das políticas ficam na subpasta "policies".</summary>
+    /// <summary>Tweak backup folder; policy backups go in the "policies" subfolder.</summary>
     public string BackupDirectory { get; init; } = BackupStore.DefaultDirectory;
 
-    /// <summary>Exigir processo elevado para aplicar/reverter. Só desligue em testes.</summary>
+    /// <summary>Require an elevated process to apply/revert. Only turn off in tests.</summary>
     public bool RequireElevation { get; init; } = true;
 
     public SystemInfo? System { get; init; }
 
-    /// <summary>Registro alvo. Padrão: o real (HKLM/HKCU). Testes usam <see cref="WindowsPolicyRegistry.Redirected"/>.</summary>
+    /// <summary>Target registry. Default: the real one (HKLM/HKCU). Tests use <see cref="WindowsPolicyRegistry.Redirected"/>.</summary>
     public IPolicyRegistry? Registry { get; init; }
 }
 
-/// <summary>Resultado de aplicar/reverter uma política.</summary>
+/// <summary>Result of applying/reverting a policy.</summary>
 public sealed record PolicyOperationResult(string Policy, bool Success, string Message, IReadOnlyList<string> Errors)
 {
-    /// <summary>Operações executadas (linhas de prévia: "+ ...", "- ...").</summary>
+    /// <summary>Operations performed (preview lines: "+ ...", "- ...").</summary>
     public IReadOnlyList<string> Operations { get; init; } = [];
 
-    /// <summary>Estado lido depois da operação (quando a definição é conhecida).</summary>
+    /// <summary>State read after the operation (when the definition is known).</summary>
     public AdmxPolicyState? StateAfter { get; init; }
 }
 
 /// <summary>
-/// Aplica e reverte configurações de políticas ADMX gravando direto no registro (como WinUtil/O&amp;O),
-/// com backup do valor original de tudo o que for tocado. Não altera o Registry.pol: o gpedit.msc não
-/// mostra o que foi gravado, e uma GPO de domínio pode sobrescrever.
+/// Applies and reverts ADMX policy settings by writing directly to the registry (like WinUtil/O&amp;O),
+/// backing up the original value of everything it touches. Does not change Registry.pol: gpedit.msc does
+/// not show what was written, and a domain GPO may overwrite it.
 /// </summary>
 public sealed class PolicyEngine
 {
@@ -55,7 +55,7 @@ public sealed class PolicyEngine
     public (AdmxPolicyState State, PolicySetting Setting) ReadCurrent(AdmxPolicy policy, PolicyScope? scope = null) =>
         PolicyWriter.ReadCurrent(policy, scope ?? PolicySetting.DefaultScope(policy.Class), Registry);
 
-    // ---------------- aplicar ----------------
+    // ---------------- apply ----------------
 
     public PolicyOperationResult Apply(AdmxPolicy policy, PolicySetting setting, OperationLog? log = null)
     {
@@ -64,19 +64,19 @@ public sealed class PolicyEngine
         var plan = Plan(policy, setting);
         if (!plan.IsValid)
         {
-            log?.Write($"  {name}: configuração inválida: {string.Join(" ", plan.Errors)}");
-            return new PolicyOperationResult(name, false, "Configuração inválida; nada foi alterado.", plan.Errors);
+            log?.Write($"  {name}: invalid setting: {string.Join(" ", plan.Errors)}");
+            return new PolicyOperationResult(name, false, "Invalid setting; nothing was changed.", plan.Errors);
         }
         if (!plan.HasEffect)
         {
-            log?.Write($"  {name}: já está assim; nada a mudar.");
-            return new PolicyOperationResult(name, true, "Já estava assim; nada foi alterado.", [])
+            log?.Write($"  {name}: already set; nothing to change.");
+            return new PolicyOperationResult(name, true, "Already set; nothing was changed.", [])
             {
                 StateAfter = ReadCurrent(policy, plan.Scope).State,
             };
         }
 
-        // 1) Backup antes de qualquer alteração; o primeiro valor original capturado é preservado.
+        // 1) Backup before any change; the first original value captured is preserved.
         var root = plan.Root;
         var backup = Backups.Load(name) ?? new PolicyBackup { Policy = name, CreatedUtc = DateTime.UtcNow, WindowsBuild = System.FullBuild };
         foreach (var c in plan.Effective)
@@ -106,7 +106,7 @@ public sealed class PolicyEngine
         if (backup.History.Count > 20) backup.History.RemoveRange(0, backup.History.Count - 20);
         Backups.Save(backup);
 
-        // 2) Gravação.
+        // 2) Write.
         var errors = new List<string>();
         var done = new List<string>();
         var lines = plan.Describe().ToList();
@@ -125,7 +125,7 @@ public sealed class PolicyEngine
             catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException or InvalidOperationException)
             {
                 errors.Add($"{line}: {ex.Message}");
-                log?.Write($"  erro: {line}: {ex.Message}");
+                log?.Write($"  error: {line}: {ex.Message}");
             }
         }
         foreach (var k in plan.KeysToDelete)
@@ -135,30 +135,30 @@ public sealed class PolicyEngine
                 if (Registry.DeleteKeyIfEmpty(plan.Scope, k))
                 {
                     done.Add($@"- {root}\{k}\");
-                    log?.Write($@"  - {root}\{k}\ (chave apagada)");
+                    log?.Write($@"  - {root}\{k}\ (key deleted)");
                 }
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException)
             {
-                log?.Write($@"  aviso: a chave {root}\{k} foi mantida: {ex.Message}");
+                log?.Write($@"  warning: key {root}\{k} was kept: {ex.Message}");
             }
         }
 
-        // 3) Conferência: recalcular o plano não deve sobrar nada a fazer.
+        // 3) Check: recomputing the plan must leave nothing to do.
         var check = Plan(policy, setting);
         var state = ReadCurrent(policy, plan.Scope).State;
         if (errors.Count == 0 && check.Effective.Any())
-            errors.Add("depois de gravar, o registro ainda difere do pedido: " + string.Join("; ", check.Describe()));
+            errors.Add("after writing, the registry still differs from the request: " + string.Join("; ", check.Describe()));
         var ok = errors.Count == 0;
         var message = ok
-            ? $"Aplicada ({PolicySetting.StateText(setting.State)}, {root}): {done.Count} alteração(ões). Estado lido: {StateWord(state)}."
-            : $"Aplicada com {errors.Count} erro(s); backup mantido para reverter. Estado lido: {StateWord(state)}.";
+            ? $"Applied ({PolicySetting.StateText(setting.State)}, {root}): {done.Count} change(s). State read: {StateWord(state)}."
+            : $"Applied with {errors.Count} error(s); backup kept for revert. State read: {StateWord(state)}.";
         return new PolicyOperationResult(name, ok, message, errors) { Operations = done, StateAfter = state };
     }
 
-    // ---------------- reverter ----------------
+    // ---------------- revert ----------------
 
-    /// <summary>Restaura exatamente os valores originais do backup. A definição é opcional (só para ler o estado depois).</summary>
+    /// <summary>Restores exactly the original values from the backup. The definition is optional (only used to read the state afterwards).</summary>
     public PolicyOperationResult Revert(string qualifiedName, AdmxPolicy? policy = null, OperationLog? log = null)
     {
         EnsureElevated();
@@ -166,7 +166,7 @@ public sealed class PolicyEngine
         if (backup is null)
         {
             return new PolicyOperationResult(qualifiedName, false,
-                "Nenhum backup para esta política (ela não foi alterada por este programa, ou o backup foi apagado). Nada foi revertido.", []);
+                "No backup for this policy (it was not changed by this program, or the backup was deleted). Nothing was reverted.", []);
         }
 
         var errors = new List<string>();
@@ -182,12 +182,12 @@ public sealed class PolicyEngine
             catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException or InvalidOperationException or FormatException)
             {
                 errors.Add($"{what}: {ex.Message}");
-                log?.Write($"  erro: {what}: {ex.Message}");
+                log?.Write($"  error: {what}: {ex.Message}");
             }
         }
 
         foreach (var k in backup.DeletedKeys)
-            Try($@"+ {k.Root}\{k.Key}\ (chave recriada)", () => Registry.CreateKey(ScopeOf(k.Root), k.Key));
+            Try($@"+ {k.Root}\{k.Key}\ (key recreated)", () => Registry.CreateKey(ScopeOf(k.Root), k.Key));
 
         foreach (var v in backup.Values)
         {
@@ -195,16 +195,16 @@ public sealed class PolicyEngine
             var path = $@"{v.Root}\{v.Key}\{v.Name}";
             if (v.Existed)
             {
-                var value = PolicyValues.FromBackup(v.Kind ?? throw new FormatException("backup sem 'kind'."), v.Data, v.MultiData);
+                var value = PolicyValues.FromBackup(v.Kind ?? throw new FormatException("backup without 'kind'."), v.Data, v.MultiData);
                 Try($"+ {path} = {PolicyValues.Describe(value)} (original)", () => Registry.Write(scope, v.Key, v.Name, value));
             }
             else
             {
-                Try($"- {path} (não existia)", () => Registry.Delete(scope, v.Key, v.Name));
+                Try($"- {path} (did not exist)", () => Registry.Delete(scope, v.Key, v.Name));
             }
         }
 
-        // Chaves criadas pela aplicação: apaga as que ficaram vazias, de baixo para cima (best-effort).
+        // Keys created by the apply: delete the ones left empty, bottom-up (best-effort).
         foreach (var created in backup.CreatedKeys)
         {
             var scope = ScopeOf(created.Root);
@@ -228,7 +228,7 @@ public sealed class PolicyEngine
                 }
                 catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException)
                 {
-                    log?.Write($@"  aviso: a chave vazia {created.Root}\{current} foi mantida: {ex.Message}");
+                    log?.Write($@"  warning: empty key {created.Root}\{current} was kept: {ex.Message}");
                     break;
                 }
             }
@@ -241,20 +241,20 @@ public sealed class PolicyEngine
             var scope = backup.Values.FirstOrDefault() is { } first ? ScopeOf(first.Root) : PolicySetting.DefaultScope(policy.Class);
             state = ReadCurrent(policy, scope).State;
         }
-        var stateText = state is { } s ? $" Estado lido: {StateWord(s)}." : "";
+        var stateText = state is { } s ? $" State read: {StateWord(s)}." : "";
         return errors.Count == 0
-            ? new PolicyOperationResult(qualifiedName, true, $"Revertida ao original ({backup.Values.Count} valor(es) restaurado(s)).{stateText}", errors) { Operations = done, StateAfter = state }
-            : new PolicyOperationResult(qualifiedName, false, $"Revertida parcialmente ({errors.Count} erro(s)); backup mantido.{stateText}", errors) { Operations = done, StateAfter = state };
+            ? new PolicyOperationResult(qualifiedName, true, $"Reverted to original ({backup.Values.Count} value(s) restored).{stateText}", errors) { Operations = done, StateAfter = state }
+            : new PolicyOperationResult(qualifiedName, false, $"Partially reverted ({errors.Count} error(s)); backup kept.{stateText}", errors) { Operations = done, StateAfter = state };
     }
 
     // ---------------- helpers ----------------
 
     public static string StateWord(AdmxPolicyState s) => s switch
     {
-        AdmxPolicyState.Enabled => "Habilitada",
-        AdmxPolicyState.Disabled => "Desabilitada",
-        AdmxPolicyState.NotConfigured => "Não configurada",
-        _ => "Valores próprios",
+        AdmxPolicyState.Enabled => "Enabled",
+        AdmxPolicyState.Disabled => "Disabled",
+        AdmxPolicyState.NotConfigured => "Not configured",
+        _ => "Custom values",
     };
 
     private static PolicyScope ScopeOf(string root) =>

@@ -5,18 +5,18 @@ using Microsoft.Win32;
 
 namespace Debloater.Core.Reference;
 
-/// <summary>Como uma ação de registro corresponde a uma política ADMX.</summary>
+/// <summary>How a registry action corresponds to an ADMX policy.</summary>
 public enum AdmxVia
 {
-    /// <summary>key + valueName da própria política.</summary>
+    /// <summary>key + valueName of the policy itself.</summary>
     PolicyValue,
-    /// <summary>Item de enabledList/disabledList.</summary>
+    /// <summary>enabledList/disabledList item.</summary>
     List,
-    /// <summary>Elemento (decimal, enum, boolean, text...).</summary>
+    /// <summary>Element (decimal, enum, boolean, text...).</summary>
     Element,
-    /// <summary>Item de valueList de uma opção de enum, ou trueList/falseList de boolean.</summary>
+    /// <summary>valueList item of an enum option, or trueList/falseList of a boolean.</summary>
     ElementList,
-    /// <summary>Elemento list (nomes de valor livres sob a chave).</summary>
+    /// <summary>list element (free value names under the key).</summary>
     ListElement,
 }
 
@@ -34,9 +34,9 @@ public sealed record TweakMatch(Tweak Tweak, IReadOnlyList<ActionMatch> Actions)
 }
 
 /// <summary>
-/// Casa as ações de registro do catálogo com políticas ADMX (pela chave + nome do valor, respeitando
-/// a classe Machine/User) e com a Policy CSP (pelo mapeamento GP da documentação: arquivo ADMX +
-/// nome da política, ou chave + nome do valor).
+/// Matches the catalog's registry actions against ADMX policies (by key + value name, honoring the
+/// Machine/User class) and against the Policy CSP (by the documentation's GP mapping: ADMX file +
+/// policy name, or key + value name).
 /// </summary>
 public sealed class ReferenceMatcher
 {
@@ -88,7 +88,7 @@ public sealed class ReferenceMatcher
         if (!list.Contains(c)) list.Add(c);
     }
 
-    /// <summary>Chave normalizada: sem barras sobrando, maiúsculas (o registro não diferencia).</summary>
+    /// <summary>Normalized key: no stray backslashes, uppercase (the registry is case-insensitive).</summary>
     internal static string Norm(string s) => s.Trim().Trim('\\').ToUpperInvariant();
 
     public TweakMatch Match(Tweak tweak) =>
@@ -126,9 +126,9 @@ public sealed class ReferenceMatcher
     };
 
     /// <summary>
-    /// Fica só com as correspondências mais específicas: se o valor é o valueName de uma política
-    /// (ou de um elemento), descarta políticas "guarda-chuva" que só o citam numa lista
-    /// (ex.: ICM.admx:InternetManagement_RestrictCommunication_2 grava dezenas de valores).
+    /// Keeps only the most specific matches: if the value is the valueName of a policy (or of an
+    /// element), drops "umbrella" policies that only mention it in a list
+    /// (e.g. ICM.admx:InternetManagement_RestrictCommunication_2 writes dozens of values).
     /// </summary>
     private static List<AdmxMatch> KeepMostSpecific(List<AdmxMatch> matches)
     {
@@ -139,9 +139,9 @@ public sealed class ReferenceMatcher
     }
 
     /// <summary>
-    /// Uma política ADMX pode corresponder a várias entradas da CSP (uma por elemento, ex.:
-    /// AutoUpdateCfg → AllowAutoUpdate, ScheduledInstallDay...). Preferimos a de nome igual ao valor;
-    /// senão a de nome mais parecido (substring comum ≥ 5); com muitas candidatas sem pista, nenhuma.
+    /// An ADMX policy may correspond to several CSP entries (one per element, e.g.
+    /// AutoUpdateCfg → AllowAutoUpdate, ScheduledInstallDay...). We prefer the one named like the value;
+    /// otherwise the one with the most similar name (common substring ≥ 5); with many candidates and no clue, none.
     /// </summary>
     internal static IEnumerable<CspPolicy> Disambiguate(List<CspPolicy> candidates, string valueName)
     {
@@ -178,7 +178,7 @@ public sealed class ReferenceMatcher
         _ => hive is RegistryHive.LocalMachine or RegistryHive.CurrentUser,
     };
 
-    /// <summary>"Computer Configuration" → HKLM, "User Configuration" → HKCU, "Computer and User" → ambos.</summary>
+    /// <summary>"Computer Configuration" → HKLM, "User Configuration" → HKCU, "Computer and User" → both.</summary>
     private static bool CspHiveMatches(CspPolicy c, RegistryHive hive)
     {
         var loc = c.GpMappings?.FirstOrDefault()?.Location ?? "";
@@ -188,18 +188,18 @@ public sealed class ReferenceMatcher
         return hive == RegistryHive.LocalMachine ? computer : user;
     }
 
-    // ---------------- confiança e fontes ----------------
+    // ---------------- confidence and sources ----------------
 
     /// <summary>
-    /// Confiança sugerida: a melhor fonte encontrada para alguma ação do tweak
-    /// (official = Policy CSP; admx = só ADMX; community = nenhuma). Se a validação achar um
-    /// problema grave (valor fora do que a política permite, HKLM/HKCU trocados), questionable.
+    /// Suggested confidence: the best source found for any action of the tweak
+    /// (official = Policy CSP; admx = ADMX only; community = none). If validation finds a serious
+    /// problem (value outside what the policy allows, HKLM/HKCU swapped), questionable.
     /// </summary>
     public static Confidence SuggestConfidence(TweakMatch match, IEnumerable<ReferenceFinding> findings)
     {
         var mine = findings.Where(f => f.TweakId == match.Tweak.Id).ToList();
         if (mine.Any(f => f.MakesQuestionable)) return Confidence.Questionable;
-        // HKLM/HKCU trocados só tornam o tweak duvidoso se nenhuma outra ação acertar a política.
+        // Swapped HKLM/HKCU only makes the tweak questionable if no other action hits the policy.
         if (mine.Any(f => f.Code == ReferenceValidator.AdmxHive) && !match.AdmxPolicies.Any()) return Confidence.Questionable;
         if (match.CspPolicies.Any()) return Confidence.Official;
         if (match.AdmxPolicies.Any()) return Confidence.Admx;

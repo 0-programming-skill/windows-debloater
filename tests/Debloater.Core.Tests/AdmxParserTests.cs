@@ -1,3 +1,4 @@
+using System.Globalization;
 using Debloater.Core.Admx;
 using Microsoft.Win32;
 
@@ -56,7 +57,7 @@ public class AdmxParserTests
     {
         var c = Parse("pt-BR", "en-US");
         var p = Policy(c, "Telemetry");
-        // Base.adml existe em pt-BR; Sample.adml só em en-US.
+        // Base.adml exists in pt-BR; Sample.adml only in en-US.
         Assert.Equal(["Componentes do Windows", "Privacidade", "Sample Category"], p.CategoryPath);
         Assert.Equal("No mínimo Windows 11", p.SupportedOn);
         Assert.Equal("Allow diagnostic data", p.DisplayName);
@@ -85,7 +86,7 @@ public class AdmxParserTests
         Assert.Equal(@"Software\Policies\Test\Lists", p.EnabledList[0].Key);
         Assert.Equal(@"Software\Policies\Test\Lists\Sub", p.EnabledList[1].Key);
         Assert.Equal(AdmxValueKind.String, p.EnabledList[1].Value.Kind);
-        // disabledList sem defaultKey herda a chave da política.
+        // disabledList without defaultKey inherits the policy key.
         Assert.Equal(@"Software\Policies\Test\Lists", p.DisabledList![0].Key);
         Assert.Equal(AdmxValueKind.Delete, p.DisabledList[1].Value.Kind);
     }
@@ -97,7 +98,7 @@ public class AdmxParserTests
         var byId = p.Elements.ToDictionary(e => e.Id);
 
         Assert.Equal(("decimal", 5UL, 600UL, "Timeout (s)"), (byId["Timeout"].Type, byId["Timeout"].MinValue!.Value, byId["Timeout"].MaxValue!.Value, byId["Timeout"].Label));
-        // Padrão do esquema para decimal sem limites: 0..9999.
+        // Schema default for decimal without limits: 0..9999.
         Assert.Equal((0UL, 9999UL), (byId["NoRange"].MinValue!.Value, byId["NoRange"].MaxValue!.Value));
         Assert.Equal("longDecimal", byId["Big"].Type);
         Assert.Equal(100000000000UL, byId["Big"].MaxValue);
@@ -125,12 +126,49 @@ public class AdmxParserTests
     [Fact]
     public void MissingDirectory_ReportsError()
     {
-        var c = AdmxParser.ParseDirectory(Path.Combine(FixtureDir, "nao-existe"));
+        var c = AdmxParser.ParseDirectory(Path.Combine(FixtureDir, "does-not-exist"), ["en-US"]);
         Assert.Equal(0, c.FileCount);
         Assert.NotEmpty(c.Errors);
     }
 
-    // ---------------- estado ----------------
+    [Theory]
+    [InlineData("en-US", new[] { "en-US" })]
+    [InlineData("pt-BR", new[] { "pt-BR", "en-US" })]
+    public void DefaultLanguages_FollowTheUiCulture(string uiCulture, string[] expected)
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(uiCulture);
+            Assert.Equal(expected, AdmxParser.DefaultLanguages);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
+    [Fact]
+    public void DefaultLanguages_UnderPortugueseUi_PickPortugueseAdml()
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("pt-BR");
+            var p = Policy(AdmxParser.ParseDirectory(FixtureDir), "Telemetry");
+            Assert.Equal(["Componentes do Windows", "Privacidade", "Sample Category"], p.CategoryPath);
+
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            p = Policy(AdmxParser.ParseDirectory(FixtureDir), "Telemetry");
+            Assert.Equal(["Windows Components", "Privacy", "Sample Category"], p.CategoryPath);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
+    // ---------------- state ----------------
 
     private static AdmxScopeState Eval(AdmxPolicy p, Dictionary<string, AdmxPolicyStateReader.RegValue> values) =>
         AdmxPolicyStateReader.Evaluate(p, "HKLM",

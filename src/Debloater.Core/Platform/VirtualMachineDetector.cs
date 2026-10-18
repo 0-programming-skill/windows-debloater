@@ -3,25 +3,25 @@ using Microsoft.Win32;
 
 namespace Debloater.Core.Platform;
 
-/// <summary>Resultado da verificação "estou num convidado Hyper-V?".</summary>
-/// <param name="IsHyperVGuest">true só quando há evidência positiva de convidado Hyper-V.</param>
-/// <param name="Manufacturer">Win32_ComputerSystem.Manufacturer (vazio se não deu para ler).</param>
-/// <param name="Model">Win32_ComputerSystem.Model (vazio se não deu para ler).</param>
-/// <param name="HostName">HKLM\...\Virtual Machine\Guest\Parameters\HostName, quando existe.</param>
-/// <param name="Evidence">Explicação em pt-BR do que foi encontrado.</param>
+/// <summary>Result of the "am I in a Hyper-V guest?" check.</summary>
+/// <param name="IsHyperVGuest">true only when there is positive evidence of a Hyper-V guest.</param>
+/// <param name="Manufacturer">Win32_ComputerSystem.Manufacturer (empty if it could not be read).</param>
+/// <param name="Model">Win32_ComputerSystem.Model (empty if it could not be read).</param>
+/// <param name="HostName">HKLM\...\Virtual Machine\Guest\Parameters\HostName, when present.</param>
+/// <param name="Evidence">Explanation of what was found.</param>
 public sealed record VmDetectionResult(bool IsHyperVGuest, string Manufacturer, string Model, string? HostName, string Evidence);
 
 /// <summary>
-/// Detecta se o processo roda dentro de uma máquina virtual Hyper-V. Usado pelo <c>selftest</c>, que
-/// aplica e reverte TODOS os tweaks e por isso nunca deve rodar no PC real por acidente.
+/// Detects whether the process runs inside a Hyper-V virtual machine. Used by <c>selftest</c>, which
+/// applies and reverts ALL tweaks and therefore must never run on the real PC by accident.
 ///
-/// Critérios (basta um):
-/// 1. WMI Win32_ComputerSystem: Manufacturer "Microsoft Corporation" e Model "Virtual Machine";
-/// 2. HKLM\SOFTWARE\Microsoft\Virtual Machine\Guest\Parameters com HostName, VirtualMachineName ou
-///    VirtualMachineId preenchido (dados do serviço de troca de dados/KVP, só existem no convidado).
+/// Criteria (any one is enough):
+/// 1. WMI Win32_ComputerSystem: Manufacturer "Microsoft Corporation" and Model "Virtual Machine";
+/// 2. HKLM\SOFTWARE\Microsoft\Virtual Machine\Guest\Parameters with HostName, VirtualMachineName or
+///    VirtualMachineId set (data from the data exchange/KVP service, which only exists in the guest).
 ///
-/// Atenção: no HOST com Hyper-V ativado existe a chave "...\Virtual Machine\Guest" (sem "Parameters") e
-/// Win32_ComputerSystem.HypervisorPresent é true; nenhum dos dois serve como evidência.
+/// Note: on a HOST with Hyper-V enabled the key "...\Virtual Machine\Guest" exists (without "Parameters") and
+/// Win32_ComputerSystem.HypervisorPresent is true; neither counts as evidence.
 /// </summary>
 public static class VirtualMachineDetector
 {
@@ -48,7 +48,7 @@ public static class VirtualMachineDetector
         }
         catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
         {
-            // Sem WMI: decide só pelo registro.
+            // No WMI: decide by the registry only.
         }
 
         Dictionary<string, string>? parameters = null;
@@ -70,8 +70,8 @@ public static class VirtualMachineDetector
         return Evaluate(manufacturer, model, parameters);
     }
 
-    /// <summary>Decisão pura (testável): ver critérios em <see cref="VirtualMachineDetector"/>.</summary>
-    /// <param name="guestParameters">Valores de texto de Guest\Parameters, ou null se a chave não existe.</param>
+    /// <summary>Pure decision (testable): see the criteria in <see cref="VirtualMachineDetector"/>.</summary>
+    /// <param name="guestParameters">Text values of Guest\Parameters, or null if the key does not exist.</param>
     public static VmDetectionResult Evaluate(string? manufacturer, string? model, IReadOnlyDictionary<string, string>? guestParameters)
     {
         manufacturer = (manufacturer ?? "").Trim();
@@ -96,13 +96,13 @@ public static class VirtualMachineDetector
 
         var evidence = new List<string>();
         evidence.Add(wmi
-            ? $"WMI: \"{manufacturer}\" / \"{model}\" (máquina virtual Hyper-V)"
-            : $"WMI: \"{manufacturer}\" / \"{model}\" (não é o modelo de VM Hyper-V)");
+            ? $"WMI: \"{manufacturer}\" / \"{model}\" (Hyper-V virtual machine)"
+            : $"WMI: \"{manufacturer}\" / \"{model}\" (not the Hyper-V VM model)");
         evidence.Add(guestParameters is null
-            ? "registro: Guest\\Parameters ausente"
+            ? "registry: Guest\\Parameters absent"
             : registry
-                ? $"registro: Guest\\Parameters presente{(hostName is null ? "" : $" (host: {hostName})")}"
-                : "registro: Guest\\Parameters presente, mas sem identificação do host/VM");
+                ? $"registry: Guest\\Parameters present{(hostName is null ? "" : $" (host: {hostName})")}"
+                : "registry: Guest\\Parameters present, but without host/VM identification");
 
         return new VmDetectionResult(wmi || registry, manufacturer, model, hostName, string.Join("; ", evidence));
     }

@@ -5,7 +5,7 @@ using RegValue = Debloater.Core.Admx.AdmxPolicyStateReader.RegValue;
 
 namespace Debloater.Core.Policies;
 
-/// <summary>Estado desejado de uma política, como no gpedit.</summary>
+/// <summary>Desired state of a policy, as in gpedit.</summary>
 public enum PolicyTargetState
 {
     NotConfigured,
@@ -13,7 +13,7 @@ public enum PolicyTargetState
     Disabled,
 }
 
-/// <summary>Onde a política é gravada: Computador (HKLM) ou Usuário (HKCU).</summary>
+/// <summary>Where the policy is written: Computer (HKLM) or User (HKCU).</summary>
 public enum PolicyScope
 {
     Machine,
@@ -21,23 +21,23 @@ public enum PolicyScope
 }
 
 /// <summary>
-/// Configuração desejada de uma política ADMX: estado + valores dos elementos (só usados quando
-/// Habilitada). Cada valor é uma lista de textos: elementos escalares (decimal, text, boolean, enum)
-/// usam o primeiro item; multiText e list usam todos. Em listas com explicitValue, cada item é
-/// "nome=valor". Booleanos aceitam true/false, 1/0, sim/não. Enums aceitam o valor gravado
-/// (ex.: "1"), o nome exibido ou "#índice" (a partir de 0).
+/// Desired setting of an ADMX policy: state + element values (only used when
+/// Enabled). Each value is a list of strings: scalar elements (decimal, text, boolean, enum)
+/// use the first item; multiText and list use all of them. In lists with explicitValue, each item is
+/// "name=value". Booleans accept true/false, 1/0, yes/no (and sim/não). Enums accept the stored value
+/// (e.g. "1"), the display name or "#index" (0-based).
 /// </summary>
 public sealed class PolicySetting
 {
-    /// <summary>"Arquivo.admx:Nome".</summary>
+    /// <summary>"File.admx:Name".</summary>
     public string Policy { get; set; } = "";
 
     public PolicyTargetState State { get; set; }
 
-    /// <summary>Null = padrão da classe (Machine para Machine/Both, User para User).</summary>
+    /// <summary>Null = class default (Machine for Machine/Both, User for User).</summary>
     public PolicyScope? Scope { get; set; }
 
-    /// <summary>Id do elemento → valores. Ids sem entrada usam o padrão da apresentação.</summary>
+    /// <summary>Element id → values. Ids without an entry use the presentation default.</summary>
     public Dictionary<string, List<string>> Values { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public PolicySetting Set(string elementId, params string[] values)
@@ -54,7 +54,7 @@ public sealed class PolicySetting
         Values = Values.ToDictionary(kv => kv.Key, kv => kv.Value.ToList(), StringComparer.OrdinalIgnoreCase),
     };
 
-    /// <summary>Mesma configuração (estado, escopo efetivo e valores)?</summary>
+    /// <summary>Same setting (state, effective scope and values)?</summary>
     public bool SameAs(PolicySetting other, AdmxClass cls)
     {
         if (State != other.State || EffectiveScope(cls) != other.EffectiveScope(cls)) return false;
@@ -69,7 +69,7 @@ public sealed class PolicySetting
 
     public static PolicyScope DefaultScope(AdmxClass cls) => cls == AdmxClass.User ? PolicyScope.User : PolicyScope.Machine;
 
-    /// <summary>A classe da política permite este escopo?</summary>
+    /// <summary>Does the policy class allow this scope?</summary>
     public static bool ScopeAllowed(AdmxClass cls, PolicyScope scope) => cls switch
     {
         AdmxClass.Machine => scope == PolicyScope.Machine,
@@ -88,14 +88,15 @@ public sealed class PolicySetting
 
     public static string StateText(PolicyTargetState s) => s switch
     {
-        PolicyTargetState.Enabled => "Habilitada",
-        PolicyTargetState.Disabled => "Desabilitada",
-        _ => "Não configurada",
+        PolicyTargetState.Enabled => "Enabled",
+        PolicyTargetState.Disabled => "Disabled",
+        _ => "Not configured",
     };
 
     public static string ScopeText(PolicyScope s) => s == PolicyScope.Machine ? "HKLM" : "HKCU";
 
-    /// <summary>Aceita enabled/disabled/notConfigured (e variações em português).</summary>
+    /// <summary>Accepts enabled/disabled/notConfigured (and Portuguese variants).</summary>
+    // The Portuguese aliases are user input accepted for compatibility (CLI arguments, saved settings).
     public static bool TryParseState(string text, out PolicyTargetState state)
     {
         switch (text.Trim().ToLowerInvariant().Replace("-", "").Replace("_", "").Replace(" ", ""))
@@ -112,28 +113,28 @@ public sealed class PolicySetting
     }
 }
 
-/// <summary>Uma alteração de valor do registro calculada pelo <see cref="PolicyWriter"/>.</summary>
-/// <param name="Key">Subchave relativa à raiz do escopo (ex.: Software\Policies\Microsoft\...).</param>
-/// <param name="Before">Valor atual (null = ausente).</param>
-/// <param name="After">Valor desejado (null = apagar).</param>
-/// <param name="Origin">De onde vem (ex.: "valor da política", "elemento 'Count'").</param>
+/// <summary>A registry value change computed by <see cref="PolicyWriter"/>.</summary>
+/// <param name="Key">Subkey relative to the scope root (e.g. Software\Policies\Microsoft\...).</param>
+/// <param name="Before">Current value (null = absent).</param>
+/// <param name="After">Desired value (null = delete).</param>
+/// <param name="Origin">Where it comes from (e.g. "policy value", "element 'Count'").</param>
 public sealed record PolicyRegistryChange(string Key, string Name, RegValue? Before, RegValue? After, string Origin)
 {
     public bool IsNoOp => PolicyValues.Equal(Before, After);
     public bool IsDelete => After is null;
 }
 
-/// <summary>Plano de gravação de uma política: o que será escrito/apagado, com erros de validação.</summary>
+/// <summary>Write plan of a policy: what will be written/deleted, with validation errors.</summary>
 public sealed class PolicyWritePlan
 {
     public required AdmxPolicy Policy { get; init; }
     public required PolicySetting Setting { get; init; }
     public required PolicyScope Scope { get; init; }
 
-    /// <summary>Todos os valores que a política possui e que esta configuração toca (inclui os que já estão certos).</summary>
+    /// <summary>All values the policy owns that this setting touches (includes the ones already correct).</summary>
     public List<PolicyRegistryChange> Changes { get; } = [];
 
-    /// <summary>Chaves de lista que ficam vazias e são apagadas (só em "Não configurada").</summary>
+    /// <summary>List keys left empty that are deleted (only on "Not configured").</summary>
     public List<string> KeysToDelete { get; } = [];
 
     public List<string> Errors { get; } = [];
@@ -145,22 +146,22 @@ public sealed class PolicyWritePlan
 
     public string Root => PolicySetting.ScopeText(Scope);
 
-    /// <summary>Prévia legível: "+" grava, "-" apaga, "=" já está assim.</summary>
+    /// <summary>Readable preview: "+" writes, "-" deletes, "=" already set.</summary>
     public IEnumerable<string> Describe(bool includeNoOps = false)
     {
         foreach (var c in Changes)
         {
             if (c.IsNoOp && !includeNoOps) continue;
-            var path = $@"{Root}\{c.Key}\{(c.Name.Length == 0 ? "(Padrão)" : c.Name)}";
-            if (c.IsNoOp) yield return $"= {path} = {PolicyValues.Describe(c.After)} (sem mudança)";
-            else if (c.After is null) yield return $"- {path} (apagar; atual: {PolicyValues.Describe(c.Before)})";
-            else yield return $"+ {path} = {PolicyValues.Describe(c.After)}" + (c.Before is null ? " (novo)" : $" (atual: {PolicyValues.Describe(c.Before)})");
+            var path = $@"{Root}\{c.Key}\{(c.Name.Length == 0 ? "(Default)" : c.Name)}";
+            if (c.IsNoOp) yield return $"= {path} = {PolicyValues.Describe(c.After)} (no change)";
+            else if (c.After is null) yield return $"- {path} (delete; current: {PolicyValues.Describe(c.Before)})";
+            else yield return $"+ {path} = {PolicyValues.Describe(c.After)}" + (c.Before is null ? " (new)" : $" (current: {PolicyValues.Describe(c.Before)})");
         }
-        foreach (var k in KeysToDelete) yield return $@"- {Root}\{k}\ (chave vazia da lista é apagada)";
+        foreach (var k in KeysToDelete) yield return $@"- {Root}\{k}\ (empty list key is deleted)";
     }
 }
 
-/// <summary>Conversões e comparações de valores do registro usados pelas políticas.</summary>
+/// <summary>Conversions and comparisons of registry values used by policies.</summary>
 public static class PolicyValues
 {
     public static RegValue Dword(uint v) => new(RegistryValueKind.DWord, unchecked((int)v));
@@ -169,7 +170,7 @@ public static class PolicyValues
     public static RegValue ExpandSz(string v) => new(RegistryValueKind.ExpandString, v);
     public static RegValue MultiSz(IEnumerable<string> v) => new(RegistryValueKind.MultiString, v.ToArray());
 
-    /// <summary>Converte um valor do ADMX (decimal/longDecimal/string/delete) para o registro. Delete → null.</summary>
+    /// <summary>Converts an ADMX value (decimal/longDecimal/string/delete) to a registry value. Delete → null.</summary>
     public static RegValue? FromAdmx(AdmxValue value)
     {
         switch (value.Kind)
@@ -180,14 +181,14 @@ public static class PolicyValues
                 return Sz(value.Data ?? "");
             case AdmxValueKind.Decimal:
                 if (!ulong.TryParse(value.Data, NumberStyles.Integer, CultureInfo.InvariantCulture, out var d) || d > uint.MaxValue)
-                    throw new FormatException($"decimal inválido no ADMX: '{value.Data}'.");
+                    throw new FormatException($"invalid decimal in ADMX: '{value.Data}'.");
                 return Dword((uint)d);
             case AdmxValueKind.LongDecimal:
                 if (!ulong.TryParse(value.Data, NumberStyles.Integer, CultureInfo.InvariantCulture, out var q))
-                    throw new FormatException($"longDecimal inválido no ADMX: '{value.Data}'.");
+                    throw new FormatException($"invalid longDecimal in ADMX: '{value.Data}'.");
                 return Qword(q);
             default:
-                throw new FormatException($"tipo de valor desconhecido: {value.Kind}.");
+                throw new FormatException($"unknown value type: {value.Kind}.");
         }
     }
 
@@ -220,7 +221,7 @@ public static class PolicyValues
 
     public static string Describe(RegValue? v)
     {
-        if (v is not { } r) return "(ausente)";
+        if (v is not { } r) return "(absent)";
         var text = r.Data switch
         {
             string s => $"\"{s}\"",
@@ -231,7 +232,7 @@ public static class PolicyValues
         return $"{text} ({KindName(r.Kind)})";
     }
 
-    /// <summary>Serializa para o backup (mesmo formato do backup dos tweaks).</summary>
+    /// <summary>Serializes for the backup (same format as the tweak backup).</summary>
     public static (string Kind, string? Data, List<string>? Multi) ToBackup(RegValue v) => v.Data switch
     {
         string[] lines => (KindToString(v.Kind), null, [.. lines]),
@@ -275,6 +276,6 @@ public static class PolicyValues
         "multistring" => RegistryValueKind.MultiString,
         "binary" => RegistryValueKind.Binary,
         "none" => RegistryValueKind.None,
-        _ => throw new FormatException($"tipo de valor desconhecido no backup: '{kind}'."),
+        _ => throw new FormatException($"unknown value type in backup: '{kind}'."),
     };
 }

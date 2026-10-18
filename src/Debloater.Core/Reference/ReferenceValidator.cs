@@ -11,24 +11,24 @@ public enum FindingSeverity
     Info,
 }
 
-/// <summary>Um aviso do 'validate --reference'. Nunca é erro: o catálogo continua válido.</summary>
+/// <summary>A 'validate --reference' warning. Never an error: the catalog stays valid.</summary>
 public sealed record ReferenceFinding(FindingSeverity Severity, string Code, string File, string TweakId, string Message)
 {
-    /// <summary>Indica que o tweak provavelmente não funciona como descrito.</summary>
+    /// <summary>Indicates that the tweak probably does not work as described.</summary>
     public bool MakesQuestionable => Severity == FindingSeverity.Warning && Code is ReferenceValidator.AdmxValue or ReferenceValidator.CspInsider;
 
-    /// <summary>Linha estável (sem números de linha) usada como baseline no CI.</summary>
+    /// <summary>Stable line (no line numbers) used as the CI baseline.</summary>
     public string BaselineKey => $"{(Severity == FindingSeverity.Warning ? "WARN" : "INFO")} {Code} {TweakId}: {Message}";
 
-    public override string ToString() => $"{(Severity == FindingSeverity.Warning ? "AVISO" : "info ")} {File} [{TweakId}] {Code}: {Message}";
+    public override string ToString() => $"{(Severity == FindingSeverity.Warning ? "WARN" : "info")} {File} [{TweakId}] {Code}: {Message}";
 }
 
 /// <summary>
-/// Confere o catálogo contra as referências oficiais:
-/// - ADMX: o valor/tipo gravado é um dos estados que a política prevê; HKLM/HKCU batem com a classe;
-/// - Policy CSP: restrições de edição (ex.: AllowTelemetry=0 só vale em Enterprise/Education),
-///   SO aplicável (minBuild/maxBuild), políticas só do Insider ou obsoletas;
-/// - confidence declarada no YAML x encontrada.
+/// Checks the catalog against the official references:
+/// - ADMX: the written value/type is one of the states the policy defines; HKLM/HKCU match the class;
+/// - Policy CSP: edition restrictions (e.g. AllowTelemetry=0 only applies on Enterprise/Education),
+///   applicable OS (minBuild/maxBuild), Insider-only or deprecated policies;
+/// - confidence declared in the YAML vs. found.
 /// </summary>
 public static partial class ReferenceValidator
 {
@@ -94,7 +94,7 @@ public static partial class ReferenceValidator
         if (!am.HasAny)
         {
             if (a.Path is not null && PoliciesKey().IsMatch(a.Path))
-                add(FindingSeverity.Info, PolicyUnknown, $"{target}: chave de política sem política ADMX/CSP correspondente nas referências carregadas.");
+                add(FindingSeverity.Info, PolicyUnknown, $"{target}: policy key without a matching ADMX/CSP policy in the loaded references.");
             return;
         }
 
@@ -103,10 +103,10 @@ public static partial class ReferenceValidator
         {
             var p = am.Admx[0].Policy;
             add(FindingSeverity.Warning, AdmxHive,
-                $"{target}: a política {p.QualifiedName} é da classe {p.Class} ({(p.Class == AdmxClass.Machine ? "HKLM" : "HKCU")}); o Windows não lê esse valor na outra raiz.");
+                $"{target}: policy {p.QualifiedName} is of class {p.Class} ({(p.Class == AdmxClass.Machine ? "HKLM" : "HKCU")}); Windows does not read this value in the other hive.");
             return;
         }
-        if (a.Delete || hiveOk.Count == 0) return; // apagar = "não configurada": sempre válido
+        if (a.Delete || hiveOk.Count == 0) return; // delete = "not configured": always valid
 
         var verdicts = hiveOk.Select(m => Allowed(m, a)).ToList();
         if (verdicts.Any(v => v.Ok)) return;
@@ -115,7 +115,7 @@ public static partial class ReferenceValidator
         if (verdicts.Any(v => v.DisabledByDelete))
         {
             add(FindingSeverity.Info, AdmxValueDelete,
-                $"{target}={Show(a.Value)}: {policies} desabilita apagando o valor; {Show(a.Value)} não é um estado previsto pelo ADMX (geralmente funciona como 'desabilitada').");
+                $"{target}={Show(a.Value)}: {policies} disables by deleting the value; {Show(a.Value)} is not a state defined by the ADMX (usually works as 'disabled').");
             return;
         }
         var kindProblem = verdicts.FirstOrDefault(v => v.KindMismatch is not null)?.KindMismatch;
@@ -125,7 +125,7 @@ public static partial class ReferenceValidator
             return;
         }
         var expected = string.Join("; ", verdicts.Select(v => v.Expected).Where(e => e.Length > 0).Distinct());
-        add(FindingSeverity.Warning, AdmxValue, $"{target}={Show(a.Value)} não é um valor previsto por {policies} (previstos: {expected}).");
+        add(FindingSeverity.Warning, AdmxValue, $"{target}={Show(a.Value)} is not a value defined by {policies} (defined: {expected}).");
     }
 
     private sealed record Verdict(bool Ok, string Expected, bool DisabledByDelete = false, string? KindMismatch = null);
@@ -143,7 +143,7 @@ public static partial class ReferenceValidator
                 var kindIssue = KindIssue(candidates[0].Kind, a);
                 if (candidates.Any(c => ValueEquals(c, a))) return new Verdict(true, "");
                 bool byDelete = p.DisabledValue is null or { Kind: AdmxValueKind.Delete };
-                return new Verdict(false, string.Join(" | ", candidates.Select(c => c.ToString())) + (byDelete ? " | (apagar)" : ""),
+                return new Verdict(false, string.Join(" | ", candidates.Select(c => c.ToString())) + (byDelete ? " | (delete)" : ""),
                     byDelete && IsZero(a), kindIssue);
             }
             case AdmxVia.List:
@@ -182,8 +182,8 @@ public static partial class ReferenceValidator
             {
                 var expectKind = e.StoreAsText ? "string" : e.Type == "decimal" ? "dword" : "qword";
                 if (!KindIs(a, expectKind))
-                    return new Verdict(false, "", KindMismatch: $"tipo '{a.Kind}', o ADMX grava {expectKind}");
-                if (!TryNumber(a.Value, out var n)) return new Verdict(false, $"número entre {e.MinValue} e {e.MaxValue}");
+                    return new Verdict(false, "", KindMismatch: $"type '{a.Kind}', the ADMX writes {expectKind}");
+                if (!TryNumber(a.Value, out var n)) return new Verdict(false, $"number between {e.MinValue} and {e.MaxValue}");
                 bool ok = (e.MinValue is null || n >= e.MinValue) && (e.MaxValue is null || n <= e.MaxValue);
                 return new Verdict(ok, $"{e.MinValue}..{e.MaxValue}");
             }
@@ -205,9 +205,9 @@ public static partial class ReferenceValidator
             case "text":
                 return KindIs(a, e.Expandable ? "expandString" : "string") || KindIs(a, "string")
                     ? new Verdict(true, "")
-                    : new Verdict(false, "", KindMismatch: $"tipo '{a.Kind}', o ADMX grava texto");
+                    : new Verdict(false, "", KindMismatch: $"type '{a.Kind}', the ADMX writes text");
             case "multiText":
-                return KindIs(a, "multiString") ? new Verdict(true, "") : new Verdict(false, "", KindMismatch: $"tipo '{a.Kind}', o ADMX grava multiString");
+                return KindIs(a, "multiString") ? new Verdict(true, "") : new Verdict(false, "", KindMismatch: $"type '{a.Kind}', the ADMX writes multiString");
             default:
                 return new Verdict(true, "");
         }
@@ -215,9 +215,9 @@ public static partial class ReferenceValidator
 
     private static string? KindIssue(AdmxValueKind expected, ActionSpec a) => expected switch
     {
-        AdmxValueKind.Decimal when !KindIs(a, "dword") => $"tipo '{a.Kind}', o ADMX grava dword",
-        AdmxValueKind.LongDecimal when !KindIs(a, "qword") => $"tipo '{a.Kind}', o ADMX grava qword",
-        AdmxValueKind.String when !KindIs(a, "string") && !KindIs(a, "expandString") => $"tipo '{a.Kind}', o ADMX grava string",
+        AdmxValueKind.Decimal when !KindIs(a, "dword") => $"type '{a.Kind}', the ADMX writes dword",
+        AdmxValueKind.LongDecimal when !KindIs(a, "qword") => $"type '{a.Kind}', the ADMX writes qword",
+        AdmxValueKind.String when !KindIs(a, "string") && !KindIs(a, "expandString") => $"type '{a.Kind}', the ADMX writes string",
         _ => null,
     };
 
@@ -263,12 +263,12 @@ public static partial class ReferenceValidator
 
         if (!c.Editions.Contains("Pro", StringComparer.OrdinalIgnoreCase))
         {
-            var editions = c.Editions.Count == 0 ? "nenhuma edição de desktop" : string.Join(", ", c.Editions);
+            var editions = c.Editions.Count == 0 ? "no desktop edition" : string.Join(", ", c.Editions);
             add(tweakMentionsEdition ? FindingSeverity.Info : FindingSeverity.Warning, CspEdition,
-                $"{c.Reference}: a documentação lista só {editions} (não Pro/Home); o efeito no Home/Pro não é garantido.");
+                $"{c.Reference}: the documentation lists only {editions} (not Pro/Home); the effect on Home/Pro is not guaranteed.");
         }
 
-        // Notas de edição ligadas a um valor ("[0] ...") ou à política inteira.
+        // Edition notes tied to a value ("[0] ...") or to the whole policy.
         var actions = match.Actions.Where(a => a.Csp.Contains(c)).Select(a => a.Action).ToList();
         foreach (var note in c.EditionNotes ?? [])
         {
@@ -280,7 +280,7 @@ public static partial class ReferenceValidator
                     || TryNumber(a.Value, out var n) && ulong.TryParse(value, out var v) && n == v);
                 if (hit is not null)
                     add(tweakMentionsEdition ? FindingSeverity.Info : FindingSeverity.Warning, CspEditionValue,
-                        $"{c.Reference}={value}: {note[m.Length..]}{(tweakMentionsEdition ? " (o tweak já menciona a restrição)" : "")}");
+                        $"{c.Reference}={value}: {note[m.Length..]}{(tweakMentionsEdition ? " (the tweak already mentions the restriction)" : "")}");
             }
             else
             {
@@ -292,26 +292,26 @@ public static partial class ReferenceValidator
         {
             bool inLocalAdmx = actions.Count > 0 && match.Actions.Any(a => a.Csp.Contains(c) && a.Admx.Any(x => x.HiveMatches));
             if (inLocalAdmx)
-                add(FindingSeverity.Info, CspInsider, $"{c.Reference}: a documentação ainda diz 'só Windows Insider', mas o ADMX carregado já define a política.");
+                add(FindingSeverity.Info, CspInsider, $"{c.Reference}: the documentation still says 'Windows Insider only', but the loaded ADMX already defines the policy.");
             else
-                add(FindingSeverity.Warning, CspInsider, $"{c.Reference}: documentada só para builds do Windows Insider.");
+                add(FindingSeverity.Warning, CspInsider, $"{c.Reference}: documented only for Windows Insider builds.");
         }
         if (c.Deprecated)
-            add(FindingSeverity.Warning, CspDeprecated, $"{c.Reference}: a documentação marca a política como obsoleta (deprecated).");
+            add(FindingSeverity.Warning, CspDeprecated, $"{c.Reference}: the documentation marks the policy as deprecated.");
 
         if (c.Win11MinBuild is { } min)
         {
             int tweakMin = tweak.MinBuild ?? Win11FirstBuild;
             if (tweak.MaxBuild is { } max && max < min)
-                add(FindingSeverity.Warning, CspBuild, $"{c.Reference}: existe a partir do build {min}, mas o tweak tem maxBuild {max}.");
+                add(FindingSeverity.Warning, CspBuild, $"{c.Reference}: exists from build {min} on, but the tweak has maxBuild {max}.");
             else if (tweakMin < min)
                 add(FindingSeverity.Warning, CspBuild,
-                    $"{c.Reference}: aplicável a partir do build {min}{(c.Win11MinUbr is { } ubr ? $".{ubr}" : "")}; o tweak não define minBuild ≥ {min} (atual: {tweak.MinBuild?.ToString(CultureInfo.InvariantCulture) ?? "nenhum"}).");
+                    $"{c.Reference}: applicable from build {min}{(c.Win11MinUbr is { } ubr ? $".{ubr}" : "")} on; the tweak does not set minBuild ≥ {min} (current: {tweak.MinBuild?.ToString(CultureInfo.InvariantCulture) ?? "none"}).");
             else if (tweakMin == min && c.Win11MinUbr is { } ubr2)
-                add(FindingSeverity.Info, CspBuild, $"{c.Reference}: exige o build {min}.{ubr2} (com atualização cumulativa); minBuild não expressa o UBR.");
+                add(FindingSeverity.Info, CspBuild, $"{c.Reference}: requires build {min}.{ubr2} (with a cumulative update); minBuild cannot express the UBR.");
         }
 
-        // Valores da CSP: só quando não há ADMX validando e a CSP grava o mesmo valor no registro.
+        // CSP values: only when no ADMX is validating and the CSP writes the same value to the registry.
         if (c.AllowedValues is { Count: > 0 } allowed && !c.AdmxBacked && c.Format == "int")
         {
             foreach (var am in match.Actions.Where(a => a.Csp.Contains(c) && !a.Admx.Any(x => x.HiveMatches) && !a.Action.Delete))
@@ -320,14 +320,14 @@ public static partial class ReferenceValidator
                 bool ok = allowed.Any(v => TryNumber(a.Value, out var n) && ulong.TryParse(v.Value, out var e) && n == e);
                 if (!ok && !LooksLikeRange(allowed))
                     add(FindingSeverity.Warning, CspValue,
-                        $@"{a.Path}\{a.Name}={Show(a.Value)} não está entre os valores documentados de {c.Reference} ({string.Join(", ", allowed.Select(v => v.Value))}).");
+                        $@"{a.Path}\{a.Name}={Show(a.Value)} is not among the documented values of {c.Reference} ({string.Join(", ", allowed.Select(v => v.Value))}).");
             }
         }
     }
 
     private static bool LooksLikeRange(List<CspAllowedValue> values) => values.Any(v => !ulong.TryParse(v.Value, out _));
 
-    // ---------------- confidence/sources declarados ----------------
+    // ---------------- declared confidence/sources ----------------
 
     private static void CheckDeclared(Tweak tweak, TweakMatch match, List<ReferenceFinding> local,
         IReadOnlyCollection<AdmxPolicy>? admx, IReadOnlyCollection<CspPolicy>? csp, Action<FindingSeverity, string, string> add)
@@ -337,15 +337,15 @@ public static partial class ReferenceValidator
             var suggested = ReferenceMatcher.SuggestConfidence(match, local);
             bool missingRefs = (declared == Confidence.Official && csp is null) || (declared == Confidence.Admx && admx is null);
             if (declared != suggested && !missingRefs && !(declared == Confidence.Questionable))
-                add(FindingSeverity.Info, ConfidenceMismatch, $"confidence declarado '{Lower(declared)}', referências sugerem '{Lower(suggested)}'.");
+                add(FindingSeverity.Info, ConfidenceMismatch, $"declared confidence '{Lower(declared)}', references suggest '{Lower(suggested)}'.");
         }
 
         foreach (var s in tweak.Sources)
         {
             if (s.Kind == SourceRef.MsDocs && csp is not null && !csp.Any(c => c.Reference.Equals(s.Ref, StringComparison.OrdinalIgnoreCase)))
-                add(FindingSeverity.Warning, SourceUnknown, $"fonte msdocs '{s.Ref}' não existe mais na referência da Policy CSP.");
+                add(FindingSeverity.Warning, SourceUnknown, $"msdocs source '{s.Ref}' no longer exists in the Policy CSP reference.");
             if (s.Kind == SourceRef.AdmxKind && admx is not null && !admx.Any(p => p.QualifiedName.Equals(s.Ref, StringComparison.OrdinalIgnoreCase)))
-                add(FindingSeverity.Info, SourceUnknown, $"fonte admx '{s.Ref}' não encontrada nos ADMX carregados.");
+                add(FindingSeverity.Info, SourceUnknown, $"admx source '{s.Ref}' not found in the loaded ADMX.");
         }
     }
 

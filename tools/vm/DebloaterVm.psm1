@@ -1,53 +1,53 @@
 ﻿<#
 .SYNOPSIS
-    Funções compartilhadas pelos scripts de VM de teste do Debloater (New-TestVM, Invoke-VmSelfTest,
-    Remove-TestVM). Compatível com Windows PowerShell 5.1.
+    Functions shared by the Debloater test VM scripts (New-TestVM, Invoke-VmSelfTest,
+    Remove-TestVM). Compatible with Windows PowerShell 5.1.
 
 .DESCRIPTION
-    - Import-DebloaterVmCredential: carrega a credencial da VM gravada com Export-Clixml (DPAPI).
-    - New-DebloaterUnattendXml: gera o autounattend.xml (instalação sem interação do Windows 11).
-    - New-DebloaterIsoFile: cria uma ISO a partir de uma pasta usando IMAPI2FS (COM nativo do Windows).
+    - Import-DebloaterVmCredential: loads the VM credential saved with Export-Clixml (DPAPI).
+    - New-DebloaterUnattendXml: generates autounattend.xml (unattended Windows 11 installation).
+    - New-DebloaterIsoFile: creates an ISO from a folder using IMAPI2FS (native Windows COM).
     - Get-DebloaterDefaultVmPath, Get-DebloaterVmSwitch, Send-DebloaterVmKey, Wait-DebloaterVmSession,
       Get-DebloaterGuestInfo, Remove-DebloaterSetupMedia, Get-DebloaterDotNet, Get-DebloaterRepoRoot.
 
-    Nenhuma função grava senha no repositório: a credencial fica num arquivo ignorado pelo git
-    (tools/vm/.vmcred.xml) e o autounattend.xml só existe dentro da ISO na pasta da VM, apagada ao
-    final da instalação.
+    No function writes a password to the repository: the credential lives in a git-ignored file
+    (tools/vm/.vmcred.xml) and autounattend.xml only exists inside the ISO in the VM folder, which is
+    deleted at the end of the installation.
 #>
 
 Set-StrictMode -Version 2.0
 
-# Nome do arquivo que marca uma pasta como criada por New-TestVM (Remove-TestVM só apaga a pasta inteira com ele).
+# Name of the file that marks a folder as created by New-TestVM (Remove-TestVM only deletes the whole folder if it is present).
 $script:MarkerFileName = '.debloater-testvm'
 
-# Chave genérica de INSTALAÇÃO do Windows 11 Pro publicada pela Microsoft (não ativa o Windows;
-# só seleciona a edição e evita a tela de chave do produto).
+# Generic Windows 11 Pro INSTALLATION key published by Microsoft (does not activate Windows;
+# it only selects the edition and skips the product key screen).
 $script:GenericProKey = 'VK7JG-NPHTM-C97JM-9MPGT-3V66T'
 
-# Id fixo do "Default Switch" do Hyper-V (o nome pode variar entre idiomas).
+# Fixed Id of the Hyper-V "Default Switch" (the name may vary between languages).
 $script:DefaultSwitchId = 'c08cb7b8-9b3c-408e-8e30-5e16a3aeb444'
 
-# Id do serviço de integração "Guest Service Interface" (o nome é traduzido no host pt-BR).
+# Id of the "Guest Service Interface" integration service (the name is localized on a pt-BR host).
 $script:GuestServiceInterfaceId = '6C09BB55-D683-4DA0-8931-C9BF705F6480'
 
 function Get-DebloaterMarkerFileName { $script:MarkerFileName }
 function Get-DebloaterGenericProKey { $script:GenericProKey }
 
 function Get-DebloaterRepoRoot {
-    <# .SYNOPSIS Raiz do repositório (dois níveis acima de tools/vm). #>
+    <# .SYNOPSIS Repository root (two levels above tools/vm). #>
     (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).ProviderPath
 }
 
 function Get-DebloaterDefaultCredentialPath {
-    <# .SYNOPSIS Caminho padrão da credencial: tools/vm/.vmcred.xml (ignorado pelo git). #>
+    <# .SYNOPSIS Default credential path: tools/vm/.vmcred.xml (git-ignored). #>
     Join-Path $PSScriptRoot '.vmcred.xml'
 }
 
 function Get-DebloaterDefaultVmPath {
     <#
     .SYNOPSIS
-        Pasta base das VMs: D:\Hyper-V se a unidade D: existir (e for disco fixo), senão C:\Hyper-V.
-        A VM fica em <base>\<Nome> (ex.: D:\Hyper-V\DebloaterTest).
+        Base folder for VMs: D:\Hyper-V if drive D: exists (and is a fixed disk), otherwise C:\Hyper-V.
+        The VM lives in <base>\<Name> (e.g. D:\Hyper-V\DebloaterTest).
     #>
     $d = [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.Name -eq 'D:\' -and $_.DriveType -eq 'Fixed' -and $_.IsReady }
     if ($d) { return 'D:\Hyper-V' }
@@ -57,35 +57,35 @@ function Get-DebloaterDefaultVmPath {
 function Import-DebloaterVmCredential {
     <#
     .SYNOPSIS
-        Carrega a credencial da conta administradora da VM (arquivo criado com Export-Clixml).
+        Loads the credential of the VM's administrator account (file created with Export-Clixml).
     .DESCRIPTION
-        O arquivo é protegido por DPAPI: só pode ser lido pelo mesmo usuário, no mesmo PC, que o criou.
-        Para criar: Get-Credential -UserName teste -Message "Conta da VM" | Export-Clixml -Path tools\vm\.vmcred.xml
+        The file is protected by DPAPI: it can only be read by the same user, on the same PC, that created it.
+        To create it: Get-Credential -UserName teste -Message "VM account" | Export-Clixml -Path tools\vm\.vmcred.xml
     #>
     param([Parameter(Mandatory)][string]$Path)
 
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw ("Arquivo de credencial não encontrado: '{0}'. Crie-o com:`n" +
-               "  Get-Credential -UserName teste -Message 'Conta da VM de teste' | Export-Clixml -Path '{0}'") -f $Path
+        throw ("Credential file not found: '{0}'. Create it with:`n" +
+               "  Get-Credential -UserName teste -Message 'Test VM account' | Export-Clixml -Path '{0}'") -f $Path
     }
     $cred = Import-Clixml -LiteralPath $Path
     if (-not ($cred -is [System.Management.Automation.PSCredential])) {
-        throw "O arquivo '$Path' não contém uma PSCredential (use Get-Credential | Export-Clixml)."
+        throw "The file '$Path' does not contain a PSCredential (use Get-Credential | Export-Clixml)."
     }
     return $cred
 }
 
 function Test-DebloaterUserName {
-    <# .SYNOPSIS Valida o nome da conta local que o autounattend vai criar. #>
+    <# .SYNOPSIS Validates the name of the local account that autounattend will create. #>
     param([Parameter(Mandatory)][string]$UserName)
 
     $name = $UserName
     if ($name.Contains('\')) { $name = $name.Split('\')[-1] }
-    if ($name.Length -lt 1 -or $name.Length -gt 20) { throw "Nome de usuário '$name' inválido: use de 1 a 20 caracteres." }
-    if ($name -match '[\\/\[\]:;|=,+*?<>"@%]') { throw "Nome de usuário '$name' contém caracteres não permitidos." }
-    if ($name.TrimEnd('.').Length -eq 0) { throw "Nome de usuário '$name' inválido." }
+    if ($name.Length -lt 1 -or $name.Length -gt 20) { throw "Invalid user name '$name': use 1 to 20 characters." }
+    if ($name -match '[\\/\[\]:;|=,+*?<>"@%]') { throw "User name '$name' contains characters that are not allowed." }
+    if ($name.TrimEnd('.').Length -eq 0) { throw "Invalid user name '$name'." }
     if (@('Administrator', 'Administrador', 'Guest', 'Convidado', 'DefaultAccount', 'WDAGUtilityAccount') -contains $name) {
-        throw "Use um nome que não seja de uma conta interna do Windows (recebido '$name')."
+        throw "Use a name that is not a built-in Windows account (got '$name')."
     }
     return $name
 }
@@ -98,7 +98,7 @@ function ConvertTo-DebloaterXmlText {
 function Get-DebloaterAdminGroupName {
     <#
     .SYNOPSIS
-        Nome do grupo Administradores no idioma da instalação (o autounattend usa o nome, não o SID).
+        Name of the Administrators group in the installation language (autounattend uses the name, not the SID).
     #>
     param([Parameter(Mandatory)][string]$UILanguage)
     switch -Regex ($UILanguage) {
@@ -114,17 +114,17 @@ function Get-DebloaterAdminGroupName {
 function New-DebloaterUnattendXml {
     <#
     .SYNOPSIS
-        Gera o texto do autounattend.xml para instalar o Windows 11 sem interação numa VM Hyper-V Gen 2.
+        Generates the autounattend.xml text to install Windows 11 unattended on a Hyper-V Gen 2 VM.
     .DESCRIPTION
-        windowsPE: idioma/teclado, LabConfig (BypassTPMCheck, BypassSecureBootCheck, BypassCPUCheck,
-        BypassRAMCheck, BypassStorageCheck: para hosts com CPU fora da lista do Windows 11),
-        apaga o disco 0 e cria EFI/MSR/Windows (GPT), seleciona a edição pelo nome da imagem.
-        specialize: nome do computador, fuso, LocalAccountTokenFilterPolicy=1 (token completo de
-        administrador em logons remotos de contas locais; a VM é descartável) e BypassNRO.
-        oobeSystem: pula telas do OOBE e da conta online, cria a conta local administradora, faz logon
-        automático uma única vez e, nesse logon, desativa suspensão e limpa a senha do logon automático.
+        windowsPE: language/keyboard, LabConfig (BypassTPMCheck, BypassSecureBootCheck, BypassCPUCheck,
+        BypassRAMCheck, BypassStorageCheck: for hosts whose CPU is not on the Windows 11 list),
+        wipes disk 0 and creates EFI/MSR/Windows (GPT), selects the edition by image name.
+        specialize: computer name, time zone, LocalAccountTokenFilterPolicy=1 (full administrator
+        token for remote logons of local accounts; the VM is disposable) and BypassNRO.
+        oobeSystem: skips the OOBE and online account screens, creates the local administrator account,
+        logs on automatically once and, in that logon, disables sleep and clears the auto-logon password.
     .OUTPUTS
-        [string] com o XML (UTF-8). Contém a senha em texto: grave apenas fora do repositório.
+        [string] with the XML (UTF-8). Contains the password in plain text: only save it outside the repository.
     #>
     param(
         [Parameter(Mandatory)][pscredential]$Credential,
@@ -139,7 +139,7 @@ function New-DebloaterUnattendXml {
 
     $user = Test-DebloaterUserName $Credential.UserName
     $password = $Credential.GetNetworkCredential().Password
-    if ([string]::IsNullOrEmpty($password)) { throw 'A credencial precisa ter senha (PowerShell Direct não aceita senha vazia).' }
+    if ([string]::IsNullOrEmpty($password)) { throw 'The credential needs a password (PowerShell Direct does not accept an empty password).' }
     if (-not $AdminGroup) { $AdminGroup = Get-DebloaterAdminGroupName $UILanguage }
 
     $cn = ($ComputerName -replace '[^A-Za-z0-9-]', '')
@@ -182,7 +182,7 @@ function New-DebloaterUnattendXml {
 
     $xml = @"
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Gerado por tools/vm/New-TestVM.ps1 (Debloater). Somente para a VM de teste descartável. -->
+<!-- Generated by tools/vm/New-TestVM.ps1 (Debloater). Only for the disposable test VM. -->
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
   <settings pass="windowsPE">
     <component name="Microsoft-Windows-International-Core-WinPE" $arch>
@@ -320,22 +320,22 @@ $productKeyXml
         <SynchronousCommand wcm:action="add">
           <Order>1</Order>
           <CommandLine>powercfg.exe /change standby-timeout-ac 0</CommandLine>
-          <Description>Sem suspensão</Description>
+          <Description>No sleep</Description>
         </SynchronousCommand>
         <SynchronousCommand wcm:action="add">
           <Order>2</Order>
           <CommandLine>powercfg.exe /change monitor-timeout-ac 0</CommandLine>
-          <Description>Sem desligar o vídeo</Description>
+          <Description>No display timeout</Description>
         </SynchronousCommand>
         <SynchronousCommand wcm:action="add">
           <Order>3</Order>
           <CommandLine>reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoAdminLogon /t REG_SZ /d 0 /f</CommandLine>
-          <Description>Logon automático só uma vez</Description>
+          <Description>Automatic logon only once</Description>
         </SynchronousCommand>
         <SynchronousCommand wcm:action="add">
           <Order>4</Order>
           <CommandLine>reg.exe delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v DefaultPassword /f</CommandLine>
-          <Description>Remove a senha do logon automático</Description>
+          <Description>Remove the automatic logon password</Description>
         </SynchronousCommand>
       </FirstLogonCommands>
       <TimeZone>$($x.Tz)</TimeZone>
@@ -344,7 +344,7 @@ $productKeyXml
 </unattend>
 "@
 
-    # Garante que o resultado é XML bem formado antes de usá-lo.
+    # Makes sure the result is well-formed XML before using it.
     $null = [xml]$xml
     return $xml
 }
@@ -352,8 +352,8 @@ $productKeyXml
 function New-DebloaterIsoFile {
     <#
     .SYNOPSIS
-        Cria uma ISO (ISO 9660 + Joliet) com o conteúdo de uma pasta, usando o COM IMAPI2FS do Windows
-        (sem ADK/oscdimg e sem baixar nada).
+        Creates an ISO (ISO 9660 + Joliet) with the contents of a folder, using the Windows IMAPI2FS COM
+        (no ADK/oscdimg and no downloads).
     #>
     param(
         [Parameter(Mandatory)][string]$SourceFolder,
@@ -369,7 +369,7 @@ using System.Runtime.InteropServices.ComTypes;
 
 public static class DebloaterIsoWriter
 {
-    // Copia o IStream devolvido por IMAPI2FS para um arquivo, bloco a bloco.
+    // Copies the IStream returned by IMAPI2FS to a file, block by block.
     public static void Write(string path, object stream, int blockSize, int totalBlocks)
     {
         IStream source = (IStream)stream;
@@ -403,31 +403,31 @@ public static class DebloaterIsoWriter
 }
 
 function Get-DebloaterVmSwitch {
-    <# .SYNOPSIS Retorna o switch pelo nome; para 'Default Switch', também procura pelo Id fixo. #>
+    <# .SYNOPSIS Returns the switch by name; for 'Default Switch', also looks it up by its fixed Id. #>
     param([string]$Name = 'Default Switch')
     $sw = Get-VMSwitch -Name $Name -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $sw -and $Name -eq 'Default Switch') {
         $sw = Get-VMSwitch -ErrorAction SilentlyContinue | Where-Object { "$($_.Id)" -eq $script:DefaultSwitchId } | Select-Object -First 1
     }
-    if (-not $sw) { throw "Switch virtual '$Name' não encontrado. Veja Get-VMSwitch." }
+    if (-not $sw) { throw "Virtual switch '$Name' not found. See Get-VMSwitch." }
     return $sw
 }
 
 function Enable-DebloaterGuestServices {
-    <# .SYNOPSIS Ativa o serviço de integração "Guest Service Interface" (pelo Id; o nome é traduzido). #>
+    <# .SYNOPSIS Enables the "Guest Service Interface" integration service (by Id; the name is localized). #>
     param([Parameter(Mandatory)][string]$VMName)
     $svc = Get-VMIntegrationService -VMName $VMName | Where-Object {
         "$($_.Id)" -match $script:GuestServiceInterfaceId -or $_.Name -match 'Guest Service|Convidado'
     } | Select-Object -First 1
-    if (-not $svc) { Write-Warning 'Serviço de integração "Guest Service Interface" não encontrado.'; return }
+    if (-not $svc) { Write-Warning 'Integration service "Guest Service Interface" not found.'; return }
     if (-not $svc.Enabled) { Enable-VMIntegrationService -VMIntegrationService $svc }
 }
 
 function Send-DebloaterVmKey {
     <#
     .SYNOPSIS
-        Pressiona uma tecla no teclado virtual da VM (Msvm_Keyboard.TypeKey) repetidamente por alguns
-        segundos. Usado logo após ligar a VM para passar do "Press any key to boot from CD or DVD".
+        Presses a key on the VM's virtual keyboard (Msvm_Keyboard.TypeKey) repeatedly for a few
+        seconds. Used right after starting the VM to get past "Press any key to boot from CD or DVD".
     #>
     param(
         [Parameter(Mandatory)]$VM,   # Microsoft.HyperV.PowerShell.VirtualMachine (Get-VM)
@@ -447,25 +447,25 @@ function Send-DebloaterVmKey {
             }
         }
         catch {
-            Write-Verbose "TypeKey ainda indisponível: $($_.Exception.Message)"
+            Write-Verbose "TypeKey not available yet: $($_.Exception.Message)"
         }
         Start-Sleep -Milliseconds $IntervalMilliseconds
     }
-    Write-Verbose "Teclas enviadas: $sent"
+    Write-Verbose "Keys sent: $sent"
     return $sent
 }
 
 function Wait-DebloaterVmSession {
     <#
     .SYNOPSIS
-        Tenta abrir uma sessão PowerShell Direct (New-PSSession -VMName) até conseguir ou estourar o tempo.
+        Tries to open a PowerShell Direct session (New-PSSession -VMName) until it succeeds or times out.
     #>
     param(
         [Parameter(Mandatory)][string]$VMName,
         [Parameter(Mandatory)][pscredential]$Credential,
         [int]$TimeoutMinutes = 10,
         [int]$IntervalSeconds = 15,
-        [string]$Activity = 'Aguardando a VM aceitar PowerShell Direct'
+        [string]$Activity = 'Waiting for the VM to accept PowerShell Direct'
     )
     $start = Get-Date
     $deadline = $start.AddMinutes($TimeoutMinutes)
@@ -482,15 +482,15 @@ function Wait-DebloaterVmSession {
         $elapsed = (Get-Date) - $start
         if ((Get-Date) -gt $deadline) {
             Write-Progress -Activity $Activity -Completed
-            throw "A VM '$VMName' não aceitou PowerShell Direct em $TimeoutMinutes min. Último erro: $last"
+            throw "The VM '$VMName' did not accept PowerShell Direct within $TimeoutMinutes min. Last error: $last"
         }
-        Write-Progress -Activity $Activity -Status ("{0:hh\:mm\:ss} decorridos (limite {1} min). Último erro: {2}" -f $elapsed, $TimeoutMinutes, $last)
+        Write-Progress -Activity $Activity -Status ("{0:hh\:mm\:ss} elapsed (limit {1} min). Last error: {2}" -f $elapsed, $TimeoutMinutes, $last)
         Start-Sleep -Seconds $IntervalSeconds
     }
 }
 
 function Get-DebloaterGuestInfo {
-    <# .SYNOPSIS Usuário, elevação, modelo (VM?) e versão do Windows dentro da sessão. #>
+    <# .SYNOPSIS User, elevation, model (VM?) and Windows version inside the session. #>
     param([Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session)
     Invoke-Command -Session $Session -ScriptBlock {
         $id = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -512,18 +512,18 @@ function Get-DebloaterGuestInfo {
 function Remove-DebloaterSetupMedia {
     <#
     .SYNOPSIS
-        Ejeta a ISO do Windows e remove a unidade com a ISO do autounattend, apagando esse arquivo
-        (ele contém a senha da VM em texto).
+        Ejects the Windows ISO and removes the drive holding the autounattend ISO, deleting that file
+        (it contains the VM password in plain text).
     #>
     param([Parameter(Mandatory)][string]$VMName)
     $drives = @(Get-VMDvdDrive -VMName $VMName | Where-Object { $_.Path })
     if ($drives.Count -eq 0) { return }
 
-    # Ejetar/remover DVD com a VM ligada pode travar o VMMS inteiro (o convidado segura a mídia).
-    # Por isso a VM é desligada antes e religada depois, se estava ligada.
+    # Ejecting/removing a DVD while the VM is running can hang the whole VMMS (the guest holds the media).
+    # So the VM is turned off first and started again afterwards, if it was running.
     $wasRunning = (Get-VM -Name $VMName).State -eq 'Running'
     if ($wasRunning) {
-        Write-Host 'Desligando a VM para remover as mídias de instalação...'
+        Write-Host 'Turning off the VM to remove the installation media...'
         Stop-VM -Name $VMName -Force
     }
     elseif ((Get-VM -Name $VMName).State -eq 'Saved') {
@@ -536,11 +536,11 @@ function Remove-DebloaterSetupMedia {
         if ((Split-Path -Leaf $path) -like '*autounattend*.iso') {
             Remove-VMDvdDrive -VMDvdDrive $dvd
             if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
-            Write-Host "ISO do autounattend removida: $path"
+            Write-Host "autounattend ISO removed: $path"
         }
         else {
             Set-VMDvdDrive -VMDvdDrive $dvd -Path $null
-            Write-Host "ISO ejetada: $path"
+            Write-Host "ISO ejected: $path"
         }
     }
 
@@ -548,7 +548,7 @@ function Remove-DebloaterSetupMedia {
 }
 
 function Get-DebloaterGuestBootTime {
-    <# .SYNOPSIS Data/hora do último boot do convidado (Win32_OperatingSystem.LastBootUpTime). #>
+    <# .SYNOPSIS Date/time of the guest's last boot (Win32_OperatingSystem.LastBootUpTime). #>
     param([Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session)
     Invoke-Command -Session $Session -ScriptBlock { (Get-CimInstance Win32_OperatingSystem).LastBootUpTime }
 }
@@ -556,9 +556,9 @@ function Get-DebloaterGuestBootTime {
 function Restart-DebloaterVmGuest {
     <#
     .SYNOPSIS
-        Reinicia o Windows do convidado de forma limpa (shutdown /r de dentro da VM, não um reset do
-        Hyper-V, para o registro ser gravado como numa reinicialização normal) e devolve uma sessão
-        PowerShell Direct nova, aberta só depois que o boot novo aconteceu (LastBootUpTime mudou).
+        Restarts the guest Windows cleanly (shutdown /r from inside the VM, not a Hyper-V reset, so the
+        registry is flushed as in a normal restart) and returns a new PowerShell Direct session, opened
+        only after the new boot happened (LastBootUpTime changed).
     #>
     param(
         [Parameter(Mandatory)][string]$VMName,
@@ -567,23 +567,23 @@ function Restart-DebloaterVmGuest {
         [int]$TimeoutMinutes = 10
     )
     $before = Get-DebloaterGuestBootTime -Session $Session
-    # Start-Process devolve logo; a sessão cai quando o Windows desliga.
+    # Start-Process returns immediately; the session drops when Windows shuts down.
     Invoke-Command -Session $Session -ScriptBlock { Start-Process -FilePath shutdown.exe -ArgumentList '/r', '/t', '3', '/f' -WindowStyle Hidden }
     Remove-PSSession $Session -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 20
     $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
     while ($true) {
         $remaining = [math]::Max(1, [int][math]::Ceiling(($deadline - (Get-Date)).TotalMinutes))
-        $s = Wait-DebloaterVmSession -VMName $VMName -Credential $Credential -TimeoutMinutes $remaining -IntervalSeconds 10 -Activity 'Aguardando a VM reiniciar'
+        $s = Wait-DebloaterVmSession -VMName $VMName -Credential $Credential -TimeoutMinutes $remaining -IntervalSeconds 10 -Activity 'Waiting for the VM to restart'
         try {
             $now = Get-DebloaterGuestBootTime -Session $s
             if ($now -gt $before) { return $s }
         }
         catch {
-            Write-Verbose "Sessão ainda instável: $($_.Exception.Message)"
+            Write-Verbose "Session still unstable: $($_.Exception.Message)"
         }
         Remove-PSSession $s -ErrorAction SilentlyContinue
-        if ((Get-Date) -gt $deadline) { throw "A VM '$VMName' não reiniciou em $TimeoutMinutes min." }
+        if ((Get-Date) -gt $deadline) { throw "The VM '$VMName' did not restart within $TimeoutMinutes min." }
         Start-Sleep -Seconds 10
     }
 }
@@ -591,9 +591,9 @@ function Restart-DebloaterVmGuest {
 function Set-DebloaterGuestAutoLogon {
     <#
     .SYNOPSIS
-        Liga o logon automático da conta de teste no convidado (Winlogon AutoAdminLogon/DefaultPassword),
-        para que, depois de reiniciar, haja uma sessão interativa com o Explorer rodando (ele pode
-        reescrever valores de HKCU). A senha fica no registro da VM só até o checkpoint ser restaurado.
+        Enables automatic logon of the test account in the guest (Winlogon AutoAdminLogon/DefaultPassword),
+        so that after a restart there is an interactive session with Explorer running (it may rewrite
+        HKCU values). The password stays in the VM registry only until the checkpoint is restored.
     #>
     param(
         [Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session,
@@ -614,7 +614,7 @@ function Set-DebloaterGuestAutoLogon {
 }
 
 function Wait-DebloaterGuestDesktop {
-    <# .SYNOPSIS Espera o Explorer da sessão interativa aparecer (logon automático). Devolve $true se apareceu. #>
+    <# .SYNOPSIS Waits for Explorer of the interactive session to appear (automatic logon). Returns $true if it did. #>
     param(
         [Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session,
         [int]$TimeoutSeconds = 180
@@ -633,32 +633,32 @@ function Wait-DebloaterGuestDesktop {
 function Invoke-DebloaterGuestMaintenance {
     <#
     .SYNOPSIS
-        Dispara, de dentro do convidado, o que costuma desfazer ajustes: atualização de política
-        (gpupdate /force), busca do Windows Update (UsoClient StartScan e a tarefa "Schedule Scan") e a
-        remediação do WaaSMedic. Tudo best-effort: devolve uma linha por gatilho com o resultado.
+        Triggers, from inside the guest, what usually undoes tweaks: policy refresh (gpupdate /force),
+        a Windows Update scan (UsoClient StartScan and the "Schedule Scan" task) and the WaaSMedic
+        remediation. All best-effort: returns one line per trigger with the result.
     #>
     param([Parameter(Mandatory)][System.Management.Automation.Runspaces.PSSession]$Session)
     Invoke-Command -Session $Session -ScriptBlock {
         function Try-Step([string]$Name, [scriptblock]$Body) {
             try { $r = & $Body 2>&1 | Out-String; "{0}: ok {1}" -f $Name, (($r -replace '\s+', ' ').Trim()) }
-            catch { "{0}: falhou ({1})" -f $Name, $_.Exception.Message }
+            catch { "{0}: failed ({1})" -f $Name, $_.Exception.Message }
         }
         Try-Step 'gpupdate /force' { gpupdate.exe /force /wait:120 | Select-Object -Last 2 }
-        Try-Step 'UsoClient StartScan' { Start-Process -FilePath UsoClient.exe -ArgumentList 'StartScan' -Wait -WindowStyle Hidden; 'disparado' }
+        Try-Step 'UsoClient StartScan' { Start-Process -FilePath UsoClient.exe -ArgumentList 'StartScan' -Wait -WindowStyle Hidden; 'triggered' }
         foreach ($t in @('\Microsoft\Windows\UpdateOrchestrator\Schedule Scan', '\Microsoft\Windows\WaaSMedic\PerformRemediation')) {
-            Try-Step "tarefa $t" {
+            Try-Step "task $t" {
                 $path = $t.Substring(0, $t.LastIndexOf('\') + 1); $name = $t.Substring($t.LastIndexOf('\') + 1)
                 $task = Get-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop
                 Start-ScheduledTask -InputObject $task -ErrorAction Stop
-                'iniciada'
+                'started'
             }
         }
-        Try-Step 'serviço WaaSMedicSvc' { Start-Service -Name WaaSMedicSvc -ErrorAction Stop; (Get-Service WaaSMedicSvc).Status }
+        Try-Step 'service WaaSMedicSvc' { Start-Service -Name WaaSMedicSvc -ErrorAction Stop; (Get-Service WaaSMedicSvc).Status }
     }
 }
 
 function Get-DebloaterDotNet {
-    <# .SYNOPSIS Caminho do dotnet.exe (C:\Program Files\dotnet ou o do PATH). #>
+    <# .SYNOPSIS Path to dotnet.exe (C:\Program Files\dotnet or the one on PATH). #>
     $candidates = @(
         (Join-Path $env:ProgramFiles 'dotnet\dotnet.exe'),
         'C:\Program Files\dotnet\dotnet.exe'
@@ -666,7 +666,7 @@ function Get-DebloaterDotNet {
     foreach ($c in $candidates) { if (Test-Path -LiteralPath $c) { return $c } }
     $cmd = Get-Command dotnet -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
-    throw 'dotnet.exe não encontrado (instale o SDK do .NET 10).'
+    throw 'dotnet.exe not found (install the .NET 10 SDK).'
 }
 
 Export-ModuleMember -Function *-Debloater*

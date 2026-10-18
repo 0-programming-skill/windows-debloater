@@ -9,9 +9,9 @@ using Windows.Management.Deployment;
 namespace Debloater.Core.Inventory;
 
 /// <summary>
-/// Enumera, somente leitura, o que existe no sistema: serviços e drivers, tarefas agendadas,
-/// pacotes appx, recursos opcionais, capacidades e itens de inicialização automática.
-/// Nada aqui altera o sistema.
+/// Enumerates (read-only) what exists on the system: services and drivers, scheduled tasks,
+/// appx packages, optional features, capabilities and autostart items.
+/// Nothing here changes the system.
 /// </summary>
 public sealed partial class InventoryCollector
 {
@@ -19,7 +19,7 @@ public sealed partial class InventoryCollector
 
     public InventoryCollector(SystemInfo? system = null) => _system = system ?? SystemInfo.Current;
 
-    /// <summary>Coleta os tipos pedidos (todos, se <paramref name="kinds"/> for null), em paralelo.</summary>
+    /// <summary>Collects the requested kinds (all, if <paramref name="kinds"/> is null), in parallel.</summary>
     public async Task<InventorySnapshot> CollectAsync(IEnumerable<string>? kinds = null, CancellationToken ct = default)
     {
         var wanted = (kinds ?? InventoryKinds.All).Select(k => k.ToLowerInvariant()).Distinct().ToList();
@@ -48,7 +48,7 @@ public sealed partial class InventoryCollector
                 InventoryKinds.Features => CollectFeatures(),
                 InventoryKinds.Capabilities => CollectCapabilities(),
                 InventoryKinds.Autoruns => CollectAutoruns(),
-                _ => throw new ArgumentException($"tipo de inventário desconhecido '{kind}' ({string.Join(", ", InventoryKinds.All)})."),
+                _ => throw new ArgumentException($"unknown inventory kind '{kind}' ({string.Join(", ", InventoryKinds.All)})."),
             };
             section.Items.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
             return section;
@@ -59,11 +59,11 @@ public sealed partial class InventoryCollector
         }
         catch (Exception ex)
         {
-            return new InventorySection { Kind = kind, Available = false, Note = $"falha ao enumerar: {ex.Message}" };
+            return new InventorySection { Kind = kind, Available = false, Note = $"failed to enumerate: {ex.Message}" };
         }
     }
 
-    // ---------------- serviços e drivers ----------------
+    // ---------------- services and drivers ----------------
 
     // SERVICE_* (winnt.h)
     private const int KernelDriver = 0x1, FileSystemDriver = 0x2, RecognizerDriver = 0x8;
@@ -74,12 +74,12 @@ public sealed partial class InventoryCollector
         var section = new InventorySection { Kind = drivers ? InventoryKinds.Drivers : InventoryKinds.Services };
         using var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
         using var root = hklm.OpenSubKey(@"SYSTEM\CurrentControlSet\Services")
-            ?? throw new InvalidOperationException("chave Services não encontrada");
+            ?? throw new InvalidOperationException("Services key not found");
         foreach (var name in root.GetSubKeyNames())
         {
             using var key = root.OpenSubKey(name);
-            if (key?.GetValue("Type") is not int type) continue; // não é serviço (ex.: chaves de parâmetros)
-            if ((type & UserServiceInstance) != 0) continue;    // instância por usuário (nome muda a cada logon)
+            if (key?.GetValue("Type") is not int type) continue; // not a service (e.g. parameter keys)
+            if ((type & UserServiceInstance) != 0) continue;    // per-user instance (name changes at every logon)
             bool isDriver = (type & (KernelDriver | FileSystemDriver | RecognizerDriver)) != 0;
             if (isDriver != drivers) continue;
 
@@ -95,7 +95,7 @@ public sealed partial class InventoryCollector
             item.Properties["type"] = $"0x{type:X}";
             if (key.GetValue("ImagePath", null, RegistryValueOptions.DoNotExpandEnvironmentNames) is string image)
                 item.Properties["imagePath"] = image;
-            // DLL de serviços hospedados no svchost (informativo: não entra no diff; usado pelo fingerprint).
+            // DLL of svchost-hosted services (informational: not part of the diff; used by the fingerprint).
             try
             {
                 using var parameters = key.OpenSubKey("Parameters");
@@ -121,7 +121,7 @@ public sealed partial class InventoryCollector
     [LibraryImport("shlwapi.dll", StringMarshalling = StringMarshalling.Utf16)]
     private static partial int SHLoadIndirectString(string pszSource, [Out] char[] pszOutBuf, int cchOutBuf, IntPtr ppvReserved);
 
-    /// <summary>Resolve nomes no formato "@%SystemRoot%\system32\x.dll,-100"; devolve o original se falhar.</summary>
+    /// <summary>Resolves names in the "@%SystemRoot%\system32\x.dll,-100" format; returns the original on failure.</summary>
     internal static string? ResolveIndirect(string? value)
     {
         if (string.IsNullOrEmpty(value) || value[0] != '@') return value;
@@ -138,7 +138,7 @@ public sealed partial class InventoryCollector
         return value;
     }
 
-    // ---------------- tarefas agendadas ----------------
+    // ---------------- scheduled tasks ----------------
 
     private const int TaskEnumHidden = 1;
 
@@ -146,7 +146,7 @@ public sealed partial class InventoryCollector
     {
         var section = new InventorySection { Kind = InventoryKinds.Tasks };
         var type = Type.GetTypeFromProgID("Schedule.Service")
-            ?? throw new InvalidOperationException("Agendador de Tarefas (Schedule.Service) indisponível.");
+            ?? throw new InvalidOperationException("Task Scheduler (Schedule.Service) unavailable.");
         dynamic service = Activator.CreateInstance(type)!;
         service.Connect();
         int deniedFolders = 0;
@@ -173,7 +173,7 @@ public sealed partial class InventoryCollector
 
         Walk(service.GetFolder("\\"));
         if (deniedFolders > 0)
-            section.Note = $"{deniedFolders} pasta(s) sem acesso (rode como administrador para ver todas).";
+            section.Note = $"{deniedFolders} folder(s) without access (run as administrator to see all).";
         return section;
     }
 
@@ -219,12 +219,12 @@ public sealed partial class InventoryCollector
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or COMException)
             {
-                section.Note = $"pacotes de todos os usuários/provisionados indisponíveis: {ex.Message}";
+                section.Note = $"all-users/provisioned packages unavailable: {ex.Message}";
             }
         }
         else
         {
-            section.Note = "somente usuário atual; pacotes de outros usuários e provisionados exigem administrador.";
+            section.Note = "current user only; other users' and provisioned packages require administrator.";
         }
 
         foreach (var item in items.Values) item.Properties.TryAdd("currentUser", "false");
@@ -234,7 +234,7 @@ public sealed partial class InventoryCollector
 
     private static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
 
-    // ---------------- recursos opcionais ----------------
+    // ---------------- optional features ----------------
 
     private static InventorySection CollectFeatures()
     {
@@ -255,13 +255,13 @@ public sealed partial class InventoryCollector
         return section;
     }
 
-    // ---------------- capacidades (Features on Demand) ----------------
+    // ---------------- capabilities (Features on Demand) ----------------
 
     private const string CbsKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing";
 
     /// <summary>
-    /// Sem administrador não há API para listar capacidades; usamos o índice do CBS no registro,
-    /// que lista as capacidades INSTALADAS. Como administrador, o DISM lista também as disponíveis.
+    /// Without administrator there is no API to list capabilities; we use the CBS index in the registry,
+    /// which lists the INSTALLED capabilities. As administrator, DISM also lists the available ones.
     /// </summary>
     private InventorySection CollectCapabilities()
     {
@@ -274,14 +274,14 @@ public sealed partial class InventoryCollector
         var section = new InventorySection
         {
             Kind = InventoryKinds.Capabilities,
-            Note = "somente capacidades instaladas (índice CBS do registro); rode como administrador para listar também as disponíveis.",
+            Note = "installed capabilities only (CBS index in the registry); run as administrator to also list the available ones.",
         };
         using var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
         using var index = hklm.OpenSubKey($@"{CbsKey}\CapabilityIndex");
         if (index is null)
         {
             section.Available = false;
-            section.Note = "índice de capacidades do CBS não encontrado; rode como administrador.";
+            section.Note = "CBS capability index not found; run as administrator.";
             return section;
         }
         foreach (var name in index.GetSubKeyNames())
@@ -310,7 +310,7 @@ public sealed partial class InventoryCollector
         return section.Items.Count > 0 ? section : null;
     }
 
-    // ---------------- inicialização automática ----------------
+    // ---------------- autostart ----------------
 
     internal static readonly (RegistryHive Hive, string Prefix, string SubKey)[] RunKeys =
     [
@@ -352,8 +352,8 @@ public sealed partial class InventoryCollector
 
         var folders = new (string Label, string Path, RegistryHive Hive)[]
         {
-            ("Startup(usuário)", Environment.GetFolderPath(Environment.SpecialFolder.Startup), RegistryHive.CurrentUser),
-            ("Startup(todos)", Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), RegistryHive.LocalMachine),
+            ("Startup(user)", Environment.GetFolderPath(Environment.SpecialFolder.Startup), RegistryHive.CurrentUser),
+            ("Startup(all)", Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), RegistryHive.LocalMachine),
         };
         foreach (var (label, path, hive) in folders)
         {
@@ -372,7 +372,7 @@ public sealed partial class InventoryCollector
         return section;
     }
 
-    /// <summary>Estado em Gerenciador de Tarefas &gt; Inicializar (StartupApproved: byte 0 par = habilitado).</summary>
+    /// <summary>State in Task Manager &gt; Startup apps (StartupApproved: even byte 0 = enabled).</summary>
     private static string ReadApproved(RegistryKey baseKey, string subKey, string name)
     {
         using var key = baseKey.OpenSubKey(subKey);

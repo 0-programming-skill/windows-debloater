@@ -6,7 +6,7 @@ using Microsoft.Win32;
 
 namespace Debloater.Core.Tests;
 
-/// <summary>Testes do handler de registro, isolados em HKCU\Software\DebloaterTests.</summary>
+/// <summary>Registry handler tests, isolated in HKCU\Software\DebloaterTests.</summary>
 public sealed class RegistryActionHandlerTests : IDisposable
 {
     private readonly RegistrySandbox _sandbox = new();
@@ -34,17 +34,17 @@ public sealed class RegistryActionHandlerTests : IDisposable
     public async Task Dword_NewValueInNewKeys_ApplyThenRestoreRemovesValueAndCreatedKeys()
     {
         using (_sandbox.Create()) { }
-        var spec = Spec("Telemetry", "dword", "0", @"Nova\Sub");
+        var spec = Spec("Telemetry", "dword", "0", @"New\Sub");
 
         Assert.Equal(ActionState.NotDesired, await Detect(spec));
         var backup = await _handler.CaptureBackupAsync(spec, _ctx);
         Assert.NotNull(backup);
         Assert.False(backup.Existed);
-        Assert.Equal("Nova", backup.Extra?.Split('\\').Last());
+        Assert.Equal("New", backup.Extra?.Split('\\').Last());
 
         await _handler.ApplyAsync(spec, _ctx);
         Assert.Equal(ActionState.Desired, await Detect(spec));
-        using (var k = _sandbox.TryOpen(@"Nova\Sub"))
+        using (var k = _sandbox.TryOpen(@"New\Sub"))
         {
             Assert.Equal(RegistryValueKind.DWord, k!.GetValueKind("Telemetry"));
             Assert.Equal(0, k.GetValue("Telemetry"));
@@ -52,14 +52,14 @@ public sealed class RegistryActionHandlerTests : IDisposable
 
         await _handler.RestoreAsync(spec, backup, _ctx);
         Assert.Equal(ActionState.NotDesired, await Detect(spec));
-        Assert.Null(_sandbox.TryOpen("Nova"));
+        Assert.Null(_sandbox.TryOpen("New"));
         Assert.NotNull(_sandbox.TryOpen());
     }
 
     [Fact]
     public async Task ExistingValueOfDifferentKind_IsRestoredWithOriginalKind()
     {
-        using (var k = _sandbox.Create()) k.SetValue("V", "texto original", RegistryValueKind.String);
+        using (var k = _sandbox.Create()) k.SetValue("V", "original text", RegistryValueKind.String);
         var spec = Spec("V", "dword", "4294967295");
 
         Assert.Equal(ActionState.NotDesired, await Detect(spec));
@@ -75,7 +75,7 @@ public sealed class RegistryActionHandlerTests : IDisposable
         using (var k = _sandbox.Open())
         {
             Assert.Equal(RegistryValueKind.String, k.GetValueKind("V"));
-            Assert.Equal("texto original", k.GetValue("V"));
+            Assert.Equal("original text", k.GetValue("V"));
         }
     }
 
@@ -103,7 +103,7 @@ public sealed class RegistryActionHandlerTests : IDisposable
     [Fact]
     public async Task Delete_WhenKeyMissing_IsDesired()
     {
-        var spec = new ActionSpec { Type = ActionSpec.Registry, Path = $@"{_sandbox.Path}\NaoExiste", Name = "X", Delete = true };
+        var spec = new ActionSpec { Type = ActionSpec.Registry, Path = $@"{_sandbox.Path}\DoesNotExist", Name = "X", Delete = true };
         Assert.Equal(ActionState.Desired, await Detect(spec));
     }
 
@@ -139,18 +139,18 @@ public sealed class RegistryActionHandlerTests : IDisposable
     [Fact]
     public async Task MultiString_RoundTripsThroughBackup()
     {
-        using (var k = _sandbox.Create()) k.SetValue("M", new[] { "um", "dois" }, RegistryValueKind.MultiString);
-        var spec = Spec("M", "multiString", new List<object> { "três" });
+        using (var k = _sandbox.Create()) k.SetValue("M", new[] { "one", "two" }, RegistryValueKind.MultiString);
+        var spec = Spec("M", "multiString", new List<object> { "three" });
 
         var backup = await _handler.CaptureBackupAsync(spec, _ctx);
-        Assert.Equal(["um", "dois"], backup!.MultiData!);
+        Assert.Equal(["one", "two"], backup!.MultiData!);
 
         await _handler.ApplyAsync(spec, _ctx);
         Assert.Equal(ActionState.Desired, await Detect(spec));
 
         await _handler.RestoreAsync(spec, backup, _ctx);
         using var key = _sandbox.Open();
-        Assert.Equal(new[] { "um", "dois" }, (string[])key.GetValue("M")!);
+        Assert.Equal(new[] { "one", "two" }, (string[])key.GetValue("M")!);
     }
 
     [Fact]
@@ -171,15 +171,15 @@ public sealed class RegistryActionHandlerTests : IDisposable
     public async Task Restore_DoesNotDeleteCreatedKeyIfSomethingElseWasAddedLater()
     {
         using (_sandbox.Create()) { }
-        var spec = Spec("A", "dword", "1", "Criada");
+        var spec = Spec("A", "dword", "1", "Created");
         var backup = await _handler.CaptureBackupAsync(spec, _ctx);
         await _handler.ApplyAsync(spec, _ctx);
-        using (var k = _sandbox.Create("Criada")) k.SetValue("Outro", 1);
+        using (var k = _sandbox.Create("Created")) k.SetValue("Other", 1);
 
         await _handler.RestoreAsync(spec, backup, _ctx);
-        using var key = _sandbox.TryOpen("Criada");
+        using var key = _sandbox.TryOpen("Created");
         Assert.NotNull(key);
         Assert.Null(key.GetValue("A"));
-        Assert.Equal(1, key.GetValue("Outro"));
+        Assert.Equal(1, key.GetValue("Other"));
     }
 }

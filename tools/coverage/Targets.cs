@@ -2,11 +2,11 @@ using System.Text.RegularExpressions;
 
 namespace Debloater.Coverage;
 
-/// <summary>Tipo de alvo que uma ferramenta altera.</summary>
+/// <summary>Type of target that a tool changes.</summary>
 public enum TargetKind
 {
-    Registry,     // chave + valor
-    RegistryKey,  // chave inteira (apagar/criar a chave, sem valor específico)
+    Registry,     // key + value
+    RegistryKey,  // whole key (delete/create the key, no specific value)
     Service,
     Task,
     Appx,
@@ -15,16 +15,16 @@ public enum TargetKind
 }
 
 /// <summary>
-/// Um alvo normalizado (ex.: HKLM\SOFTWARE\POLICIES\...\VALOR, serviço DIAGTRACK). <see cref="Key"/> é a forma
-/// canônica usada para deduplicar e casar com o catálogo; <see cref="Display"/> é a forma legível.
-/// Só nomes e caminhos: nenhum texto das ferramentas comparadas é guardado.
+/// A normalized target (e.g. HKLM\SOFTWARE\POLICIES\...\VALUE, service DIAGTRACK). <see cref="Key"/> is the canonical
+/// form used to deduplicate and match against the catalog; <see cref="Display"/> is the readable form.
+/// Only names and paths: no text from the compared tools is kept.
 /// </summary>
 public sealed record Target(TargetKind Kind, string Key, string Display)
 {
     public override string ToString() => $"{Kind}:{Display}";
 }
 
-/// <summary>Normalização de alvos vindos de formatos diferentes (.reg, PowerShell, JSON, C#, YAML).</summary>
+/// <summary>Normalization of targets coming from different formats (.reg, PowerShell, JSON, C#, YAML).</summary>
 public static partial class Targets
 {
     private static readonly (string Long, string Short)[] s_hives =
@@ -41,13 +41,13 @@ public static partial class Targets
     [GeneratedRegex(@"^HKLM\\SYSTEM\\CurrentControlSet\\Services\\([^\\]+)$", RegexOptions.IgnoreCase)]
     private static partial Regex ServiceKey();
 
-    /// <summary>Normaliza uma chave: hive curto, sem "Registry::", sem barras duplicadas, ControlSet001 = CurrentControlSet.
-    /// Devolve null se não for uma chave de registro utilizável (variável, modelo, hive desconhecido).</summary>
+    /// <summary>Normalizes a key: short hive, no "Registry::", no doubled backslashes, ControlSet001 = CurrentControlSet.
+    /// Returns null if it is not a usable registry key (variable, template, unknown hive).</summary>
     public static string? NormalizeKey(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
         var p = path.Trim().Trim('"', '\'', '[', ']').Trim();
-        if (p.StartsWith("-", StringComparison.Ordinal)) p = p[1..]; // [-HKEY...] em .reg = apagar a chave
+        if (p.StartsWith("-", StringComparison.Ordinal)) p = p[1..]; // [-HKEY...] in .reg = delete the key
         if (p.StartsWith("Registry::", StringComparison.OrdinalIgnoreCase)) p = p["Registry::".Length..];
         if (p.StartsWith("Microsoft.PowerShell.Core\\Registry::", StringComparison.OrdinalIgnoreCase)) p = p["Microsoft.PowerShell.Core\\Registry::".Length..];
         p = p.Replace('/', '\\');
@@ -77,10 +77,10 @@ public static partial class Targets
             }
         }
         if (hive is null || p.Length == 0) return null;
-        // Variáveis e modelos ($env, %VAR%, {{ }}, `) não são caminhos concretos. Chaves com GUID ({...}) são.
+        // Variables and templates ($env, %VAR%, {{ }}, `) are not concrete paths. Keys with a GUID ({...}) are.
         if (p.IndexOfAny(['$', '%', '`', '*', '<', '>', '"', '\n', '\r']) >= 0 || p.Contains("{{")) return null;
 
-        // HKU\.DEFAULT, HKU\S-1-5-..., HKU\<SID> → tratados como HKCU (perfil de usuário).
+        // HKU\.DEFAULT, HKU\S-1-5-..., HKU\<SID> → treated as HKCU (user profile).
         if (hive == "HKU")
         {
             int i = p.IndexOf('\\');
@@ -104,7 +104,7 @@ public static partial class Targets
         return hive + "\\" + p;
     }
 
-    /// <summary>Alvo de registro. Escrever "Start" em Services\X vira o alvo de serviço X.</summary>
+    /// <summary>Registry target. Writing "Start" under Services\X becomes the service target X.</summary>
     public static Target? Registry(string? path, string? valueName)
     {
         var key = NormalizeKey(path);
@@ -115,7 +115,7 @@ public static partial class Targets
         if (valueName is null)
             return new Target(TargetKind.RegistryKey, key.ToUpperInvariant(), key);
         var name = valueName.Trim().Trim('"', '\'');
-        if (name.Length == 0 || name == "@") name = "(padrão)";
+        if (name.Length == 0 || name == "@") name = "(default)";
         if (name.Length > 120 || name.Contains('$') || name.Contains('\n')) return null;
         return new Target(TargetKind.Registry, (key + "\\" + name).ToUpperInvariant(), key + "\\" + name);
     }
@@ -127,12 +127,12 @@ public static partial class Targets
     {
         var n = name?.Trim().Trim('"', '\'');
         if (n is null || !SimpleName().IsMatch(n)) return null;
-        // serviços por usuário (OneSyncSvc_1a2b3) → nome base
+        // per-user services (OneSyncSvc_1a2b3) → base name
         n = Regex.Replace(n, @"_[0-9a-f]{4,8}$", "", RegexOptions.IgnoreCase);
         return new Target(TargetKind.Service, n.ToUpperInvariant(), n);
     }
 
-    /// <summary>Tarefa agendada. Casada pelo nome da tarefa (último segmento), porque muitas ferramentas só dão o nome.</summary>
+    /// <summary>Scheduled task. Matched by the task name (last segment), because many tools only give the name.</summary>
     public static Target? Task(string? path, string? name = null)
     {
         string full;
@@ -156,7 +156,7 @@ public static partial class Targets
     {
         var n = name?.Trim().Trim('"', '\'', '*').Trim();
         if (n is null || n.Length < 3) return null;
-        int u = n.IndexOf('_'); // nome completo / família → nome
+        int u = n.IndexOf('_'); // full name / family → name
         if (u > 0) n = n[..u];
         if (!Regex.IsMatch(n, @"^[A-Za-z0-9][A-Za-z0-9.\-]+$") || !n.Contains('.')) return null;
         return new Target(TargetKind.Appx, n.ToUpperInvariant(), n);

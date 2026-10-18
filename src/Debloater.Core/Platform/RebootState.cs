@@ -3,12 +3,12 @@ using Microsoft.Win32;
 namespace Debloater.Core.Platform;
 
 /// <summary>
-/// Indica se o Windows tem uma reinicialização pendente (somente leitura). Usado pelo selftest para
-/// registrar quando um recurso opcional (dism /norestart) só terá efeito completo após reiniciar.
+/// Tells whether Windows has a pending restart (read-only). Used by selftest to
+/// record when an optional feature (dism /norestart) only takes full effect after a restart.
 /// </summary>
 public static class RebootState
 {
-    /// <summary>Motivos encontrados (vazio = nenhuma reinicialização pendente detectada).</summary>
+    /// <summary>Reasons found (empty = no pending restart detected).</summary>
     public static IReadOnlyList<string> PendingReasons()
     {
         var reasons = new List<string>();
@@ -24,7 +24,7 @@ public static class RebootState
         }
         catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
         {
-            reasons.Add($"não foi possível verificar: {ex.Message}");
+            reasons.Add($"could not check: {ex.Message}");
         }
         return reasons;
     }

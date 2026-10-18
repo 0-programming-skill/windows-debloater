@@ -1,80 +1,80 @@
 ﻿<#
 .SYNOPSIS
-    Cria a VM Hyper-V descartável usada para testar aplicar/reverter do Debloater e instala o
-    Windows 11 sem interação.
+    Creates the disposable Hyper-V VM used to test Debloater apply/revert and installs
+    Windows 11 unattended.
 
 .DESCRIPTION
-    1. Carrega a credencial da conta local administradora (arquivo DPAPI criado com Export-Clixml).
-    2. Gera um autounattend.xml (idioma/teclado, LabConfig para CPU/TPM/Secure Boot/RAM fora dos
-       requisitos, apaga o disco 0, Windows 11 Pro, pula OOBE e conta online, cria a conta local,
-       logon automático uma vez, LocalAccountTokenFilterPolicy=1) e grava numa ISO pequena criada
-       com IMAPI2FS (nativo do Windows, sem ADK e sem downloads).
-    3. Cria a VM: Geração 2, Secure Boot (modelo Microsoft Windows), vTPM, memória fixa, VHDX
-       dinâmico, "Default Switch", checkpoints Standard, sem checkpoints automáticos, serviço de
-       integração "Guest Service Interface" ativado.
-    4. Liga a VM e pressiona Enter algumas vezes para passar do "Press any key to boot from CD".
-    5. (padrão) Espera a instalação terminar (PowerShell Direct responde), confere que a sessão é de
-       administrador elevado, ejeta as ISOs, APAGA a ISO do autounattend (ela tem a senha em texto)
-       e cria o checkpoint "base-limpa".
+    1. Loads the credential of the local administrator account (DPAPI file created with Export-Clixml).
+    2. Generates an autounattend.xml (language/keyboard, LabConfig for CPU/TPM/Secure Boot/RAM outside
+       the requirements, wipes disk 0, Windows 11 Pro, skips OOBE and the online account, creates the
+       local account, automatic logon once, LocalAccountTokenFilterPolicy=1) and writes it to a small
+       ISO created with IMAPI2FS (native to Windows, no ADK and no downloads).
+    3. Creates the VM: Generation 2, Secure Boot (Microsoft Windows template), vTPM, fixed memory,
+       dynamic VHDX, "Default Switch", Standard checkpoints, no automatic checkpoints, "Guest Service
+       Interface" integration service enabled.
+    4. Starts the VM and presses Enter a few times to get past "Press any key to boot from CD".
+    5. (default) Waits for the installation to finish (PowerShell Direct responds), checks that the
+       session is an elevated administrator, ejects the ISOs, DELETES the autounattend ISO (it holds
+       the password in plain text) and creates the "clean-base" checkpoint.
 
-    Checkpoints Standard (e não Production): o selftest restaura o checkpoint depois de cada execução;
-    o Standard guarda também a memória, então a VM volta em segundos já ligada, exatamente no estado
-    de antes (serviços em execução, sessão etc.), sem reiniciar. O Production usa VSS dentro do
-    convidado e sempre volta com a VM desligada (boot completo a cada execução). Para uma VM de teste
-    descartável, reprodutibilidade e velocidade valem mais que a consistência de aplicação do VSS.
+    Standard checkpoints (not Production): the selftest restores the checkpoint after each run;
+    Standard also saves memory, so the VM comes back in seconds already running, exactly in the
+    previous state (running services, session, etc.), without restarting. Production uses VSS inside
+    the guest and always comes back with the VM off (full boot on every run). For a disposable test
+    VM, reproducibility and speed matter more than VSS application consistency.
 
-    Requisitos: Hyper-V ativado, usuário no grupo "Administradores do Hyper-V" (não precisa elevar),
-    ISO do Windows 11 no MESMO idioma de -UILanguage (padrão pt-BR).
+    Requirements: Hyper-V enabled, user in the "Hyper-V Administrators" group (no elevation needed),
+    Windows 11 ISO in the SAME language as -UILanguage (default pt-BR).
 
 .PARAMETER IsoPath
-    ISO de instalação do Windows 11 (Microsoft). Deve conter a edição -ImageName.
+    Windows 11 installation ISO (Microsoft). Must contain the -ImageName edition.
 
 .PARAMETER Name
-    Nome da VM. Padrão: DebloaterTest.
+    VM name. Default: DebloaterTest.
 
 .PARAMETER CredentialPath
-    Credencial da conta local (Export-Clixml). Padrão: tools/vm/.vmcred.xml.
-    Crie com: Get-Credential -UserName teste -Message 'Conta da VM de teste' | Export-Clixml -Path tools\vm\.vmcred.xml
+    Local account credential (Export-Clixml). Default: tools/vm/.vmcred.xml.
+    Create it with: Get-Credential -UserName teste -Message 'Test VM account' | Export-Clixml -Path tools\vm\.vmcred.xml
 
 .PARAMETER MemoryGB
-    Memória fixa da VM em GB. Padrão: 8.
+    Fixed VM memory in GB. Default: 8.
 
 .PARAMETER CpuCount
-    Processadores virtuais. Padrão: 4.
+    Virtual processors. Default: 4.
 
 .PARAMETER DiskGB
-    Tamanho máximo do VHDX dinâmico em GB. Padrão: 80 (ocupa ~20-25 GB após a instalação).
+    Maximum size of the dynamic VHDX in GB. Default: 80 (uses ~20-25 GB after installation).
 
 .PARAMETER VmPath
-    Pasta base; a VM fica em <VmPath>\<Name>. Padrão: D:\Hyper-V se D: existir, senão C:\Hyper-V.
-    Caminhos com espaços são aceitos.
+    Base folder; the VM lives in <VmPath>\<Name>. Default: D:\Hyper-V if D: exists, otherwise C:\Hyper-V.
+    Paths with spaces are accepted.
 
 .PARAMETER SwitchName
-    Switch virtual. Padrão: Default Switch (NAT com acesso à internet).
+    Virtual switch. Default: Default Switch (NAT with internet access).
 
 .PARAMETER ImageName
-    Nome da imagem no install.wim/esd. Padrão: Windows 11 Pro.
+    Image name in install.wim/esd. Default: Windows 11 Pro.
 
 .PARAMETER UILanguage
-    Idioma do Setup e do sistema. Deve existir na ISO. Padrão: pt-BR.
+    Setup and system language. Must exist in the ISO. Default: pt-BR.
 
 .PARAMETER InputLocale
-    Teclado. Padrão: 0416:00010416 (Português Brasil ABNT2).
+    Keyboard. Default: 0416:00010416 (Portuguese Brazil ABNT2).
 
 .PARAMETER ProductKey
-    Chave usada só para escolher a edição. Padrão: chave genérica de instalação do Pro (não ativa).
-    Use '' para omitir.
+    Key used only to pick the edition. Default: generic Pro installation key (does not activate).
+    Use '' to omit it.
 
 .PARAMETER AdminGroup
-    Nome do grupo Administradores no idioma da ISO. Padrão: deduzido de -UILanguage
+    Name of the Administrators group in the ISO language. Default: derived from -UILanguage
     (pt-BR: Administradores; en-US: Administrators).
 
 .PARAMETER NoWait
-    Só cria e liga a VM; não espera a instalação. Invoke-VmSelfTest.ps1 remove a ISO do autounattend
-    na primeira execução, se ela ainda estiver conectada.
+    Only creates and starts the VM; does not wait for the installation. Invoke-VmSelfTest.ps1 removes
+    the autounattend ISO on its first run, if it is still attached.
 
 .PARAMETER InstallTimeoutMinutes
-    Quanto esperar a instalação. Padrão: 120.
+    How long to wait for the installation. Default: 120.
 
 .EXAMPLE
     .\tools\vm\New-TestVM.ps1 -IsoPath 'D:\ISOs\Win11_25H2_BrazilianPortuguese_x64.iso'
@@ -108,14 +108,14 @@ if (-not $CredentialPath) { $CredentialPath = Get-DebloaterDefaultCredentialPath
 if (-not $VmPath) { $VmPath = Get-DebloaterDefaultVmPath }
 if (-not $PSBoundParameters.ContainsKey('ProductKey')) { $ProductKey = Get-DebloaterGenericProKey }
 
-# ---------- verificações ----------
+# ---------- checks ----------
 if (-not (Get-Command Get-VM -ErrorAction SilentlyContinue)) {
-    throw 'Módulo Hyper-V não encontrado. Ative o Hyper-V (inclusive "Módulo do Hyper-V para Windows PowerShell").'
+    throw 'Hyper-V module not found. Enable Hyper-V (including "Hyper-V Module for Windows PowerShell").'
 }
-if (-not (Test-Path -LiteralPath $IsoPath -PathType Leaf)) { throw "ISO não encontrada: '$IsoPath'." }
+if (-not (Test-Path -LiteralPath $IsoPath -PathType Leaf)) { throw "ISO not found: '$IsoPath'." }
 $IsoPath = (Resolve-Path -LiteralPath $IsoPath).ProviderPath
 if (Get-VM -Name $Name -ErrorAction SilentlyContinue) {
-    throw "Já existe uma VM chamada '$Name'. Use Remove-TestVM.ps1 ou outro -Name."
+    throw "A VM named '$Name' already exists. Use Remove-TestVM.ps1 or another -Name."
 }
 $cred = Import-DebloaterVmCredential -Path $CredentialPath
 $null = Test-DebloaterUserName $cred.UserName
@@ -124,18 +124,18 @@ $switch = Get-DebloaterVmSwitch -Name $SwitchName
 $vmDir = Join-Path $VmPath $Name
 if (Test-Path -LiteralPath $vmDir) {
     if (Get-ChildItem -LiteralPath $vmDir -Force | Select-Object -First 1) {
-        throw "A pasta '$vmDir' já existe e não está vazia. Apague-a ou use outro -VmPath/-Name."
+        throw "The folder '$vmDir' already exists and is not empty. Delete it or use another -VmPath/-Name."
     }
 }
 $root = [System.IO.Path]::GetPathRoot($vmDir)
 $drive = New-Object System.IO.DriveInfo($root)
 $freeGB = [math]::Round($drive.AvailableFreeSpace / 1GB, 1)
-# Instalação ~25 GB + memória salva dos checkpoints Standard (MemoryGB cada) + folga.
+# Installation ~25 GB + saved memory of the Standard checkpoints (MemoryGB each) + headroom.
 $neededGB = 30 + 2 * $MemoryGB
 if ($freeGB -lt $neededGB) {
-    throw "Pouco espaço livre em $root ($freeGB GB). Recomendado ao menos $neededGB GB. Use -VmPath em outra unidade."
+    throw "Not enough free space on $root ($freeGB GB). At least $neededGB GB recommended. Use -VmPath on another drive."
 }
-Write-Host "Espaço livre em ${root}: $freeGB GB (VHDX dinâmico de até $DiskGB GB)."
+Write-Host "Free space on ${root}: $freeGB GB (dynamic VHDX of up to $DiskGB GB)."
 
 $vhdDir = Join-Path $vmDir 'Virtual Hard Disks'
 $vhdPath = Join-Path $vhdDir "$Name.vhdx"
@@ -143,7 +143,7 @@ $unattendIso = Join-Path $vmDir "$Name-autounattend.iso"
 
 # ---------- autounattend ----------
 $null = New-Item -ItemType Directory -Path $vhdDir -Force
-Set-Content -LiteralPath (Join-Path $vmDir (Get-DebloaterMarkerFileName)) -Value "Criada por tools/vm/New-TestVM.ps1 em $(Get-Date -Format s). Remove-TestVM.ps1 apaga esta pasta." -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $vmDir (Get-DebloaterMarkerFileName)) -Value "Created by tools/vm/New-TestVM.ps1 on $(Get-Date -Format s). Remove-TestVM.ps1 deletes this folder." -Encoding UTF8
 
 $stage = Join-Path ([System.IO.Path]::GetTempPath()) ("debloater-unattend-" + [guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $stage
@@ -160,14 +160,14 @@ try {
     $xml = New-DebloaterUnattendXml @unattendParams
     [System.IO.File]::WriteAllText((Join-Path $stage 'autounattend.xml'), $xml, (New-Object System.Text.UTF8Encoding($false)))
     $null = New-DebloaterIsoFile -SourceFolder $stage -IsoPath $unattendIso -VolumeName 'UNATTEND'
-    Write-Host "ISO do autounattend: $unattendIso (contém a senha; será apagada ao fim da instalação)"
+    Write-Host "autounattend ISO: $unattendIso (contains the password; it will be deleted at the end of the installation)"
 }
 finally {
     Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # ---------- VM ----------
-Write-Host "Criando a VM '$Name' em '$vmDir'..."
+Write-Host "Creating the VM '$Name' in '$vmDir'..."
 $vm = New-VM -Name $Name -Generation 2 -Path $VmPath -MemoryStartupBytes ([int64]$MemoryGB * 1GB) `
     -NewVHDPath $vhdPath -NewVHDSizeBytes ([uint64]$DiskGB * 1GB) -SwitchName $switch.Name
 Set-VMMemory -VMName $Name -DynamicMemoryEnabled $false -StartupBytes ([int64]$MemoryGB * 1GB)
@@ -180,12 +180,12 @@ Set-VMFirmware -VMName $Name -EnableSecureBoot On -SecureBootTemplate MicrosoftW
 try {
     Set-VMKeyProtector -VMName $Name -NewLocalKeyProtector
     Enable-VMTPM -VMName $Name
-    Write-Host 'vTPM ativado.'
+    Write-Host 'vTPM enabled.'
 }
 catch {
-    # Criar o "guardião local" (certificados do HGS) pode exigir elevação na primeira vez.
-    $msg = ("Não foi possível ativar o vTPM: {0}`nA instalação continua (o autounattend usa BypassTPMCheck). " +
-        "Para ter vTPM, rode uma vez num PowerShell elevado (com a VM desligada): " +
+    # Creating the "local guardian" (HGS certificates) may require elevation the first time.
+    $msg = ("Could not enable the vTPM: {0}`nThe installation continues (autounattend uses BypassTPMCheck). " +
+        "To get a vTPM, run once in an elevated PowerShell (with the VM off): " +
         "Set-VMKeyProtector -VMName '{1}' -NewLocalKeyProtector; Enable-VMTPM -VMName '{1}'") -f $_.Exception.Message, $Name
     Write-Warning $msg
 }
@@ -196,40 +196,40 @@ $windowsDvd = Add-VMDvdDrive -VMName $Name -Path $IsoPath -Passthru
 $null = Add-VMDvdDrive -VMName $Name -Path $unattendIso -Passthru
 Set-VMFirmware -VMName $Name -FirstBootDevice $windowsDvd
 
-# ---------- instalação ----------
-Write-Host 'Ligando a VM e pressionando Enter para iniciar pelo DVD...'
+# ---------- installation ----------
+Write-Host 'Starting the VM and pressing Enter to boot from the DVD...'
 Start-VM -Name $Name
 $vm = Get-VM -Name $Name
 $keys = Send-DebloaterVmKey -VM $vm -Seconds 30
 if ($keys -eq 0) {
-    Write-Warning 'Não foi possível enviar teclas à VM. Se aparecer "Press any key to boot from CD or DVD", abra a VM (vmconnect) e pressione uma tecla.'
+    Write-Warning 'Could not send keys to the VM. If "Press any key to boot from CD or DVD" appears, open the VM (vmconnect) and press a key.'
 }
-Write-Host "A instalação começou. Acompanhe com: vmconnect.exe localhost '$Name'"
+Write-Host "The installation has started. Follow it with: vmconnect.exe localhost '$Name'"
 
 if ($NoWait) {
-    Write-Host 'Sem esperar (-NoWait). Quando terminar, rode Invoke-VmSelfTest.ps1 (ele remove a ISO do autounattend).'
+    Write-Host 'Not waiting (-NoWait). When it finishes, run Invoke-VmSelfTest.ps1 (it removes the autounattend ISO).'
     return
 }
 
 $session = Wait-DebloaterVmSession -VMName $Name -Credential $cred -TimeoutMinutes $InstallTimeoutMinutes -IntervalSeconds 30 `
-    -Activity "Instalando o Windows na VM '$Name'"
+    -Activity "Installing Windows on the VM '$Name'"
 try {
     $info = Get-DebloaterGuestInfo -Session $session
-    Write-Host ("Windows instalado: build {0} ({1} {2}); usuário {3}; modelo '{4}'." -f $info.Build, $info.Edition, $info.DisplayVersion, $info.User, $info.Model)
+    Write-Host ("Windows installed: build {0} ({1} {2}); user {3}; model '{4}'." -f $info.Build, $info.Edition, $info.DisplayVersion, $info.User, $info.Model)
     if (-not $info.IsElevated) {
-        Write-Warning ('A sessão PowerShell Direct NÃO está elevada. O selftest precisa de administrador. Verifique se a conta está ' +
-            'no grupo Administradores e se LocalAccountTokenFilterPolicy=1 (HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System).')
+        Write-Warning ('The PowerShell Direct session is NOT elevated. The selftest needs administrator rights. Check that the account is ' +
+            'in the Administrators group and that LocalAccountTokenFilterPolicy=1 (HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System).')
     }
 }
 finally {
     Remove-PSSession $session
 }
 
-# Deixa o primeiro logon (FirstLogonCommands) terminar antes do checkpoint.
+# Lets the first logon (FirstLogonCommands) finish before the checkpoint.
 Start-Sleep -Seconds 60
 Remove-DebloaterSetupMedia -VMName $Name
-# A remoção das mídias desliga e religa a VM; espera o Windows voltar antes do checkpoint.
+# Removing the media turns the VM off and on again; wait for Windows to come back before the checkpoint.
 Remove-PSSession (Wait-DebloaterVmSession -VMName $Name -Credential $cred -TimeoutMinutes 10)
 Start-Sleep -Seconds 30
-Checkpoint-VM -Name $Name -SnapshotName 'base-limpa'
-Write-Host "Pronto. VM '$Name' instalada, ligada e com o checkpoint 'base-limpa'. Próximo passo: .\tools\vm\Invoke-VmSelfTest.ps1"
+Checkpoint-VM -Name $Name -SnapshotName 'clean-base'
+Write-Host "Done. VM '$Name' installed, running and with the 'clean-base' checkpoint. Next step: .\tools\vm\Invoke-VmSelfTest.ps1"

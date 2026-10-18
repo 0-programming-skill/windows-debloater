@@ -7,7 +7,7 @@ namespace Debloater.Core.Tests;
 
 public class StringExtractorTests
 {
-    /// <summary>Monta um "binário" de teste: pedaços de lixo, cadeias ASCII e UTF-16LE em posições conhecidas.</summary>
+    /// <summary>Builds a test "binary": junk chunks, ASCII and UTF-16LE strings at known positions.</summary>
     private sealed class Blob
     {
         private readonly List<byte> _bytes = [(byte)'M', (byte)'Z'];
@@ -72,8 +72,8 @@ public class StringExtractorTests
         var data = new Blob()
             .Junk(16).Ascii(@"xSOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager")
             .Junk(16).Ascii(@"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Dsh")
-            .Junk(16).Ascii("EnableWindowsWidgets")          // identificador ASCII: nome de função, ignorado
-            .Junk(16).Ascii(@"C:\Windows\System32\Software\x.dll") // caminho de arquivo
+            .Junk(16).Ascii("EnableWindowsWidgets")          // ASCII identifier: function name, ignored
+            .Junk(16).Ascii(@"C:\Windows\System32\Software\x.dll") // file path
             .Junk(16).Ascii("WNF_SHEL_TASKBAR_STATE")
             .Build();
 
@@ -228,7 +228,7 @@ public class FingerprintDiffTests
 
     private static Tweak RegTweak(string id, string path, string name) => new()
     {
-        Id = id, Name = id, Description = id, Category = "Teste",
+        Id = id, Name = id, Description = id, Category = "Test",
         Actions = [new ActionSpec { Type = ActionSpec.Registry, Path = path, Name = name, Kind = "dword", Value = 0 }],
     };
 
@@ -322,7 +322,7 @@ public class FingerprintDiffTests
         var policyPath = Assert.Single(d.Candidates, c => c.Value == @"Software\Policies\Microsoft\Windows\NewAI");
         Assert.Equal(CandidateKinds.PolicyPath, policyPath.Kind);
 
-        Assert.DoesNotContain(d.Candidates, c => c.Value == "ShowSameThing");   // existia no mesmo binário
+        Assert.DoesNotContain(d.Candidates, c => c.Value == "ShowSameThing");   // existed in the same binary
         Assert.Equal(d.Candidates.OrderByDescending(c => c.Score).Select(c => c.Value), d.Candidates.Select(c => c.Value));
         Assert.Equal(Enumerable.Range(1, d.Candidates.Count), d.Candidates.Select(c => c.Rank));
     }
@@ -356,7 +356,7 @@ public class FingerprintDiffTests
         var d = FingerprintDiff.Compare(old, neu, catalog);
         var added = Assert.Single(d.Policies, p => p.Change == DiffChange.Added);
         Assert.Equal("P2", added.Policy.Name);
-        // P1 só mudou o texto traduzido do supportedOn: a referência é a mesma, então não é alteração.
+        // P1 only changed the translated supportedOn text (pt-BR ADML on purpose): the reference is the same, so it is not a change.
         Assert.DoesNotContain(d.Policies, p => p.Change == DiffChange.Changed);
 
         var candidate = Assert.Single(d.Candidates, c => c.Kind == CandidateKinds.AdmxPolicy);
@@ -382,13 +382,13 @@ public class FingerprintDiffTests
         var (old, neu, catalog) = Scenario();
         var d = FingerprintDiff.Compare(old, neu, catalog);
 
-        // Serviço de terceiros e driver de hardware que só existem no PC antigo: ruído.
+        // Third-party service and hardware driver that only exist on the old PC: noise.
         Assert.NotNull(d.Inventory.Single(i => i.Id == "VendorSvc").Noise);
         Assert.NotNull(d.Inventory.Single(i => i.Id == "vendor").Noise);
-        // Elevações diferentes: appx sem allUsers/provisioned e capacidades só as instaladas, pelo nome.
+        // Different elevations: appx without allUsers/provisioned and only installed capabilities, by name.
         Assert.DoesNotContain(d.Inventory, i => i.Kind == InventoryKinds.Appx);
         Assert.DoesNotContain(d.Inventory, i => i.Kind == InventoryKinds.Capabilities);
-        Assert.Contains(d.Warnings, w => w.Contains("elevação diferente"));
+        Assert.Contains(d.Warnings, w => w.Contains("different elevation"));
 
         var svc = Assert.Single(d.Candidates, c => c.Kind == CandidateKinds.Service);
         Assert.Equal("NewAISvc", svc.Value);
@@ -409,9 +409,9 @@ public class FingerprintDiffTests
         });
         var d = FingerprintDiff.Compare(old, neu, catalog);
         var change = Assert.Single(d.Inventory, i => i.Kind == InventoryKinds.Tasks);
-        Assert.Contains("elevação", change.Noise);
+        Assert.Contains("elevation", change.Noise);
         var task = Assert.Single(d.Candidates, c => c.Kind == CandidateKinds.Task);
-        Assert.Contains(task.Reasons, r => r.StartsWith("incerto"));
+        Assert.Contains(task.Reasons, r => r.StartsWith("uncertain"));
     }
 
     [Theory]
@@ -439,10 +439,10 @@ public class FingerprintDiffTests
             Assert.Equal("10.0.26300.1", back.Binaries.Files[0].Version);
 
             var md = FingerprintReport.ToMarkdown(FingerprintDiff.Compare(old, back, catalog), top: 10);
-            Assert.Contains("# Diff de builds: 26200.1 → 26300.1", md);
+            Assert.Contains("# Build diff: 26200.1 → 26300.1", md);
             Assert.Contains(FingerprintReport.HumanReadingHeading, md);
             Assert.Contains("DisableNewCopilotThing", md);
-            Assert.Contains("Políticas ADMX novas (1)", md);
+            Assert.Contains("New ADMX policies (1)", md);
             Assert.Contains("test.old-thing", md);
         }
         finally
@@ -490,27 +490,27 @@ public class FingerprintDiffTests
     {
         var (old, neu, catalog) = PrivacyScenario();
         var raw = FingerprintDiff.Compare(old, neu, catalog);
-        Assert.Contains(raw.Inventory, i => i.Id == "HwVendorSvc");          // sem filtro, tudo aparece
+        Assert.Contains(raw.Inventory, i => i.Id == "HwVendorSvc");          // without the filter, everything shows up
         Assert.Contains(raw.Binaries, b => b.Path.EndsWith("vendorsvc.exe"));
         Assert.Equal("PC", raw.Old.MachineName);
 
         var d = FingerprintPrivacy.Apply(FingerprintDiff.Compare(old, neu, catalog), old, neu);
         var ids = d.Inventory.Select(i => i.Id).ToHashSet();
-        // Do Windows: serviço cujo binário continua no build novo, tarefa \Microsoft\Windows, pacote do sistema.
+        // Part of Windows: service whose binary is still in the new build, \Microsoft\Windows task, system package.
         Assert.Contains("InBoxGone", ids);
         Assert.Contains(@"\Microsoft\Windows\Gone\T", ids);
         Assert.Contains("MicrosoftWindows.1.Old", ids);
-        Assert.Contains("Same", ids);                                        // alterado: existe nos dois lados
-        // Terceiros/hardware/instalados à parte, ou sem evidência de serem do Windows: fora.
+        Assert.Contains("Same", ids);                                        // changed: exists on both sides
+        // Third party/hardware/separately installed, or no evidence of being part of Windows: out.
         foreach (var gone in new[] { "VendorSvc", "vendor", "HwVendorSvc", "OpaqueSvc", @"\Microsoft\Office\Office Feature Updates", @"\VendorUpdater",
                                      "Microsoft.SomeDevTool", "Vendor.ChatApp", @"HKCU\...\Run\VendorTray" })
             Assert.DoesNotContain(gone, ids);
 
         Assert.DoesNotContain(d.Binaries, b => b.Change == DiffChange.Removed && !b.Path.StartsWith(@"Windows\SystemApps\"));
         Assert.Contains(d.Binaries, b => b.Change == DiffChange.Removed && b.Path.EndsWith("Old.View.dll"));
-        Assert.Contains(d.Binaries, b => b.Change == DiffChange.Added);       // o lado novo não muda
+        Assert.Contains(d.Binaries, b => b.Change == DiffChange.Added);       // the new side does not change
         Assert.DoesNotContain(d.RemovedStrings, c => c.Value == "DisableVendorThing");
-        Assert.Empty(d.Candidates.Single(c => c.Value == "ShowMovedThing").OldBinaries!);   // old.dll não existe no novo
+        Assert.Empty(d.Candidates.Single(c => c.Value == "ShowMovedThing").OldBinaries!);   // old.dll does not exist in the new one
         Assert.DoesNotContain(d.Policies, p => p.Policy.File == "vendor.admx");
         Assert.Null(d.Old.MachineName);
         Assert.Null(d.New.MachineName);
@@ -534,15 +534,15 @@ public class FingerprintDiffTests
         var plain = FingerprintReport.ToMarkdown(FingerprintDiff.Compare(old, neu, catalog));
         Assert.Contains("HwVendorSvc", plain);
         Assert.Contains("vendorsvc.exe", plain);
-        Assert.DoesNotContain("**Privacidade:**", plain);
+        Assert.DoesNotContain("**Privacy:**", plain);
 
         var md = FingerprintReport.ToMarkdown(FingerprintPrivacy.Apply(FingerprintDiff.Compare(old, neu, catalog), old, neu));
         foreach (var hidden in new[] { "HwVendorSvc", "VendorSvc", "vendorsvc.exe", "VendorUpdater", "Vendor.ChatApp", "SomeDevTool", "VendorTray", "vendor.admx", "DisableVendorThing", "old.dll" })
             Assert.DoesNotContain(hidden, md);
-        Assert.Contains("**Privacidade:** filtro ligado", md);
-        Assert.Contains("foram omitidos (privacidade)", md);
+        Assert.Contains("**Privacy:** filter on", md);
+        Assert.Contains("omitted (privacy)", md);
         Assert.Contains("InBoxGone", md);
-        Assert.Contains("### Inicialização automática", md);                 // a seção fica, só com a nota
+        Assert.Contains("### Autoruns", md);                                 // the section stays, with just the note
     }
 
     [Fact]

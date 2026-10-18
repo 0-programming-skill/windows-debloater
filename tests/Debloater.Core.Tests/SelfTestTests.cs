@@ -7,18 +7,18 @@ using Debloater.Core.SelfTest;
 namespace Debloater.Core.Tests;
 
 /// <summary>
-/// Testes do selftest com um "sistema" falso em memória: nenhuma alteração real é feita.
+/// Selftest tests with a fake in-memory "system": no real change is made.
 /// </summary>
 public sealed class SelfTestTests
 {
     /// <summary>
-    /// Mundo falso: cada alvo de ação tem um valor em texto. O valor desejado de uma ação é o seu
-    /// value/state/startup. Aplicar grava o backup (se não existir) e o valor desejado; reverter restaura.
-    /// Falhas são injetadas pelas propriedades.
+    /// Fake world: each action target has a text value. An action's desired value is its
+    /// value/state/startup. Apply writes the backup (if it does not exist) and the desired value; revert restores.
+    /// Failures are injected through the properties.
     /// </summary>
     private sealed class FakeHost : ISelfTestHost
     {
-        public const string Missing = "<não existe>";
+        public const string Missing = "<missing>";
         public Dictionary<string, string> World { get; } = new(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, string> Backups { get; } = new(StringComparer.OrdinalIgnoreCase);
         public List<string> Calls { get; } = [];
@@ -39,10 +39,10 @@ public sealed class SelfTestTests
         {
             var actions = tweak.Actions.Select(a =>
             {
-                var current = World.GetValueOrDefault(a.Target, "ausente");
+                var current = World.GetValueOrDefault(a.Target, "absent");
                 var state = current == Missing ? ActionState.NotApplicable
                     : current == Desired(a) ? ActionState.Desired : ActionState.NotDesired;
-                return new ActionStatus(a, state, current == Missing ? "não existe" : $"atual: {current}");
+                return new ActionStatus(a, state, current == Missing ? "does not exist" : $"current: {current}");
             }).ToList();
             return Task.FromResult(new TweakStatus(tweak, StatusAggregator.Aggregate(actions.Select(s => s.State)), actions));
         }
@@ -51,14 +51,14 @@ public sealed class SelfTestTests
         {
             bool reapply = Backups.ContainsKey(tweak.Id);
             Calls.Add((reapply ? "reapply:" : "apply:") + tweak.Id);
-            if (ApplyThrows) throw new InvalidOperationException("dism falhou (87)");
+            if (ApplyThrows) throw new InvalidOperationException("dism failed (87)");
             if (!SkipBackupWrite && (!reapply || ReapplyRewritesBackup))
             {
-                // Re-aplicação "com bug": regrava o arquivo (mesmos originais + um campo novo).
+                // "Buggy" re-apply: rewrites the file (same originals + a new field).
                 var originals = reapply
                     ? JsonSerializer.Deserialize<Dictionary<string, string>>(Backups[tweak.Id])!
-                    : tweak.Actions.ToDictionary(a => a.Target, a => World.GetValueOrDefault(a.Target, "ausente"));
-                if (reapply) originals["rewritten"] = "sim";
+                    : tweak.Actions.ToDictionary(a => a.Target, a => World.GetValueOrDefault(a.Target, "absent"));
+                if (reapply) originals["rewritten"] = "yes";
                 Backups[tweak.Id] = JsonSerializer.Serialize(originals);
             }
             foreach (var a in tweak.Actions)
@@ -67,24 +67,24 @@ public sealed class SelfTestTests
                 World[a.Target] = Desired(a);
             }
             if (ApplyCausesReboot) RebootReasons.Add("CBS RebootPending");
-            return Task.FromResult(new OperationResult(tweak.Id, true, "Aplicado.", []));
+            return Task.FromResult(new OperationResult(tweak.Id, true, "Applied.", []));
         }
 
         public Task<OperationResult> RevertAsync(Tweak tweak, CancellationToken ct = default)
         {
             Calls.Add("revert:" + tweak.Id);
             if (!Backups.TryGetValue(tweak.Id, out var json))
-                return Task.FromResult(new OperationResult(tweak.Id, false, "Nenhum backup encontrado.", []));
+                return Task.FromResult(new OperationResult(tweak.Id, false, "No backup found.", []));
             if (RevertReportsFailure)
-                return Task.FromResult(new OperationResult(tweak.Id, false, "Revertido parcialmente (1 erro(s)).", ["service:X: acesso negado"]));
+                return Task.FromResult(new OperationResult(tweak.Id, false, "Partially reverted (1 error(s)).", ["service:X: access denied"]));
             var originals = JsonSerializer.Deserialize<Dictionary<string, string>>(json)!;
             foreach (var (target, value) in originals)
             {
                 if (RevertIgnores.Contains(target) || target == "rewritten") continue;
-                if (value == "ausente") World.Remove(target); else World[target] = value;
+                if (value == "absent") World.Remove(target); else World[target] = value;
             }
             if (!RevertKeepsBackup) Backups.Remove(tweak.Id);
-            return Task.FromResult(new OperationResult(tweak.Id, true, "Revertido.", []));
+            return Task.FromResult(new OperationResult(tweak.Id, true, "Reverted.", []));
         }
 
         public string? ReadBackupJson(string tweakId) => Backups.GetValueOrDefault(tweakId);
@@ -95,9 +95,9 @@ public sealed class SelfTestTests
     private static Tweak MakeTweak(string id = "test.tweak", RiskLevel risk = RiskLevel.Low, bool reversible = true, params ActionSpec[] actions) => new()
     {
         Id = id,
-        Name = "Teste",
+        Name = "Test",
         Description = "d",
-        Category = "Teste",
+        Category = "Test",
         Risk = risk,
         Reversible = reversible,
         Actions = actions.Length > 0
@@ -126,7 +126,7 @@ public sealed class SelfTestTests
     public async Task HealthyTweak_Passes_AndRecordsEveryStep()
     {
         var host = HostWithOriginals();
-        host.World.Remove(@"HKLM\SOFTWARE\T\A"); // valor de registro que não existia: deve voltar a "ausente"
+        host.World.Remove(@"HKLM\SOFTWARE\T\A"); // registry value that did not exist: must go back to "absent"
         var original = new Dictionary<string, string>(host.World);
 
         var r = await Run(host, MakeTweak());
@@ -142,8 +142,8 @@ public sealed class SelfTestTests
         Assert.True(r.Backup.DeletedAfterRevert);
         Assert.NotNull(r.Backup.Json);
         Assert.All(r.Actions, a => Assert.True(a.Restored));
-        Assert.Equal("atual: ausente", r.Actions[0].Before!.Detail);
-        Assert.Equal("atual: 1", r.Actions[0].AfterApply!.Detail);
+        Assert.Equal("current: absent", r.Actions[0].Before!.Detail);
+        Assert.Equal("current: 1", r.Actions[0].AfterApply!.Detail);
         Assert.Equal(original, host.World);
         Assert.Equal(["registry", "service", "scheduledTask"], r.ActionTypes);
     }
@@ -157,10 +157,10 @@ public sealed class SelfTestTests
         var r = await Run(host, MakeTweak());
 
         Assert.Equal(SelfTestVerdict.ApplyFailed, r.Verdict);
-        Assert.Contains("dism falhou (87)", r.Reason);
+        Assert.Contains("dism failed (87)", r.Reason);
         Assert.Contains("InvalidOperationException", r.Apply!.Exception);
         Assert.False(r.Backup.WrittenOnApply);
-        Assert.Null(r.Revert); // sem backup não há o que reverter
+        Assert.Null(r.Revert); // without a backup there is nothing to revert
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public sealed class SelfTestTests
         Assert.Equal(TweakState.Partial, r.StateAfterApply);
         Assert.Contains("service:DiagTrack", r.Reason);
         Assert.Contains("automatic", r.Reason);
-        Assert.NotNull(r.Revert); // ainda reverte para deixar o sistema como estava
+        Assert.NotNull(r.Revert); // still reverts to leave the system as it was
     }
 
     [Fact]
@@ -188,8 +188,8 @@ public sealed class SelfTestTests
 
         Assert.Equal(SelfTestVerdict.NotRestored, r.Verdict);
         Assert.Contains(@"scheduledTask:\Microsoft\T", r.Reason);
-        Assert.Contains("atual: enabled", r.Reason);
-        Assert.Contains("atual: disabled", r.Reason);
+        Assert.Contains("current: enabled", r.Reason);
+        Assert.Contains("current: disabled", r.Reason);
         Assert.Equal([true, true, false], r.Actions.Select(a => a.Restored));
     }
 
@@ -202,7 +202,7 @@ public sealed class SelfTestTests
         var r = await Run(host, MakeTweak());
 
         Assert.Equal(SelfTestVerdict.RevertFailed, r.Verdict);
-        Assert.Contains("acesso negado", r.Reason);
+        Assert.Contains("access denied", r.Reason);
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public sealed class SelfTestTests
 
         Assert.Equal(SelfTestVerdict.BackupProblem, r.Verdict);
         Assert.False(r.Backup.KeptOnReapply);
-        Assert.Contains("re-aplicar alterou o backup", r.Reason);
+        Assert.Contains("re-applying changed the original backup", r.Reason);
     }
 
     [Fact]
@@ -269,7 +269,7 @@ public sealed class SelfTestTests
         var r = await Run(host, MakeTweak(actions: new ActionSpec { Type = ActionSpec.Service, Name = "DiagTrack", Startup = "disabled" }));
 
         Assert.Equal(SelfTestVerdict.Skipped, r.Verdict);
-        Assert.Contains("não se aplica", r.Reason);
+        Assert.Contains("does not apply", r.Reason);
         Assert.Empty(host.Calls);
     }
 
@@ -297,7 +297,7 @@ public sealed class SelfTestTests
         var r = await Run(host, MakeTweak());
 
         Assert.Equal(SelfTestVerdict.Pass, r.Verdict);
-        Assert.Contains(r.Notes, n => n.Contains("já estava aplicado"));
+        Assert.Contains(r.Notes, n => n.Contains("already applied"));
     }
 
     [Fact]
@@ -327,7 +327,7 @@ public sealed class SelfTestTests
         Assert.Equal(["apply:a.one", "reapply:a.one", "revert:a.one", "apply:b.two", "reapply:b.two", "revert:b.two"], host.Calls);
     }
 
-    // ---------- avaliador puro ----------
+    // ---------- pure evaluator ----------
 
     private static TweakSelfTestResult Facts(Action<TweakSelfTestResult>? tweak = null)
     {
@@ -343,9 +343,9 @@ public sealed class SelfTestTests
                 new ActionSelfTest
                 {
                     Type = "registry", Target = @"HKCU\X\V",
-                    Before = new ActionSnapshot { State = ActionState.NotDesired, Detail = "atual: 0 (dword)" },
-                    AfterApply = new ActionSnapshot { State = ActionState.Desired, Detail = "atual: 1 (dword)" },
-                    AfterRevert = new ActionSnapshot { State = ActionState.NotDesired, Detail = "atual: 0 (dword)" },
+                    Before = new ActionSnapshot { State = ActionState.NotDesired, Detail = "current: 0 (dword)" },
+                    AfterApply = new ActionSnapshot { State = ActionState.Desired, Detail = "current: 1 (dword)" },
+                    AfterRevert = new ActionSnapshot { State = ActionState.NotDesired, Detail = "current: 0 (dword)" },
                 },
             ],
         };
@@ -365,24 +365,24 @@ public sealed class SelfTestTests
     [Fact]
     public void Evaluator_SameStateDifferentValue_IsNotRestored()
     {
-        // Ex.: o valor original era 0 e depois de reverter ficou 2: ambos "NotDesired", mas não é o original.
-        var r = Facts(f => f.Actions[0].AfterRevert = new ActionSnapshot { State = ActionState.NotDesired, Detail = "atual: 2 (dword)" });
+        // E.g. the original value was 0 and after revert it became 2: both "NotDesired", but it is not the original.
+        var r = Facts(f => f.Actions[0].AfterRevert = new ActionSnapshot { State = ActionState.NotDesired, Detail = "current: 2 (dword)" });
         var (verdict, reason) = SelfTestEvaluator.Evaluate(r);
         Assert.Equal(SelfTestVerdict.NotRestored, verdict);
-        Assert.Contains("atual: 2 (dword)", reason);
+        Assert.Contains("current: 2 (dword)", reason);
     }
 
     [Fact]
     public void Evaluator_DeletedValueThatExistedBefore_IsNotRestored()
     {
-        var r = Facts(f => f.Actions[0].AfterRevert = new ActionSnapshot { State = ActionState.NotDesired, Detail = "ausente" });
+        var r = Facts(f => f.Actions[0].AfterRevert = new ActionSnapshot { State = ActionState.NotDesired, Detail = "absent" });
         Assert.Equal(SelfTestVerdict.NotRestored, SelfTestEvaluator.Evaluate(r).Verdict);
     }
 
     [Fact]
     public void Evaluator_SeverityOrder()
     {
-        // Aplicar falhou prevalece sobre tudo.
+        // Apply failed takes precedence over everything.
         Assert.Equal(SelfTestVerdict.ApplyFailed, SelfTestEvaluator.Evaluate(Facts(f =>
         {
             f.Apply = new StepResult { Success = false, Errors = ["x"] };
@@ -390,25 +390,25 @@ public sealed class SelfTestTests
             f.Revert = new StepResult { Success = false };
         })).Verdict);
 
-        // Não aplicado prevalece sobre falha ao reverter.
+        // Not applied takes precedence over revert failure.
         Assert.Equal(SelfTestVerdict.NotAppliedAfterApply, SelfTestEvaluator.Evaluate(Facts(f =>
         {
             f.StateAfterApply = TweakState.Partial;
             f.Revert = new StepResult { Success = false };
         })).Verdict);
 
-        // Falha ao reverter prevalece sobre valor não restaurado e backup.
+        // Revert failure takes precedence over value not restored and backup.
         Assert.Equal(SelfTestVerdict.RevertFailed, SelfTestEvaluator.Evaluate(Facts(f =>
         {
             f.Revert = new StepResult { Success = false, Exception = "IOException: x" };
-            f.Actions[0].AfterRevert = new ActionSnapshot { State = ActionState.Desired, Detail = "atual: 1 (dword)" };
+            f.Actions[0].AfterRevert = new ActionSnapshot { State = ActionState.Desired, Detail = "current: 1 (dword)" };
             f.Backup.DeletedAfterRevert = false;
         })).Verdict);
 
-        // Não restaurado prevalece sobre problema de backup.
+        // Not restored takes precedence over backup problem.
         Assert.Equal(SelfTestVerdict.NotRestored, SelfTestEvaluator.Evaluate(Facts(f =>
         {
-            f.Actions[0].AfterRevert = new ActionSnapshot { State = ActionState.Desired, Detail = "atual: 1 (dword)" };
+            f.Actions[0].AfterRevert = new ActionSnapshot { State = ActionState.Desired, Detail = "current: 1 (dword)" };
             f.Backup.KeptOnReapply = false;
         })).Verdict);
     }
@@ -432,8 +432,8 @@ public sealed class SelfTestTests
     [Fact]
     public void Evaluator_KeepsSkipped()
     {
-        var r = Facts(f => { f.Verdict = SelfTestVerdict.Skipped; f.Reason = "motivo"; });
-        Assert.Equal((SelfTestVerdict.Skipped, (string?)"motivo"), SelfTestEvaluator.Evaluate(r));
+        var r = Facts(f => { f.Verdict = SelfTestVerdict.Skipped; f.Reason = "reason"; });
+        Assert.Equal((SelfTestVerdict.Skipped, (string?)"reason"), SelfTestEvaluator.Evaluate(r));
     }
 
     [Fact]
@@ -455,7 +455,7 @@ public sealed class SelfTestTests
         Assert.True(report.HasFailures);
     }
 
-    // ---------- detecção de VM ----------
+    // ---------- VM detection ----------
 
     [Fact]
     public void VmDetector_HyperVGuestByWmi()
@@ -467,14 +467,14 @@ public sealed class SelfTestTests
     [Fact]
     public void VmDetector_HyperVGuestByKvpRegistry()
     {
-        var r = VirtualMachineDetector.Evaluate("", "", new Dictionary<string, string> { ["HostName"] = "MEU-PC" });
+        var r = VirtualMachineDetector.Evaluate("", "", new Dictionary<string, string> { ["HostName"] = "MY-PC" });
         Assert.True(r.IsHyperVGuest);
-        Assert.Equal("MEU-PC", r.HostName);
+        Assert.Equal("MY-PC", r.HostName);
     }
 
     [Theory]
     [InlineData("Contoso Ltd.", "Desktop Board X1")]
-    [InlineData("Microsoft Corporation", "Surface Laptop 5")] // hardware real da Microsoft não é VM
+    [InlineData("Microsoft Corporation", "Surface Laptop 5")] // real Microsoft hardware is not a VM
     [InlineData("", "")]
     [InlineData(null, null)]
     public void VmDetector_PhysicalMachine_IsNotGuest(string? manufacturer, string? model)
@@ -485,7 +485,7 @@ public sealed class SelfTestTests
     [Fact]
     public void VmDetector_EmptyParametersKey_IsNotEnough()
     {
-        // No host com Hyper-V pode existir a chave "Guest"; só Parameters com identificação conta.
+        // On a Hyper-V host the "Guest" key may exist; only Parameters with identification counts.
         var r = VirtualMachineDetector.Evaluate("Contoso Ltd.", "Desktop Board X1",
             new Dictionary<string, string> { ["SessionMonitor"] = "VmbusSessionMonitor", ["HostName"] = " " });
         Assert.False(r.IsHyperVGuest);
@@ -509,7 +509,7 @@ public sealed class SelfTestTests
         }
     }
 
-    // ---------- persistência ----------
+    // ---------- persistence ----------
 
     [Fact]
     public void Evaluator_ApplyOnly_IgnoresMissingRevert()
@@ -537,7 +537,7 @@ public sealed class SelfTestTests
             {
                 Type = tweak.Actions[i].Type,
                 Target = tweak.Actions[i].Target,
-                AfterApply = new ActionSnapshot { State = afterApply[i], Detail = afterApply[i] == ActionState.Desired ? "desejado" : "n/a" },
+                AfterApply = new ActionSnapshot { State = afterApply[i], Detail = afterApply[i] == ActionState.Desired ? "desired" : "n/a" },
             });
         }
         return r;
@@ -549,13 +549,13 @@ public sealed class SelfTestTests
         var tweak = MakeTweak();
         var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.Desired);
         var check = SelfTestEvaluator.RecordPersistence(r,
-            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.Desired, "b"), (ActionState.Desired, "c")), "apos-reinicio-1", DateTime.UtcNow);
+            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.Desired, "b"), (ActionState.Desired, "c")), "after-restart-1", DateTime.UtcNow);
 
         Assert.Equal(PersistenceVerdict.Persisted, check.Verdict);
         Assert.Empty(check.RevertedActions);
         Assert.Equal(PersistenceVerdict.Persisted, r.PersistenceVerdict);
         Assert.Null(r.RevertedAfter);
-        Assert.All(r.Actions, a => Assert.Equal("apos-reinicio-1", Assert.Single(a.Checks).Label));
+        Assert.All(r.Actions, a => Assert.Equal("after-restart-1", Assert.Single(a.Checks).Label));
     }
 
     [Fact]
@@ -564,23 +564,23 @@ public sealed class SelfTestTests
         var tweak = MakeTweak();
         var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.Desired);
         var check = SelfTestEvaluator.RecordPersistence(r,
-            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.NotDesired, "atual: automatic"), (ActionState.Desired, "c")), "apos-espera", DateTime.UtcNow);
+            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.NotDesired, "current: automatic"), (ActionState.Desired, "c")), "after-wait", DateTime.UtcNow);
 
         Assert.Equal(PersistenceVerdict.PartiallyReverted, check.Verdict);
         var reverted = Assert.Single(check.RevertedActions);
         Assert.StartsWith("service:DiagTrack", reverted);
-        Assert.Contains("atual: automatic", reverted);
-        Assert.Equal("apos-espera", r.RevertedAfter);
+        Assert.Contains("current: automatic", reverted);
+        Assert.Equal("after-wait", r.RevertedAfter);
     }
 
     [Fact]
     public void Persistence_AllUndone_IsRevertedByWindows_IgnoringNotApplicableActions()
     {
         var tweak = MakeTweak();
-        // A terceira ação não existia (NotApplicable) ao aplicar: não conta.
+        // The third action did not exist (NotApplicable) on apply: it does not count.
         var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.NotApplicable);
         var check = SelfTestEvaluator.RecordPersistence(r,
-            StatusOf(tweak, (ActionState.NotDesired, "ausente"), (ActionState.NotDesired, "atual: manual"), (ActionState.NotApplicable, "n/a")), "x", DateTime.UtcNow);
+            StatusOf(tweak, (ActionState.NotDesired, "absent"), (ActionState.NotDesired, "current: manual"), (ActionState.NotApplicable, "n/a")), "x", DateTime.UtcNow);
 
         Assert.Equal(PersistenceVerdict.RevertedByWindows, check.Verdict);
         Assert.Equal(2, check.RevertedActions.Count);
@@ -591,16 +591,16 @@ public sealed class SelfTestTests
     {
         var tweak = MakeTweak();
         var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.Desired);
-        SelfTestEvaluator.RecordPersistence(r, new TweakStatus(tweak, TweakState.Error, [], "erro ao ler"), "um", DateTime.UtcNow);
+        SelfTestEvaluator.RecordPersistence(r, new TweakStatus(tweak, TweakState.Error, [], "read error"), "one", DateTime.UtcNow);
         Assert.Equal(PersistenceVerdict.RevertedByWindows, r.PersistenceVerdict);
-        Assert.Contains("erro ao ler", r.Persistence[0].RevertedActions[0]);
+        Assert.Contains("read error", r.Persistence[0].RevertedActions[0]);
 
-        // Depois volta a ficar tudo certo: o veredito atual é o da última conferência; RevertedAfter guarda a primeira falha.
+        // Then everything is fine again: the current verdict is the last check's; RevertedAfter keeps the first failure.
         SelfTestEvaluator.RecordPersistence(r,
-            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.Desired, "b"), (ActionState.Desired, "c")), "dois", DateTime.UtcNow);
+            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.Desired, "b"), (ActionState.Desired, "c")), "two", DateTime.UtcNow);
         Assert.Equal(PersistenceVerdict.Persisted, r.PersistenceVerdict);
-        Assert.Equal("um", r.RevertedAfter);
-        Assert.Equal(["um", "dois"], r.Persistence.Select(c => c.Label));
+        Assert.Equal("one", r.RevertedAfter);
+        Assert.Equal(["one", "two"], r.Persistence.Select(c => c.Label));
     }
 
     [Fact]
@@ -614,7 +614,7 @@ public sealed class SelfTestTests
         var byId = new Dictionary<string, Tweak> { [tweak.Id] = tweak, [other.Id] = other };
         var original = new Dictionary<string, string>(host.World);
 
-        // apply-only: aplica e re-aplica, sem reverter.
+        // apply-only: applies and re-applies, without reverting.
         var applyRunner = new SelfTestRunner(host, new SelfTestOptions { ApplyOnly = true });
         var results = await applyRunner.RunAsync([tweak, other]);
         Assert.All(results, r => Assert.Equal(SelfTestVerdict.Pass, r.Verdict));
@@ -623,19 +623,19 @@ public sealed class SelfTestTests
         Assert.Equal("1", host.World[@"HKCU\X\B"]);
 
         var runner = new SelfTestRunner(host);
-        await runner.VerifyAsync(results, byId, "apos-reinicio-1");
+        await runner.VerifyAsync(results, byId, "after-restart-1");
         Assert.All(results, r => Assert.Equal(PersistenceVerdict.Persisted, r.PersistenceVerdict));
 
-        // "O Windows" desfaz o serviço do primeiro tweak e o único valor do segundo.
+        // "Windows" undoes the first tweak's service and the second tweak's only value.
         host.World["DiagTrack"] = "automatic";
         host.World[@"HKCU\X\B"] = "0";
-        await runner.VerifyAsync(results, byId, "apos-espera");
+        await runner.VerifyAsync(results, byId, "after-wait");
         Assert.Equal(PersistenceVerdict.PartiallyReverted, results[0].PersistenceVerdict);
-        Assert.Equal("apos-espera", results[0].RevertedAfter);
+        Assert.Equal("after-wait", results[0].RevertedAfter);
         Assert.Equal(PersistenceVerdict.RevertedByWindows, results[1].PersistenceVerdict);
         Assert.Equal(2, results[0].Actions[1].Checks.Count);
 
-        // revert: volta tudo ao original e o ciclo completo passa.
+        // revert: everything goes back to the original and the full cycle passes.
         await runner.RevertAppliedAsync(results, byId);
         Assert.All(results, r => Assert.Equal(SelfTestVerdict.Pass, r.Verdict));
         Assert.All(results, r => Assert.True(r.Backup.DeletedAfterRevert));
@@ -647,7 +647,7 @@ public sealed class SelfTestTests
     public async Task PersistencePhases_SkippedAndFailedTweaksAreNotVerifiedOrReverted()
     {
         var host = HostWithOriginals();
-        host.ApplyIgnores.Add("DiagTrack"); // aplicar não muda o serviço: NotAppliedAfterApply
+        host.ApplyIgnores.Add("DiagTrack"); // apply does not change the service: NotAppliedAfterApply
         var tweak = MakeTweak();
         var irreversible = MakeTweak("test.appx", RiskLevel.Low, false,
             new ActionSpec { Type = ActionSpec.Appx, Name = "Pkg", State = "removed" });
@@ -663,7 +663,7 @@ public sealed class SelfTestTests
 
         host.Calls.Clear();
         await runner.RevertAppliedAsync(results, byId);
-        // O que falhou ao aplicar ainda é revertido (limpeza: há backup); o pulado não.
+        // The one that failed on apply is still reverted (cleanup: there is a backup); the skipped one is not.
         Assert.Equal(["revert:test.tweak"], host.Calls);
         Assert.Equal(SelfTestVerdict.NotAppliedAfterApply, results[0].Verdict);
     }
@@ -680,7 +680,7 @@ public sealed class SelfTestTests
         var r = AppliedFacts(tweak, ActionState.Desired, ActionState.Desired, ActionState.Desired);
         r.Backup.WrittenOnApply = true;
         SelfTestEvaluator.RecordPersistence(r,
-            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.NotDesired, "b"), (ActionState.Desired, "c")), "apos-reinicio-1", DateTime.UtcNow);
+            StatusOf(tweak, (ActionState.Desired, "a"), (ActionState.NotDesired, "b"), (ActionState.Desired, "c")), "after-restart-1", DateTime.UtcNow);
         var report = new SelfTestReport { Phase = SelfTestPhase.Verify, BackupDirectory = @"C:\b", Results = [r] };
         report.PhaseLog.Add("ApplyOnly x");
 
@@ -690,7 +690,7 @@ public sealed class SelfTestTests
         Assert.Equal(@"C:\b", back.BackupDirectory);
         var br = Assert.Single(back.Results);
         Assert.Equal(PersistenceVerdict.PartiallyReverted, br.PersistenceVerdict);
-        Assert.Equal("apos-reinicio-1", br.RevertedAfter);
+        Assert.Equal("after-restart-1", br.RevertedAfter);
         Assert.Equal("b", br.Actions[1].Checks[0].Snapshot.Detail);
         Assert.Equal(ActionState.Desired, br.Actions[0].AfterApply!.State);
         Assert.True(back.HasPersistenceFailures);

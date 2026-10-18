@@ -1,63 +1,62 @@
 ﻿<#
 .SYNOPSIS
-    Testa a edição de políticas ADMX ("policy show/set/revert") de verdade, dentro da VM de teste,
-    contra o C:\Windows\PolicyDefinitions da própria VM, e restaura a VM.
+    Tests ADMX policy editing ("policy show/set/revert") for real, inside the test VM, against the
+    VM's own C:\Windows\PolicyDefinitions, and restores the VM.
 
 .DESCRIPTION
-    1. dotnet publish da CLI (Release, win-x64, autocontida) numa pasta temporária, compactada em zip.
-    2. Liga/retoma a VM, espera o PowerShell Direct e confere que a sessão é ELEVADA.
-    3. Cria o checkpoint "antes-policytest-<data-hora>".
-    4. Copia o pacote para C:\DebloaterPolicyTest\<data-hora> e roda a matriz de testes na VM:
-       para cada política (ver $Matrix), com o registro dos valores/chaves tocados exportado
-       ("reg export" da chave existente mais próxima de cada chave da política) antes e depois de
-       cada passo:
-         a. (opcional) grava valores "originais" (Preseed), que fazem parte do estado inicial;
-         b. policy show (estado inicial);
-         c. configurações inválidas (Invalid): devem falhar sem tocar no registro nem criar backup;
-         d. Não configurada a partir do estado inicial (se já era Não configurada: nada muda, sem backup);
-         e. policy set (Set): o show deve ler o estado e os valores pedidos; os valores do registro
-            (Expect.Reg) são conferidos de forma independente;
-         f. o mesmo set de novo: "nada foi alterado", backup idêntico, registro idêntico;
-         g. policy backups lista a política;
-         h. Não configurada: estado lido Não configurada, os valores de Expect.Reg ausentes (NcReg
-            confere o que deve ficar); de novo: nada muda;
-         i. Set2 (padrão: Set) e os passos extras (Extra), cada um conferido como em e.;
-         j. policy revert: backup apagado e o export do registro IDÊNTICO (byte a byte) ao inicial;
-            o show volta ao estado inicial; um segundo revert falha ("Nenhum backup").
-       Depois, a conferência cruzada com o próprio Windows (Cross): aplica algumas políticas com
-       mapeamento na Policy CSP, lê a ponte WMI do MDM (root\cimv2\mdm\dmmap, como SYSTEM numa tarefa
-       agendada), o PolicyManager e o agente do Windows Update (Microsoft.Update.AutoUpdate), roda
-       gpupdate /force (os valores gravados direto no registro devem continuar lá), reverte tudo e
-       compara o registro. Confere também que o Registry.pol da GPO local não foi tocado.
-    5. Traz policytest-<vm>-<data-hora>.json e .md (e a pasta com saídas e exports) para -ReportDir.
-    6. Restaura o checkpoint e o apaga (mesmo se algo falhar no meio), a menos que -KeepChanges.
+    1. dotnet publish of the CLI (Release, win-x64, self-contained) into a temporary folder, zipped.
+    2. Starts/resumes the VM, waits for PowerShell Direct and checks that the session is ELEVATED.
+    3. Creates the "before-policytest-<date-time>" checkpoint.
+    4. Copies the package to C:\DebloaterPolicyTest\<date-time> and runs the test matrix in the VM:
+       for each policy (see $Matrix), with the registry of the touched values/keys exported
+       ("reg export" of the closest existing key of each policy key) before and after each step:
+         a. (optional) writes "original" values (Preseed), which are part of the initial state;
+         b. policy show (initial state);
+         c. invalid settings (Invalid): must fail without touching the registry or creating a backup;
+         d. Not configured from the initial state (if it was already Not configured: nothing changes, no backup);
+         e. policy set (Set): show must read the requested state and values; the registry values
+            (Expect.Reg) are checked independently;
+         f. the same set again: "nothing changed", identical backup, identical registry;
+         g. policy backups lists the policy;
+         h. Not configured: state read as Not configured, the Expect.Reg values absent (NcReg
+            checks what must remain); again: nothing changes;
+         i. Set2 (default: Set) and the extra steps (Extra), each checked as in e.;
+         j. policy revert: backup deleted and the registry export IDENTICAL (byte for byte) to the
+            initial one; show returns to the initial state; a second revert fails ("No backup").
+       Then, the cross-check with Windows itself (Cross): applies a few policies that map to the
+       Policy CSP, reads the MDM WMI bridge (root\cimv2\mdm\dmmap, as SYSTEM in a scheduled task),
+       PolicyManager and the Windows Update agent (Microsoft.Update.AutoUpdate), runs gpupdate /force
+       (the values written directly to the registry must still be there), reverts everything and
+       compares the registry. Also checks that the local GPO's Registry.pol was not touched.
+    5. Brings policytest-<vm>-<date-time>.json and .md (and the folder with outputs and exports) to -ReportDir.
+    6. Restores the checkpoint and deletes it (even if something fails midway), unless -KeepChanges.
 
-    Nada roda no host além do dotnet publish e dos cmdlets do Hyper-V: "policy set/revert" NUNCA
-    rodam no PC de verdade.
+    Nothing runs on the host besides dotnet publish and the Hyper-V cmdlets: "policy set/revert"
+    NEVER run on the real PC.
 
 .PARAMETER Name
-    Nome da VM. Padrão: DebloaterTest.
+    VM name. Default: DebloaterTest.
 
 .PARAMETER CredentialPath
-    Credencial da conta local da VM (Export-Clixml). Padrão: tools/vm/.vmcred.xml.
+    Credential of the VM's local account (Export-Clixml). Default: tools/vm/.vmcred.xml.
 
 .PARAMETER Only
-    Roda só os casos cujo nome de política contém um destes textos (ex.: -Only AllowTelemetry,Spotlight).
+    Runs only the cases whose policy name contains one of these strings (e.g. -Only AllowTelemetry,Spotlight).
 
 .PARAMETER NoCross
-    Não roda a conferência cruzada com o Windows (MDM/PolicyManager/Windows Update/gpupdate).
+    Does not run the cross-check with Windows (MDM/PolicyManager/Windows Update/gpupdate).
 
 .PARAMETER ReportDir
-    Onde gravar o relatório. Padrão: tests/vm-reports (ignorado pelo git).
+    Where to save the report. Default: tests/vm-reports (git-ignored).
 
 .PARAMETER KeepChanges
-    Não restaura o checkpoint (mantém a VM como o teste deixou e o checkpoint para voltar à mão).
+    Does not restore the checkpoint (keeps the VM as the test left it, and the checkpoint to roll back by hand).
 
 .PARAMETER PublishDir
-    Usa uma publicação já feita (pasta com Debloater.Cli.exe) em vez de rodar dotnet publish.
+    Uses an existing publish output (folder with Debloater.Cli.exe) instead of running dotnet publish.
 
 .PARAMETER BootTimeoutMinutes
-    Quanto esperar o PowerShell Direct responder. Padrão: 10.
+    How long to wait for PowerShell Direct to respond. Default: 10.
 
 .EXAMPLE
     .\tools\vm\Invoke-VmPolicyTest.ps1
@@ -81,21 +80,23 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'DebloaterVm.psm1') -Force
 
 # ======================================================================================
-# Matriz de testes. Valores do registro: "HIVE\chave\nome=tipo:dado" (dword, qword, sz,
-# expand_sz, multi_sz com itens separados por "|") ou "...=absent".
-# Expect: Scope (HKLM/HKCU), State (Enabled/Disabled/NotConfigured), Values (linhas "id = valor"
-# que o "policy show" deve listar) e Reg (valores conferidos direto no registro).
+# Test matrix. Registry values: "HIVE\key\name=type:data" (dword, qword, sz,
+# expand_sz, multi_sz with items separated by "|") or "...=absent".
+# Expect: Scope (HKLM/HKCU), State (Enabled/Disabled/NotConfigured), Values ("id = value" lines
+# that "policy show" must list) and Reg (values checked directly in the registry).
+# Enum values given by display name (e.g. 'Automático', 'Personalizado', 'Ocultar') are the pt-BR
+# ADML strings of the pt-BR test VM: they test display-name matching and must stay in pt-BR.
 # ======================================================================================
 $P = 'HKLM\Software\Policies\Microsoft\Windows'
 $U = 'HKCU\Software\Policies\Microsoft\Windows'
 $Matrix = @(
     @{
         Policy = 'DataCollection.admx:AllowTelemetry'
-        Covers = 'enum por valor, #índice e nome exibido; classe Both com --scope machine e --scope user; política só com elemento'
+        Covers = 'enum by value, #index and display name; class Both with --scope machine and --scope user; element-only policy'
         Hives = @('HKLM', 'HKCU')
         Invalid = @(
             @('--state', 'enabled', '--scope', 'machine', '--value', 'AllowTelemetry=7'),
-            @('--state', 'enabled', '--scope', 'machine', '--value', 'NaoExiste=1'),
+            @('--state', 'enabled', '--scope', 'machine', '--value', 'DoesNotExist=1'),
             @('--state', 'enabled', '--scope', 'machine', '--value', 'AllowTelemetry=#9')
         )
         NcArgs = @('--scope', 'machine')
@@ -110,8 +111,8 @@ $Matrix = @(
     },
     @{
         Policy = 'DataCollection.admx:AllowTelemetry'
-        Label = 'AllowTelemetry (Desabilitada, com valor original)'
-        Covers = 'Desabilitada numa política só com elemento (apaga o valor = Não configurada); restaura valor original pré-existente'
+        Label = 'AllowTelemetry (Disabled, with original value)'
+        Covers = 'Disabled on an element-only policy (deletes the value = Not configured); restores a pre-existing original value'
         Preseed = @("$P\DataCollection\AllowTelemetry=dword:3")
         NcArgs = @('--scope', 'machine')
         Set = @('--state', 'disabled', '--scope', 'machine')
@@ -121,7 +122,7 @@ $Matrix = @(
     },
     @{
         Policy = 'WindowsCopilot.admx:TurnOffWindowsCopilot'
-        Covers = 'classe User (HKCU); enabledValue/disabledValue; --scope machine recusado'
+        Covers = 'class User (HKCU); enabledValue/disabledValue; --scope machine refused'
         Invalid = @(, @('--state', 'enabled', '--scope', 'machine'))
         Set = @('--state', 'enabled')
         Expect = @{ Scope = 'HKCU'; State = 'Enabled'; Reg = @("$U\WindowsCopilot\TurnOffWindowsCopilot=dword:1") }
@@ -130,7 +131,7 @@ $Matrix = @(
     },
     @{
         Policy = 'Search.admx:AllowCortana'
-        Covers = 'enabledValue/disabledValue; Não configurada a partir de Desabilitada'
+        Covers = 'enabledValue/disabledValue; Not configured from Disabled'
         Set = @('--state', 'disabled')
         Expect = @{ Scope = 'HKLM'; State = 'Disabled'; Reg = @("$P\Windows Search\AllowCortana=dword:0") }
         Set2 = @('--state', 'enabled')
@@ -138,7 +139,7 @@ $Matrix = @(
     },
     @{
         Policy = 'Search.admx:DoNotUseWebResults'
-        Covers = 'ConnectedSearchUseWeb: enabledValue 0 / disabledValue 1 (invertidos)'
+        Covers = 'ConnectedSearchUseWeb: enabledValue 0 / disabledValue 1 (inverted)'
         Set = @('--state', 'enabled')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Reg = @("$P\Windows Search\ConnectedSearchUseWeb=dword:0") }
         Set2 = @('--state', 'disabled')
@@ -146,7 +147,7 @@ $Matrix = @(
     },
     @{
         Policy = 'Search.admx:DisableWebSearch'
-        Covers = 'sem enabledValue/disabledValue (Habilitada = REG_DWORD 1; Desabilitada apaga)'
+        Covers = 'no enabledValue/disabledValue (Enabled = REG_DWORD 1; Disabled deletes)'
         Set = @('--state', 'enabled')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Reg = @("$P\Windows Search\DisableWebSearch=dword:1") }
         Set2 = @('--state', 'disabled')
@@ -154,14 +155,14 @@ $Matrix = @(
     },
     @{
         Policy = 'CloudContent.admx:DisableWindowsConsumerFeatures'
-        Covers = 'valor original pré-existente (Desabilitada) restaurado; Habilitada/Desabilitada'
+        Covers = 'pre-existing original value (Disabled) restored; Enabled/Disabled'
         Preseed = @("$P\CloudContent\DisableWindowsConsumerFeatures=dword:0")
         Set = @('--state', 'enabled')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Reg = @("$P\CloudContent\DisableWindowsConsumerFeatures=dword:1") }
     },
     @{
         Policy = 'CloudContent.admx:ConfigureWindowsSpotlight'
-        Covers = 'classe User; boolean com trueValue/falseValue; disabledValue 2; Não configurada a partir de Desabilitada'
+        Covers = 'class User; boolean with trueValue/falseValue; disabledValue 2; Not configured from Disabled'
         Set = @('--state', 'enabled', '--value', 'ConfigureWindowsSpotlight_Checkbox=true')
         Expect = @{ Scope = 'HKCU'; State = 'Enabled'; Values = @('ConfigureWindowsSpotlight_Checkbox = true')
                     Reg = @("$U\CloudContent\ConfigureWindowsSpotlight=dword:1", "$U\CloudContent\IncludeEnterpriseSpotlight=dword:1") }
@@ -177,7 +178,7 @@ $Matrix = @(
     },
     @{
         Policy = 'WindowsUpdate.admx:DeferQualityUpdates'
-        Covers = 'decimal com min/max (fora do intervalo recusado; limites 0 e 30); text com maxLength; risco alto exige --max-risk'
+        Covers = 'decimal with min/max (out of range refused; bounds 0 and 30); text with maxLength; high risk requires --max-risk'
         HighRisk = $true
         Invalid = @(
             @('--state', 'enabled', '--value', 'DeferQualityUpdatesPeriodId=31', '--max-risk', 'high'),
@@ -194,7 +195,7 @@ $Matrix = @(
     },
     @{
         Policy = 'WindowsUpdate.admx:AutoUpdateCfg'
-        Covers = 'enabledValue 0/disabledValue 1; enums obrigatórios; boolean sem trueValue (padrão 1/0); padrões da apresentação; Desabilitada apaga elementos'
+        Covers = 'enabledValue 0/disabledValue 1; required enums; boolean without trueValue (default 1/0); presentation defaults; Disabled deletes elements'
         HighRisk = $true
         Set = @('--state', 'enabled', '--value', 'AutoUpdateMode=2', '--value', 'AutoUpdateAutomaticMaintenanceEnabled=true', '--value', 'AutoUpdateSchTime=Automático')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Values = @('AutoUpdateMode = 2', 'AutoUpdateAutomaticMaintenanceEnabled = true', 'AutoUpdateSchTime = 24', 'AutoUpdateSchDay = 0', 'AutoUpdateSchEveryWeek = true')
@@ -206,7 +207,7 @@ $Matrix = @(
     },
     @{
         Policy = 'WindowsUpdate.admx:ActiveHours'
-        Covers = 'enum pelo nome exibido ("08:00") e pelo valor'
+        Covers = 'enum by display name ("08:00") and by value'
         HighRisk = $true
         Set = @('--state', 'enabled', '--value', 'ActiveHoursStartTime=08:00', '--value', 'ActiveHoursEndTime=18:00')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Values = @('ActiveHoursStartTime = 8', 'ActiveHoursEndTime = 18')
@@ -216,7 +217,7 @@ $Matrix = @(
     },
     @{
         Policy = 'ErrorReporting.admx:PCH_ShowUI'
-        Covers = 'enabledList/disabledList em subchave (chave criada e apagada na reversão)'
+        Covers = 'enabledList/disabledList in a subkey (key created and deleted on revert)'
         Set = @('--state', 'enabled')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Reg = @('HKLM\Software\Policies\Microsoft\PCHealth\ErrorReporting\ShowUI=dword:1', 'HKLM\Software\Policies\Microsoft\PCHealth\ErrorReporting\DW\DWAllowHeadless=dword:0') }
         Set2 = @('--state', 'disabled')
@@ -224,7 +225,7 @@ $Matrix = @(
     },
     @{
         Policy = 'Globalization.admx:ImplicitDataCollectionOff_1'
-        Covers = 'classe User; só enabledList/disabledList (sem valueName)'
+        Covers = 'class User; only enabledList/disabledList (no valueName)'
         Set = @('--state', 'enabled')
         Expect = @{ Scope = 'HKCU'; State = 'Enabled'; Reg = @('HKCU\SOFTWARE\Policies\Microsoft\InputPersonalization\RestrictImplicitTextCollection=dword:1', 'HKCU\SOFTWARE\Policies\Microsoft\InputPersonalization\RestrictImplicitInkCollection=dword:1') }
         Set2 = @('--state', 'disabled')
@@ -232,7 +233,7 @@ $Matrix = @(
     },
     @{
         Policy = 'WindowsMediaPlayer.admx:ConfigureHTTPProxySettings'
-        Covers = 'enum com valueList (com <delete/>; trocar de item apaga a valueList do anterior); text; decimal min 1; boolean trueValue/falseValue; chaves pai criadas'
+        Covers = "enum with valueList (with <delete/>; switching items deletes the previous item's valueList); text; decimal min 1; boolean trueValue/falseValue; parent keys created"
         Invalid = @(, @('--state', 'enabled', '--value', 'Proxytype=2', '--value', 'ProxyPort=0'))
         Set = @('--state', 'enabled', '--value', 'Proxytype=Personalizado', '--value', 'ProxyAddress=proxy.local', '--value', 'ProxyPort=8080', '--value', 'BypassProxyLocal=true')
         Expect = @{ Scope = 'HKCU'; State = 'Enabled'; Values = @('Proxytype = 2', 'ProxyAddress = proxy.local', 'ProxyPort = 8080', 'BypassProxyLocal = true')
@@ -247,7 +248,7 @@ $Matrix = @(
     },
     @{
         Policy = 'WindowsMediaPlayer.admx:NetworkBuffering'
-        Covers = 'enum com valueList sem <delete/> (troca de item reescreve o mesmo valor); decimal max 60'
+        Covers = 'enum with valueList without <delete/> (switching items rewrites the same value); decimal max 60'
         Invalid = @(, @('--state', 'enabled', '--value', 'BufferingTime=2', '--value', 'NetworkBuffering=61'))
         Set = @('--state', 'enabled', '--value', 'BufferingTime=2', '--value', 'NetworkBuffering=60')
         Expect = @{ Scope = 'HKCU'; State = 'Enabled'; Values = @('BufferingTime = 2', 'NetworkBuffering = 60')
@@ -259,7 +260,7 @@ $Matrix = @(
     },
     @{
         Policy = 'EventViewer.admx:EventViewer_RedirectionProgram'
-        Covers = 'text expandable (REG_EXPAND_SZ sem expandir); padrão da apresentação; política só com elemento'
+        Covers = 'expandable text (REG_EXPAND_SZ, not expanded); presentation default; element-only policy'
         Set = @('--state', 'enabled', '--value', 'EventViewer_RedirectionProgram=%SystemRoot%\System32\notepad.exe')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Values = @('EventViewer_RedirectionProgram = %SystemRoot%\System32\notepad.exe')
                     Reg = @('HKLM\Software\Policies\Microsoft\EventViewer\MicrosoftRedirectionProgram=expand_sz:%SystemRoot%\System32\notepad.exe') }
@@ -268,7 +269,7 @@ $Matrix = @(
     },
     @{
         Policy = 'AppPrivacy.admx:LetAppsAccessCamera'
-        Covers = 'multiText (REG_MULTI_SZ, várias linhas); enum; multiText vazio não grava'
+        Covers = 'multiText (REG_MULTI_SZ, several lines); enum; empty multiText is not written'
         Set = @('--state', 'enabled', '--value', 'LetAppsAccessCamera_Enum=2', '--value', 'LetAppsAccessCamera_ForceAllowTheseApps_List=Microsoft.WindowsCamera_8wekyb3d8bbwe', '--value', 'LetAppsAccessCamera_ForceAllowTheseApps_List=Microsoft.SkypeApp_kzf8qxf38zg5c')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Values = @('LetAppsAccessCamera_Enum = 2', 'LetAppsAccessCamera_ForceAllowTheseApps_List = Microsoft.WindowsCamera_8wekyb3d8bbwe | Microsoft.SkypeApp_kzf8qxf38zg5c')
                     Reg = @("$P\AppPrivacy\LetAppsAccessCamera=dword:2", "$P\AppPrivacy\LetAppsAccessCamera_ForceAllowTheseApps=multi_sz:Microsoft.WindowsCamera_8wekyb3d8bbwe|Microsoft.SkypeApp_kzf8qxf38zg5c",
@@ -278,7 +279,7 @@ $Matrix = @(
     },
     @{
         Policy = 'ControlPanel.admx:DisallowCpls'
-        Covers = 'classe User; list com valuePrefix vazio (1, 2...) em subchave; lista não aditiva encolhe; chave da lista apagada em Não configurada'
+        Covers = 'class User; list with empty valuePrefix (1, 2...) in a subkey; non-additive list shrinks; list key deleted on Not configured'
         Set = @('--state', 'enabled', '--value', 'DisallowCplsList=Microsoft.Mouse', '--value', 'DisallowCplsList=Microsoft.Sound')
         Expect = @{ Scope = 'HKCU'; State = 'Enabled'; Values = @('DisallowCplsList = Microsoft.Mouse | Microsoft.Sound')
                     Reg = @('HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl=dword:1',
@@ -291,9 +292,9 @@ $Matrix = @(
     },
     @{
         Policy = 'ErrorReporting.admx:WerConsentCustomize_2'
-        Covers = 'list com explicitValue + additive na própria chave da política, que também guarda DefaultConsent (de WerDefaultConsent_2)'
+        Covers = "list with explicitValue + additive in the policy's own key, which also holds DefaultConsent (from WerDefaultConsent_2)"
         Preseed = @("$P\Windows Error Reporting\Consent\DefaultConsent=dword:1")
-        Invalid = @(, @('--state', 'enabled', '--value', 'WerConsentCustomize=semigual'))
+        Invalid = @(, @('--state', 'enabled', '--value', 'WerConsentCustomize=noequals'))
         Set = @('--state', 'enabled', '--value', 'WerConsentCustomize=notepad.exe=4')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Values = @('WerConsentCustomize = notepad.exe=4')
                     Reg = @("$P\Windows Error Reporting\Consent\notepad.exe=sz:4") }
@@ -302,30 +303,30 @@ $Matrix = @(
     },
     @{
         Policy = 'ErrorReporting.admx:WerExlusion_2'
-        Covers = 'list aditiva sem prefixo (nome = dado) mantém itens existentes'
-        Preseed = @("$P\Windows Error Reporting\ExcludedApplications\existente.exe=sz:existente.exe")
-        Set = @('--state', 'enabled', '--value', 'WerExlusionList=novo.exe')
+        Covers = 'additive list without prefix (name = data) keeps existing items'
+        Preseed = @("$P\Windows Error Reporting\ExcludedApplications\existing.exe=sz:existing.exe")
+        Set = @('--state', 'enabled', '--value', 'WerExlusionList=new.exe')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'
-                    Reg = @("$P\Windows Error Reporting\ExcludedApplications\novo.exe=sz:novo.exe", "$P\Windows Error Reporting\ExcludedApplications\existente.exe=sz:existente.exe") }
-        # Depois de Não configurada (que apaga todos os itens da lista), o mesmo set só tem o item novo.
+                    Reg = @("$P\Windows Error Reporting\ExcludedApplications\new.exe=sz:new.exe", "$P\Windows Error Reporting\ExcludedApplications\existing.exe=sz:existing.exe") }
+        # After Not configured (which deletes all list items), the same set only has the new item.
         Expect2 = @{ Scope = 'HKLM'; State = 'Enabled'
-                     Reg = @("$P\Windows Error Reporting\ExcludedApplications\novo.exe=sz:novo.exe", "$P\Windows Error Reporting\ExcludedApplications\existente.exe=absent") }
+                     Reg = @("$P\Windows Error Reporting\ExcludedApplications\new.exe=sz:new.exe", "$P\Windows Error Reporting\ExcludedApplications\existing.exe=absent") }
     },
     @{
         Policy = 'StartMenu.admx:StartPinAppsWhenInstalled'
-        Covers = 'classe Both com --scope user; list aditiva com valuePrefix vazio (numeração continua depois do maior índice)'
+        Covers = 'class Both with --scope user; additive list with empty valuePrefix (numbering continues after the highest index)'
         Hives = @('HKCU')
-        Preseed = @("$U\Explorer\StartPinAppsWhenInstalled\1=sz:Existente!App")
+        Preseed = @("$U\Explorer\StartPinAppsWhenInstalled\1=sz:Existing!App")
         NcArgs = @('--scope', 'user')
         Set = @('--state', 'enabled', '--scope', 'user', '--value', 'StartPinAppsWhenInstalled_Name=Microsoft.WindowsCalculator_8wekyb3d8bbwe!App')
         Expect = @{ Scope = 'HKCU'; State = 'Enabled'
-                    Reg = @("$U\Explorer\StartPinAppsWhenInstalled=dword:1", "$U\Explorer\StartPinAppsWhenInstalled\1=sz:Existente!App", "$U\Explorer\StartPinAppsWhenInstalled\2=sz:Microsoft.WindowsCalculator_8wekyb3d8bbwe!App") }
+                    Reg = @("$U\Explorer\StartPinAppsWhenInstalled=dword:1", "$U\Explorer\StartPinAppsWhenInstalled\1=sz:Existing!App", "$U\Explorer\StartPinAppsWhenInstalled\2=sz:Microsoft.WindowsCalculator_8wekyb3d8bbwe!App") }
         Expect2 = @{ Scope = 'HKCU'; State = 'Enabled'
                      Reg = @("$U\Explorer\StartPinAppsWhenInstalled\1=sz:Microsoft.WindowsCalculator_8wekyb3d8bbwe!App", "$U\Explorer\StartPinAppsWhenInstalled\2=absent") }
     },
     @{
         Policy = 'AppxPackageManager.admx:RemoveDefaultMicrosoftStorePackages'
-        Covers = 'elementos com chave própria (subchaves por pacote); boolean trueValue/falseValue; padrão da apresentação (BingNews = true)'
+        Covers = 'elements with their own key (subkeys per package); boolean trueValue/falseValue; presentation default (BingNews = true)'
         Set = @('--state', 'enabled', '--value', 'Clipchamp=true')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Values = @('Clipchamp = true', 'BingNews = true', 'Photos = false')
                     Reg = @("$P\Appx\RemoveDefaultMicrosoftStorePackages\Enabled=dword:1",
@@ -337,7 +338,7 @@ $Matrix = @(
     },
     @{
         Policy = 'ControlPanelDisplay.admx:CPL_Personalization_ScreenSaverTimeOut'
-        Covers = 'classe User; decimal com storeAsText (REG_SZ); máximo 599940'
+        Covers = 'class User; decimal with storeAsText (REG_SZ); maximum 599940'
         Invalid = @(, @('--state', 'enabled', '--value', 'ScreenSaverTimeOutFreqSpin=599941'))
         Set = @('--state', 'enabled', '--value', 'ScreenSaverTimeOutFreqSpin=600')
         Expect = @{ Scope = 'HKCU'; State = 'Enabled'; Values = @('ScreenSaverTimeOutFreqSpin = 600'); Reg = @("$U\Control Panel\Desktop\ScreenSaveTimeOut=sz:600") }
@@ -346,7 +347,7 @@ $Matrix = @(
     },
     @{
         Policy = 'WindowsCopilot.admx:DisableAIDataAnalysis'
-        Covers = 'classe Both: --scope user e --scope machine no mesmo backup; revert restaura os dois'
+        Covers = 'class Both: --scope user and --scope machine in the same backup; revert restores both'
         Hives = @('HKLM', 'HKCU')
         NcArgs = @('--scope', 'user')
         Set = @('--state', 'enabled', '--scope', 'user')
@@ -358,7 +359,7 @@ $Matrix = @(
     },
     @{
         Policy = 'Search.admx:AllowCloudSearch'
-        Covers = 'valueName da política igual ao do elemento enum; Desabilitada sem disabledValue (apaga = Não configurada)'
+        Covers = 'policy valueName equal to the enum element one; Disabled without disabledValue (deletes = Not configured)'
         Set = @('--state', 'enabled', '--value', 'AllowCloudSearch_Dropdown=0')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Values = @('AllowCloudSearch_Dropdown = 0'); Reg = @("$P\Windows Search\AllowCloudSearch=dword:0") }
         Set2 = @('--state', 'disabled')
@@ -366,7 +367,7 @@ $Matrix = @(
     },
     @{
         Policy = 'Search.admx:ConfigureSearchOnTaskbarMode'
-        Covers = 'enum só com elemento (debloat: ocultar a pesquisa da barra de tarefas), nome exibido com acento'
+        Covers = 'element-only enum (debloat: hide search on the taskbar), display name with an accent'
         Set = @('--state', 'enabled', '--value', 'ConfigureSearchOnTaskbarMode_Dropdown=Ocultar')
         Expect = @{ Scope = 'HKLM'; State = 'Enabled'; Values = @('ConfigureSearchOnTaskbarMode_Dropdown = 0'); Reg = @("$P\Windows Search\SearchOnTaskbarMode=dword:0") }
         Set2 = @('--state', 'enabled', '--value', 'ConfigureSearchOnTaskbarMode_Dropdown=Somente ícone de pesquisa')
@@ -374,8 +375,8 @@ $Matrix = @(
     }
 )
 
-# Conferência cruzada com o Windows: políticas com Policy CSP; a ponte WMI do MDM e o PolicyManager
-# são lidos antes e depois. Expected = valor esperado na CSP se o Windows refletir a política de GP.
+# Cross-check with Windows: policies with a Policy CSP; the MDM WMI bridge and PolicyManager are
+# read before and after. Expected = value expected in the CSP if Windows reflects the GP policy.
 $Cross = @{
     Sets = @(
         @{ Policy = 'DataCollection.admx:AllowTelemetry'; Args = @('--state', 'enabled', '--scope', 'machine', '--value', 'AllowTelemetry=0'); Reg = "$P\DataCollection\AllowTelemetry=dword:0" },
@@ -406,11 +407,11 @@ $Cross = @{
 
 if ($Only.Count -gt 0) {
     $Matrix = @($Matrix | Where-Object { $c = $_; @($Only | Where-Object { $c.Policy -like "*$_*" -or ($c.Label -and $c.Label -like "*$_*") }).Count -gt 0 })
-    if ($Matrix.Count -eq 0) { throw "Nenhum caso corresponde a -Only $($Only -join ', ')." }
+    if ($Matrix.Count -eq 0) { throw "No case matches -Only $($Only -join ', ')." }
 }
 
 # ======================================================================================
-# Código que roda DENTRO da VM (sessão PowerShell Direct elevada).
+# Code that runs INSIDE the VM (elevated PowerShell Direct session).
 # ======================================================================================
 $guestScript = {
     param([string]$GuestDir, [string]$CasesJson, [string]$CrossJson, [bool]$RunCross)
@@ -423,6 +424,17 @@ $guestScript = {
     $cases = ConvertFrom-Json $CasesJson
     $cases = @($cases)
     $cross = $CrossJson | ConvertFrom-Json
+
+    # Patterns for the CLI's console output (policy show/set/revert). They accept both the English
+    # and the earlier pt-BR texts, so the test works with either CLI build.
+    $reStateEnabled = '^(Enabled|Habilitada)'
+    $reStateDisabled = '^(Disabled|Desabilitada)'
+    $reStateNotConfigured = '^(Not configured|N.o configurada)'
+    $reCurrentLine = '^\s+(?:Current|Atual) (HKLM|HKCU)\s*:\s*(.+?)\s*$'
+    $reCurrentPrefix = '^\s+(?:Current|Atual)|^\s{6}\S'
+    $reNothingChanged = 'nothing (was |has been )?changed|nada foi alterado'
+    $reNoBackup = 'No backup|Nenhum backup'
+    $reInvalidMessage = '^\s*x |above the allowed|acima do permitido|cannot be written|n.o pode ser gravada'
 
     function Invoke-Cli([string[]]$CliArgs) {
         $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -483,7 +495,7 @@ $guestScript = {
                     'sz' { $k.SetValue($p.Name, $data, 'String') }
                     'expand_sz' { $k.SetValue($p.Name, $data, 'ExpandString') }
                     'multi_sz' { $k.SetValue($p.Name, [string[]]($data -split '\|'), 'MultiString') }
-                    default { throw "tipo desconhecido no preseed: $kind" }
+                    default { throw "unknown type in preseed: $kind" }
                 }
             }
             finally { $k.Dispose() }
@@ -494,11 +506,11 @@ $guestScript = {
         $eq = $Assertion.IndexOf('=')
         $path = $Assertion.Substring(0, $eq); $want = $Assertion.Substring($eq + 1)
         $got = Get-RegText $path
-        [pscustomobject]@{ Ok = ($got -ceq $want); Text = "$path = $got" + $(if ($got -cne $want) { " (esperado $want)" } else { '' }) }
+        [pscustomobject]@{ Ok = ($got -ceq $want); Text = "$path = $got" + $(if ($got -cne $want) { " (expected $want)" } else { '' }) }
     }
 
-    # Exporta (reg export) a chave existente mais próxima de cada chave tocada; o hash do conjunto
-    # compara estados byte a byte.
+    # Exports (reg export) the closest existing key of each touched key; the hash of the set
+    # compares states byte for byte.
     function Get-ExportRoots([string[]]$Keys, [string[]]$Hives) {
         $roots = New-Object System.Collections.Generic.List[string]
         foreach ($h in $Hives) {
@@ -520,7 +532,7 @@ $guestScript = {
         foreach ($r in $Roots) {
             $tmp = [System.IO.Path]::GetTempFileName()
             $null = & reg.exe export $r $tmp /y 2>&1
-            $bytes = if ($LASTEXITCODE -eq 0) { [System.IO.File]::ReadAllBytes($tmp) } else { [System.Text.Encoding]::Unicode.GetBytes("[$r] (ausente)`r`n") }
+            $bytes = if ($LASTEXITCODE -eq 0) { [System.IO.File]::ReadAllBytes($tmp) } else { [System.Text.Encoding]::Unicode.GetBytes("[$r] (absent)`r`n") }
             Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
             $ms.Write($bytes, 0, $bytes.Length)
         }
@@ -538,16 +550,16 @@ $guestScript = {
         Join-Path $backupDir "$n.json"
     }
     function ConvertTo-State([string]$Text) {
-        if ($Text -match '^Habilitada') { 'Enabled' }
-        elseif ($Text -match '^Desabilitada') { 'Disabled' }
-        elseif ($Text -match '^N.o configurada') { 'NotConfigured' }
+        if ($Text -match $reStateEnabled) { 'Enabled' }
+        elseif ($Text -match $reStateDisabled) { 'Disabled' }
+        elseif ($Text -match $reStateNotConfigured) { 'NotConfigured' }
         else { 'Unknown' }
     }
     function Read-Show([string]$Output) {
         $res = @{}
         $cur = $null
         foreach ($l in ($Output -split "`n")) {
-            if ($l -match '^\s+Atual (HKLM|HKCU)\s*:\s*(.+?)\s*$') {
+            if ($l -match $reCurrentLine) {
                 $cur = @{ State = (ConvertTo-State $Matches[2]); Values = New-Object System.Collections.Generic.List[string] }
                 $res[$Matches[1]] = $cur
             }
@@ -557,7 +569,7 @@ $guestScript = {
         $res
     }
 
-    # Chaves que uma política toca, a partir do export do catálogo ADMX.
+    # Keys a policy touches, from the ADMX catalog export.
     & $exe admx export (Join-Path $out 'admx.json') | Out-Null
     Add-Type -AssemblyName System.Web.Extensions
     $ser = New-Object System.Web.Script.Serialization.JavaScriptSerializer
@@ -592,7 +604,7 @@ $guestScript = {
     foreach ($c in $cases) {
         $caseNo++
         $label = if ($c.Label) { $c.Label } else { $c.Policy }
-        $dir = Join-Path $out ('caso-{0:D2}' -f $caseNo)
+        $dir = Join-Path $out ('case-{0:D2}' -f $caseNo)
         $null = New-Item -ItemType Directory -Path $dir -Force
         $steps = New-Object System.Collections.Generic.List[object]
         $failures = New-Object System.Collections.Generic.List[string]
@@ -605,35 +617,35 @@ $guestScript = {
 
         function Add-Step([string]$Title, $Run, [string[]]$Checks, [bool]$Ok) {
             $ctx.Step++
-            $snapFile = Join-Path $dir ('{0:D2}-registro.reg' -f $ctx.Step)
+            $snapFile = Join-Path $dir ('{0:D2}-registry.reg' -f $ctx.Step)
             $hash = Save-Snapshot $roots $snapFile
-            if ($Run) { [System.IO.File]::WriteAllText((Join-Path $dir ('{0:D2}-saida.txt' -f $ctx.Step)), "> $($Run.Command)`r`n(exit $($Run.Exit))`r`n$($Run.Output)", (New-Object System.Text.UTF8Encoding($true))) }
+            if ($Run) { [System.IO.File]::WriteAllText((Join-Path $dir ('{0:D2}-output.txt' -f $ctx.Step)), "> $($Run.Command)`r`n(exit $($Run.Exit))`r`n$($Run.Output)", (New-Object System.Text.UTF8Encoding($true))) }
             $steps.Add([pscustomobject]@{ N = $ctx.Step; Title = $Title; Command = $(if ($Run) { $Run.Command } else { $null }); Exit = $(if ($Run) { $Run.Exit } else { $null })
                     Ms = $(if ($Run) { $Run.Ms } else { $null }); Ok = $Ok; Checks = @($Checks); Snapshot = $hash; Output = $(if ($Run) { $Run.Output } else { $null }) })
-            if (-not $Ok) { foreach ($ch in $Checks) { if ($ch -like 'FALHA*') { $failures.Add("$Title`: $ch") } } }
+            if (-not $Ok) { foreach ($ch in $Checks) { if ($ch -like 'FAIL*') { $failures.Add("$Title`: $ch") } } }
             return $hash
         }
         function Check([System.Collections.Generic.List[string]]$List, [bool]$Cond, [string]$Text) {
-            $List.Add($(if ($Cond) { "ok: $Text" } else { "FALHA: $Text" }))
+            $List.Add($(if ($Cond) { "ok: $Text" } else { "FAIL: $Text" }))
             return $Cond
         }
         function Test-Expect($Expect, $Show, [System.Collections.Generic.List[string]]$List) {
             $ok = $true
             $sc = $Show[$Expect.Scope]
-            if (-not $sc) { return (Check $List $false "show não listou o escopo $($Expect.Scope)") }
-            $ok = (Check $List ($sc.State -eq $Expect.State) "estado lido em $($Expect.Scope): $($sc.State) (esperado $($Expect.State))") -and $ok
-            foreach ($v in @($Expect.Values | Where-Object { $_ })) { $ok = (Check $List ($sc.Values -contains $v) "show lista '$v' (lido: $($sc.Values -join '; '))") -and $ok }
-            foreach ($r in @($Expect.Reg | Where-Object { $_ })) { $t = Test-RegAssertion $r; $ok = (Check $List $t.Ok "registro: $($t.Text)") -and $ok }
+            if (-not $sc) { return (Check $List $false "show did not list the scope $($Expect.Scope)") }
+            $ok = (Check $List ($sc.State -eq $Expect.State) "state read in $($Expect.Scope): $($sc.State) (expected $($Expect.State))") -and $ok
+            foreach ($v in @($Expect.Values | Where-Object { $_ })) { $ok = (Check $List ($sc.Values -contains $v) "show lists '$v' (read: $($sc.Values -join '; '))") -and $ok }
+            foreach ($r in @($Expect.Reg | Where-Object { $_ })) { $t = Test-RegAssertion $r; $ok = (Check $List $t.Ok "registry: $($t.Text)") -and $ok }
             return $ok
         }
         function Invoke-SetStep([string]$Title, [string[]]$SetArgs, $Expect, [string]$ExpectBackup = 'exists') {
             $chk = New-Object System.Collections.Generic.List[string]
             $r = Invoke-Cli (@('policy', 'set', $c.Policy) + $SetArgs + $riskArgs)
-            $ok = Check $chk ($r.Exit -eq 0) "policy set saiu com $($r.Exit)"
+            $ok = Check $chk ($r.Exit -eq 0) "policy set exited with $($r.Exit)"
             $show = Invoke-Cli @('policy', 'show', $c.Policy)
-            $chk.Add("show: " + (($show.Output -split "`n" | Where-Object { $_ -match '^\s+Atual|^\s{6}\S' }) -join ' / '))
+            $chk.Add("show: " + (($show.Output -split "`n" | Where-Object { $_ -match $reCurrentPrefix }) -join ' / '))
             $ok = (Test-Expect $Expect (Read-Show $show.Output) $chk) -and $ok
-            if ($ExpectBackup -eq 'exists') { $ok = (Check $chk (Test-Path -LiteralPath $bpath) 'backup gravado') -and $ok }
+            if ($ExpectBackup -eq 'exists') { $ok = (Check $chk (Test-Path -LiteralPath $bpath) 'backup written') -and $ok }
             $h = Add-Step $Title $r @($chk) $ok
             return [pscustomobject]@{ Hash = $h; Ok = $ok; Run = $r }
         }
@@ -641,144 +653,144 @@ $guestScript = {
         try {
             foreach ($s in @($c.Preseed | Where-Object { $_ })) { Set-RegText $s }
             $keys = Get-PolicyKeys $c.Policy
-            if ($keys.Count -eq 0) { throw "política $($c.Policy) não existe no ADMX desta VM." }
+            if ($keys.Count -eq 0) { throw "policy $($c.Policy) does not exist in this VM's ADMX." }
             $roots = Get-ExportRoots $keys $hives
-            if (Test-Path -LiteralPath $bpath) { throw "já existe backup de $($c.Policy) antes do teste." }
+            if (Test-Path -LiteralPath $bpath) { throw "a backup of $($c.Policy) already exists before the test." }
 
-            # inicial
+            # initial
             $show0 = Invoke-Cli @('policy', 'show', $c.Policy)
             $initial = Read-Show $show0.Output
             $chk = New-Object System.Collections.Generic.List[string]
-            $null = Check $chk ($show0.Exit -eq 0) "policy show saiu com $($show0.Exit)"
-            foreach ($k in $initial.Keys) { $chk.Add("inicial $k`: $($initial[$k].State) $($initial[$k].Values -join '; ')") }
-            $chk.Add('raízes exportadas: ' + ($roots -join '; '))
-            $hash0 = Add-Step 'show (antes)' $show0 @($chk) ($show0.Exit -eq 0)
+            $null = Check $chk ($show0.Exit -eq 0) "policy show exited with $($show0.Exit)"
+            foreach ($k in $initial.Keys) { $chk.Add("initial $k`: $($initial[$k].State) $($initial[$k].Values -join '; ')") }
+            $chk.Add('exported roots: ' + ($roots -join '; '))
+            $hash0 = Add-Step 'show (before)' $show0 @($chk) ($show0.Exit -eq 0)
 
-            # inválidas
+            # invalid
             foreach ($inv in @($c.Invalid)) {
                 if ($null -eq $inv) { continue }
                 $chk = New-Object System.Collections.Generic.List[string]
                 $r = Invoke-Cli (@('policy', 'set', $c.Policy) + @($inv))
-                $ok = Check $chk ($r.Exit -ne 0) "configuração inválida recusada (exit $($r.Exit))"
-                $msg = ($r.Output -split "`n" | Where-Object { $_ -match '^\s*x |acima do permitido|n.o pode ser gravada' }) -join ' / '
-                $chk.Add("mensagem: $msg")
-                $ok = (Check $chk (-not (Test-Path -LiteralPath $bpath)) 'nenhum backup criado') -and $ok
-                $h = Add-Step "inválida: $($inv -join ' ')" $r @($chk) $ok
-                if ($h -ne $hash0) { $failures.Add("inválida: $($inv -join ' '): o registro mudou"); $steps[$steps.Count - 1].Ok = $false; $steps[$steps.Count - 1].Checks += 'FALHA: o registro mudou' }
+                $ok = Check $chk ($r.Exit -ne 0) "invalid setting refused (exit $($r.Exit))"
+                $msg = ($r.Output -split "`n" | Where-Object { $_ -match $reInvalidMessage }) -join ' / '
+                $chk.Add("message: $msg")
+                $ok = (Check $chk (-not (Test-Path -LiteralPath $bpath)) 'no backup created') -and $ok
+                $h = Add-Step "invalid: $($inv -join ' ')" $r @($chk) $ok
+                if ($h -ne $hash0) { $failures.Add("invalid: $($inv -join ' '): the registry changed"); $steps[$steps.Count - 1].Ok = $false; $steps[$steps.Count - 1].Checks += 'FAIL: the registry changed' }
             }
 
-            # Não configurada a partir do estado inicial
+            # Not configured from the initial state
             $initState = if ($initial[$c.Expect.Scope]) { $initial[$c.Expect.Scope].State } else { 'NotConfigured' }
             if ($initState -eq 'NotConfigured' -and -not $c.Preseed) {
                 $chk = New-Object System.Collections.Generic.List[string]
                 $r = Invoke-Cli (@('policy', 'set', $c.Policy) + $ncArgs)
-                $ok = Check $chk ($r.Exit -eq 0 -and $r.Output -match 'nada foi alterado') "Não configurada -> Não configurada não muda nada (exit $($r.Exit))"
-                $ok = (Check $chk (-not (Test-Path -LiteralPath $bpath)) 'nenhum backup criado') -and $ok
-                $h = Add-Step 'notconfigured (a partir de Não configurada)' $r @($chk) $ok
-                if ($h -ne $hash0) { $failures.Add('notconfigured inicial: o registro mudou'); $steps[$steps.Count - 1].Ok = $false }
+                $ok = Check $chk ($r.Exit -eq 0 -and $r.Output -match $reNothingChanged) "Not configured -> Not configured changes nothing (exit $($r.Exit))"
+                $ok = (Check $chk (-not (Test-Path -LiteralPath $bpath)) 'no backup created') -and $ok
+                $h = Add-Step 'notconfigured (from Not configured)' $r @($chk) $ok
+                if ($h -ne $hash0) { $failures.Add('initial notconfigured: the registry changed'); $steps[$steps.Count - 1].Ok = $false }
             }
 
             # set
             $set1 = Invoke-SetStep "set $($c.Set -join ' ')" @($c.Set) $c.Expect
             $b1 = Get-FileSha $bpath
 
-            # re-aplicar
+            # re-apply
             $chk = New-Object System.Collections.Generic.List[string]
             $r = Invoke-Cli (@('policy', 'set', $c.Policy) + @($c.Set) + $riskArgs)
-            $ok = Check $chk ($r.Exit -eq 0 -and $r.Output -match 'nada foi alterado') "re-aplicar não muda nada (exit $($r.Exit))"
-            $ok = (Check $chk ((Get-FileSha $bpath) -eq $b1) 'backup idêntico') -and $ok
-            $h = Add-Step 're-aplicar o mesmo set' $r @($chk) $ok
-            if ($h -ne $set1.Hash) { $failures.Add('re-aplicar: o registro mudou'); $steps[$steps.Count - 1].Ok = $false }
+            $ok = Check $chk ($r.Exit -eq 0 -and $r.Output -match $reNothingChanged) "re-applying changes nothing (exit $($r.Exit))"
+            $ok = (Check $chk ((Get-FileSha $bpath) -eq $b1) 'identical backup') -and $ok
+            $h = Add-Step 're-apply the same set' $r @($chk) $ok
+            if ($h -ne $set1.Hash) { $failures.Add('re-apply: the registry changed'); $steps[$steps.Count - 1].Ok = $false }
 
             # backups
             $chk = New-Object System.Collections.Generic.List[string]
             $r = Invoke-Cli @('policy', 'backups')
-            $ok = Check $chk ($r.Exit -eq 0 -and $r.Output -match [regex]::Escape($c.Policy)) 'policy backups lista a política'
+            $ok = Check $chk ($r.Exit -eq 0 -and $r.Output -match [regex]::Escape($c.Policy)) 'policy backups lists the policy'
             $null = Add-Step 'policy backups' $r @($chk) $ok
 
-            # Não configurada
+            # Not configured
             $chk = New-Object System.Collections.Generic.List[string]
             $r = Invoke-Cli (@('policy', 'set', $c.Policy) + $ncArgs)
-            $ok = Check $chk ($r.Exit -eq 0) "notconfigured saiu com $($r.Exit)"
+            $ok = Check $chk ($r.Exit -eq 0) "notconfigured exited with $($r.Exit)"
             $sh = Read-Show (Invoke-Cli @('policy', 'show', $c.Policy)).Output
             $sc = $sh[$c.Expect.Scope]
-            $ok = (Check $chk ($sc -and $sc.State -eq 'NotConfigured') "estado lido em $($c.Expect.Scope): $($sc.State)") -and $ok
+            $ok = (Check $chk ($sc -and $sc.State -eq 'NotConfigured') "state read in $($c.Expect.Scope): $($sc.State)") -and $ok
             $keep = @($c.Keep | Where-Object { $_ } | ForEach-Object { $_.Substring(0, $_.IndexOf('=')) })
             foreach ($a in @($c.Expect.Reg | Where-Object { $_ })) {
                 $path = $a.Substring(0, $a.IndexOf('='))
                 if ($keep -contains $path) { continue }
-                $t = Test-RegAssertion "$path=absent"; $ok = (Check $chk $t.Ok "registro: $($t.Text)") -and $ok
+                $t = Test-RegAssertion "$path=absent"; $ok = (Check $chk $t.Ok "registry: $($t.Text)") -and $ok
             }
-            foreach ($a in @($c.NcReg | Where-Object { $_ })) { $t = Test-RegAssertion $a; $ok = (Check $chk $t.Ok "registro: $($t.Text)") -and $ok }
+            foreach ($a in @($c.NcReg | Where-Object { $_ })) { $t = Test-RegAssertion $a; $ok = (Check $chk $t.Ok "registry: $($t.Text)") -and $ok }
             $hNc = Add-Step 'notconfigured' $r @($chk) $ok
 
             $chk = New-Object System.Collections.Generic.List[string]
             $r = Invoke-Cli (@('policy', 'set', $c.Policy) + $ncArgs)
-            $ok = Check $chk ($r.Exit -eq 0 -and $r.Output -match 'nada foi alterado') 'notconfigured de novo não muda nada'
-            $h = Add-Step 'notconfigured de novo' $r @($chk) $ok
-            if ($h -ne $hNc) { $failures.Add('notconfigured de novo: o registro mudou'); $steps[$steps.Count - 1].Ok = $false }
+            $ok = Check $chk ($r.Exit -eq 0 -and $r.Output -match $reNothingChanged) 'notconfigured again changes nothing'
+            $h = Add-Step 'notconfigured again' $r @($chk) $ok
+            if ($h -ne $hNc) { $failures.Add('notconfigured again: the registry changed'); $steps[$steps.Count - 1].Ok = $false }
 
-            # set 2 e extras
+            # set 2 and extras
             $set2 = if ($c.Set2) { @($c.Set2) } else { @($c.Set) }
             $exp2 = if ($c.Expect2) { $c.Expect2 } else { $c.Expect }
             $null = Invoke-SetStep "set $($set2 -join ' ')" $set2 $exp2
             foreach ($x in @($c.Extra | Where-Object { $_ })) { $null = Invoke-SetStep "set $($x.Args -join ' ')" @($x.Args) $x.Expect }
             foreach ($a in @($c.Keep | Where-Object { $_ })) {
                 $t = Test-RegAssertion $a
-                if (-not $t.Ok) { $failures.Add("valor que não pertence à política foi alterado: $($t.Text)") }
+                if (-not $t.Ok) { $failures.Add("a value that does not belong to the policy was changed: $($t.Text)") }
             }
 
-            # reverter
+            # revert
             $chk = New-Object System.Collections.Generic.List[string]
             $r = Invoke-Cli @('policy', 'revert', $c.Policy)
-            $ok = Check $chk ($r.Exit -eq 0) "revert saiu com $($r.Exit)"
-            $ok = (Check $chk (-not (Test-Path -LiteralPath $bpath)) 'backup apagado') -and $ok
+            $ok = Check $chk ($r.Exit -eq 0) "revert exited with $($r.Exit)"
+            $ok = (Check $chk (-not (Test-Path -LiteralPath $bpath)) 'backup deleted') -and $ok
             $sh = Read-Show (Invoke-Cli @('policy', 'show', $c.Policy)).Output
             foreach ($k in $initial.Keys) {
                 $same = $sh[$k] -and $sh[$k].State -eq $initial[$k].State -and (($sh[$k].Values -join ';') -eq ($initial[$k].Values -join ';'))
-                $ok = (Check $chk $same "show $k igual ao inicial ($($sh[$k].State) $($sh[$k].Values -join '; '))") -and $ok
+                $ok = (Check $chk $same "show $k equal to the initial one ($($sh[$k].State) $($sh[$k].Values -join '; '))") -and $ok
             }
             $hFinal = Add-Step 'revert' $r @($chk) $ok
             if ($hFinal -ne $hash0) {
-                $failures.Add('revert: o registro NÃO ficou idêntico ao inicial (compare 01-registro.reg com o último export)')
+                $failures.Add('revert: the registry is NOT identical to the initial one (compare 01-registry.reg with the last export)')
                 $steps[$steps.Count - 1].Ok = $false
-                $steps[$steps.Count - 1].Checks += 'FALHA: export diferente do inicial'
+                $steps[$steps.Count - 1].Checks += 'FAIL: export differs from the initial one'
             }
-            else { $steps[$steps.Count - 1].Checks += 'ok: export do registro idêntico ao inicial (SHA-256)' }
+            else { $steps[$steps.Count - 1].Checks += 'ok: registry export identical to the initial one (SHA-256)' }
 
             $chk = New-Object System.Collections.Generic.List[string]
             $r = Invoke-Cli @('policy', 'revert', $c.Policy)
-            $ok = Check $chk ($r.Exit -ne 0 -and $r.Output -match 'Nenhum backup') "segundo revert recusado (exit $($r.Exit))"
-            $h = Add-Step 'revert de novo (sem backup)' $r @($chk) $ok
-            if ($h -ne $hash0) { $failures.Add('segundo revert mudou o registro'); $steps[$steps.Count - 1].Ok = $false }
+            $ok = Check $chk ($r.Exit -ne 0 -and $r.Output -match $reNoBackup) "second revert refused (exit $($r.Exit))"
+            $h = Add-Step 'revert again (no backup)' $r @($chk) $ok
+            if ($h -ne $hash0) { $failures.Add('second revert changed the registry'); $steps[$steps.Count - 1].Ok = $false }
         }
         catch {
-            $failures.Add("exceção: $($_.Exception.Message)")
+            $failures.Add("exception: $($_.Exception.Message)")
         }
         finally {
-            # Deixa a VM limpa para o próximo caso, mesmo se algo falhou.
+            # Leaves the VM clean for the next case, even if something failed.
             if (Test-Path -LiteralPath $bpath) { $null = Invoke-Cli @('policy', 'revert', $c.Policy) }
         }
         $verdict = if ($failures.Count -eq 0) { 'Pass' } else { 'Fail' }
-        Write-Output ("    {0} ({1} passo(s))" -f $verdict, $steps.Count)
+        Write-Output ("    {0} ({1} step(s))" -f $verdict, $steps.Count)
         foreach ($f in $failures) { Write-Output "    - $f" }
         $results.Add([pscustomobject]@{ Case = $caseNo; Policy = $c.Policy; Label = $label; Covers = $c.Covers; Verdict = $verdict; Failures = $failures.ToArray(); Steps = $steps.ToArray() })
     }
 
-    # ---------- conferência cruzada ----------
+    # ---------- cross-check ----------
     $crossResult = $null
     if ($RunCross) {
-        Write-Output 'Conferência cruzada com o Windows (MDM/PolicyManager/Windows Update/gpupdate)...'
+        Write-Output 'Cross-check with Windows (MDM/PolicyManager/Windows Update/gpupdate)...'
         $log = New-Object System.Collections.Generic.List[string]
-        $dir = Join-Path $out 'cruzada'
+        $dir = Join-Path $out 'cross'
         $null = New-Item -ItemType Directory -Path $dir -Force
         $allKeys = @(); $allHives = @('HKLM', 'HKCU')
         foreach ($s in $cross.Sets) { $allKeys += Get-PolicyKeys $s.Policy }
         $roots = Get-ExportRoots @($allKeys | Sort-Object -Unique) $allHives
-        $h0 = Save-Snapshot $roots (Join-Path $dir '00-inicial.reg')
+        $h0 = Save-Snapshot $roots (Join-Path $dir '00-initial.reg')
 
         function Get-MdmAsSystem {
-            # A ponte WMI do MDM só responde como SYSTEM: roda numa tarefa agendada.
+            # The MDM WMI bridge only responds as SYSTEM: runs in a scheduled task.
             $classes = @($cross.Mdm | ForEach-Object { $_.Class } | Sort-Object -Unique)
             $outFile = Join-Path $dir ('mdm-{0}.json' -f [guid]::NewGuid().ToString('N'))
             $ps = @"
@@ -786,7 +798,7 @@ $guestScript = {
 foreach (`$cl in @('$($classes -join "','")')) {
   try { `$i = Get-CimInstance -Namespace 'root\cimv2\mdm\dmmap' -ClassName `$cl -ErrorAction Stop | Select-Object -First 1
         `$h = @{}; if (`$i) { foreach (`$p in `$i.CimInstanceProperties) { if (`$null -ne `$p.Value) { `$h[`$p.Name] = "`$(`$p.Value)" } } }; `$r[`$cl] = `$h }
-  catch { `$r[`$cl] = @{ '__erro' = `$_.Exception.Message } }
+  catch { `$r[`$cl] = @{ '__error' = `$_.Exception.Message } }
 }
 `$r | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath '$outFile' -Encoding UTF8
 "@
@@ -805,15 +817,15 @@ foreach (`$cl in @('$($classes -join "','")')) {
             return (Get-Content -LiteralPath $outFile -Raw -Encoding UTF8 | ConvertFrom-Json)
         }
         function Get-MdmValue($Snapshot, [string]$Class, [string]$Prop) {
-            if (-not $Snapshot) { return '(sem resposta)' }
+            if (-not $Snapshot) { return '(no response)' }
             $o = $Snapshot.$Class
-            if (-not $o) { return '(classe sem instância)' }
-            if ($o.__erro) { return "(erro: $($o.__erro))" }
+            if (-not $o) { return '(class without instance)' }
+            if ($o.__error) { return "(error: $($o.__error))" }
             $v = $o.$Prop
-            if ($null -eq $v) { return '(ausente)' } else { return "$v" }
+            if ($null -eq $v) { return '(absent)' } else { return "$v" }
         }
         function Get-WuSettings {
-            try { $s = (New-Object -ComObject Microsoft.Update.AutoUpdate).Settings; "NotificationLevel=$($s.NotificationLevel) ReadOnly=$($s.ReadOnly)" } catch { "erro: $($_.Exception.Message)" }
+            try { $s = (New-Object -ComObject Microsoft.Update.AutoUpdate).Settings; "NotificationLevel=$($s.NotificationLevel) ReadOnly=$($s.ReadOnly)" } catch { "error: $($_.Exception.Message)" }
         }
 
         $mdm0 = Get-MdmAsSystem
@@ -872,7 +884,7 @@ foreach (`$cl in @('$($classes -join "','")')) {
         Cross = $crossResult
         RegistryPol = $polRows
     }
-    $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $out 'relatorio.json') -Encoding UTF8
+    $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $out 'report.json') -Encoding UTF8
     Write-Output '__DONE__'
 }
 
@@ -883,12 +895,12 @@ $repo = Get-DebloaterRepoRoot
 if (-not $CredentialPath) { $CredentialPath = Get-DebloaterDefaultCredentialPath }
 if (-not $ReportDir) { $ReportDir = Join-Path $repo 'tests\vm-reports' }
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$checkpointName = "antes-policytest-$stamp"
+$checkpointName = "before-policytest-$stamp"
 $guestDir = "C:\DebloaterPolicyTest\$stamp"
 $null = New-Item -ItemType Directory -Path $ReportDir -Force
 $localBase = Join-Path $ReportDir "policytest-$Name-$stamp"
 $cred = Import-DebloaterVmCredential -Path $CredentialPath
-if (-not (Get-VM -Name $Name -ErrorAction SilentlyContinue)) { throw "VM '$Name' não encontrada. Crie-a com New-TestVM.ps1." }
+if (-not (Get-VM -Name $Name -ErrorAction SilentlyContinue)) { throw "VM '$Name' not found. Create it with New-TestVM.ps1." }
 
 $work = Join-Path ([System.IO.Path]::GetTempPath()) "debloater-policytest-$stamp"
 $null = New-Item -ItemType Directory -Path $work -Force
@@ -898,11 +910,11 @@ try {
     if ($PublishDir) { $publish = (Resolve-Path -LiteralPath $PublishDir).ProviderPath }
     else {
         $publish = Join-Path $work 'publish'
-        Write-Host 'Publicando a CLI (Release, win-x64, autocontida)...'
+        Write-Host 'Publishing the CLI (Release, win-x64, self-contained)...'
         & (Get-DebloaterDotNet) publish (Join-Path $repo 'src\Debloater.Cli\Debloater.Cli.csproj') -c Release -r win-x64 --self-contained true -o $publish --nologo -v quiet
-        if ($LASTEXITCODE -ne 0) { throw "dotnet publish falhou (código $LASTEXITCODE)." }
+        if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed (exit code $LASTEXITCODE)." }
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $publish 'Debloater.Cli.exe'))) { throw "Debloater.Cli.exe não encontrado em '$publish'." }
+    if (-not (Test-Path -LiteralPath (Join-Path $publish 'Debloater.Cli.exe'))) { throw "Debloater.Cli.exe not found in '$publish'." }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [System.IO.Compression.ZipFile]::CreateFromDirectory($publish, $zip, [System.IO.Compression.CompressionLevel]::Fastest, $false)
 
@@ -910,15 +922,15 @@ try {
     switch ($vm.State) {
         'Running' { }
         'Paused' { Resume-VM -Name $Name }
-        default { Write-Host "Ligando a VM '$Name' (estado: $($vm.State))..."; Start-VM -Name $Name }
+        default { Write-Host "Starting the VM '$Name' (state: $($vm.State))..."; Start-VM -Name $Name }
     }
     $s0 = Wait-DebloaterVmSession -VMName $Name -Credential $cred -TimeoutMinutes $BootTimeoutMinutes
     try { $info = Get-DebloaterGuestInfo -Session $s0 } finally { Remove-PSSession $s0 }
-    Write-Host ("VM: Windows build {0} ({1} {2}), usuário {3}, modelo '{4}'." -f $info.Build, $info.Edition, $info.DisplayVersion, $info.User, $info.Model)
-    if (-not $info.IsElevated) { throw 'A sessão PowerShell Direct não está elevada (veja tools\vm\README.md, "UAC e PowerShell Direct").' }
-    if ($info.Model -ne 'Virtual Machine') { throw "O convidado não parece uma VM Hyper-V (modelo '$($info.Model)'); nada foi feito." }
+    Write-Host ("VM: Windows build {0} ({1} {2}), user {3}, model '{4}'." -f $info.Build, $info.Edition, $info.DisplayVersion, $info.User, $info.Model)
+    if (-not $info.IsElevated) { throw 'The PowerShell Direct session is not elevated (see .claude\docs\tools\vm\README.md, "UAC and PowerShell Direct").' }
+    if ($info.Model -ne 'Virtual Machine') { throw "The guest does not look like a Hyper-V VM (model '$($info.Model)'); nothing was done." }
 
-    Write-Host "Criando o checkpoint '$checkpointName'..."
+    Write-Host "Creating the checkpoint '$checkpointName'..."
     Checkpoint-VM -Name $Name -SnapshotName $checkpointName
     try {
         $session = Wait-DebloaterVmSession -VMName $Name -Credential $cred -TimeoutMinutes $BootTimeoutMinutes
@@ -933,18 +945,18 @@ try {
 
             $casesJson = ConvertTo-Json -InputObject @($Matrix) -Depth 10 -Compress
             $crossJson = ConvertTo-Json -InputObject $Cross -Depth 10 -Compress
-            Write-Host "Rodando a matriz ($($Matrix.Count) caso(s)) na VM..."
-            # Erros não fatais dentro da VM são registrados (com a posição) em vez de abortar o teste.
+            Write-Host "Running the matrix ($($Matrix.Count) case(s)) in the VM..."
+            # Non-fatal errors inside the VM are logged (with their position) instead of aborting the test.
             Invoke-Command -Session $session -ScriptBlock $guestScript -ArgumentList $guestDir, $casesJson, $crossJson, (-not $NoCross) -ErrorAction Continue 2>&1 | ForEach-Object {
                 if ($_ -is [System.Management.Automation.ErrorRecord]) {
-                    $line = "ERRO na VM: $($_.Exception.Message) $($_.InvocationInfo.PositionMessage)"
+                    $line = "ERROR in the VM: $($_.Exception.Message) $($_.InvocationInfo.PositionMessage)"
                     Write-Host $line -ForegroundColor Yellow
                 }
                 else { $line = "$_"; Write-Host $line }
                 $log.Add($line)
             }
 
-            $guestZip = "$guestDir\resultado.zip"
+            $guestZip = "$guestDir\result.zip"
             Invoke-Command -Session $session -ScriptBlock {
                 param($d, $z)
                 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -961,14 +973,14 @@ try {
     }
     finally {
         if ($KeepChanges) {
-            Write-Host "Alterações mantidas (-KeepChanges). Para voltar: Restore-VMCheckpoint -VMName '$Name' -Name '$checkpointName' -Confirm:`$false"
+            Write-Host "Changes kept (-KeepChanges). To roll back: Restore-VMCheckpoint -VMName '$Name' -Name '$checkpointName' -Confirm:`$false"
         }
         else {
-            Write-Host "Restaurando o checkpoint '$checkpointName'..."
+            Write-Host "Restoring the checkpoint '$checkpointName'..."
             Stop-VM -Name $Name -TurnOff -Force -ErrorAction SilentlyContinue
             Restore-VMCheckpoint -VMName $Name -Name $checkpointName -Confirm:$false
             Remove-VMCheckpoint -VMName $Name -Name $checkpointName -Confirm:$false
-            Write-Host "VM restaurada (estado: $((Get-VM -Name $Name).State))."
+            Write-Host "VM restored (state: $((Get-VM -Name $Name).State))."
         }
     }
 }
@@ -976,50 +988,50 @@ finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-# ---------- relatório ----------
-$jsonPath = Join-Path $localBase 'relatorio.json'
-if (-not (Test-Path -LiteralPath $jsonPath)) { Write-Warning "Sem relatório. Saída: $($log -join "`n")"; exit 2 }
+# ---------- report ----------
+$jsonPath = Join-Path $localBase 'report.json'
+if (-not (Test-Path -LiteralPath $jsonPath)) { Write-Warning "No report. Output: $($log -join "`n")"; exit 2 }
 $report = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
 Copy-Item -LiteralPath $jsonPath -Destination "$localBase.json" -Force
 
 $md = New-Object System.Collections.Generic.List[string]
-$md.Add("# Teste de políticas ADMX na VM ($stamp)")
+$md.Add("# ADMX policy test in the VM ($stamp)")
 $md.Add('')
-$md.Add("- Windows: $($report.Windows) ($($report.Edition)), $($report.AdmxPolicies) políticas no PolicyDefinitions da VM")
+$md.Add("- Windows: $($report.Windows) ($($report.Edition)), $($report.AdmxPolicies) policies in the VM's PolicyDefinitions")
 $md.Add("- CLI: $($report.Cli)")
 $results = @($report.Results)
-$md.Add("- Casos: $($results.Count); Pass: $(@($results | Where-Object Verdict -eq 'Pass').Count); Fail: $(@($results | Where-Object Verdict -ne 'Pass').Count)")
+$md.Add("- Cases: $($results.Count); Pass: $(@($results | Where-Object Verdict -eq 'Pass').Count); Fail: $(@($results | Where-Object Verdict -ne 'Pass').Count)")
 $md.Add('')
-$md.Add('| # | Política | Cobre | Passos | Veredito |')
+$md.Add('| # | Policy | Covers | Steps | Verdict |')
 $md.Add('|---|---|---|---|---|')
 foreach ($r in $results) { $md.Add("| $($r.Case) | ``$($r.Label)`` | $($r.Covers) | $(@($r.Steps).Count) | $($r.Verdict) |") }
 foreach ($r in $results | Where-Object Verdict -ne 'Pass') {
-    $md.Add(''); $md.Add("## Falhas: $($r.Label)")
+    $md.Add(''); $md.Add("## Failures: $($r.Label)")
     foreach ($f in $r.Failures) { $md.Add("- $f") }
 }
 if ($report.Cross) {
-    $md.Add(''); $md.Add('## Conferência cruzada com o Windows'); $md.Add('')
-    $md.Add('| CSP (ponte WMI do MDM, como SYSTEM) | Esperado se refletir GP | Antes | Depois | Depois do gpupdate |')
+    $md.Add(''); $md.Add('## Cross-check with Windows'); $md.Add('')
+    $md.Add('| CSP (MDM WMI bridge, as SYSTEM) | Expected if GP is reflected | Before | After | After gpupdate |')
     $md.Add('|---|---|---|---|---|')
     foreach ($m in $report.Cross.Mdm) { $md.Add("| $($m.Csp) | $($m.Expected) | $($m.Before) | $($m.After) | $($m.AfterGpupdate) |") }
-    $md.Add(''); $md.Add('| PolicyManager | Antes | Depois |'); $md.Add('|---|---|---|')
+    $md.Add(''); $md.Add('| PolicyManager | Before | After |'); $md.Add('|---|---|---|')
     foreach ($m in $report.Cross.PolicyManager) { $md.Add("| $($m.Path) | $($m.Before) | $($m.After) |") }
     $md.Add('')
-    $md.Add("- Windows Update (Microsoft.Update.AutoUpdate.Settings): antes $($report.Cross.WindowsUpdate.Before); depois $($report.Cross.WindowsUpdate.After); depois do gpupdate $($report.Cross.WindowsUpdate.AfterGpupdate)")
-    foreach ($g in $report.Cross.AfterGpupdate) { $md.Add("- Depois do gpupdate /force: $(if ($g.Ok) { 'mantido' } else { 'ALTERADO' }) $($g.Text)") }
-    $md.Add("- Registro idêntico ao inicial depois de reverter: $($report.Cross.RegistryRestored)")
+    $md.Add("- Windows Update (Microsoft.Update.AutoUpdate.Settings): before $($report.Cross.WindowsUpdate.Before); after $($report.Cross.WindowsUpdate.After); after gpupdate $($report.Cross.WindowsUpdate.AfterGpupdate)")
+    foreach ($g in $report.Cross.AfterGpupdate) { $md.Add("- After gpupdate /force: $(if ($g.Ok) { 'kept' } else { 'CHANGED' }) $($g.Text)") }
+    $md.Add("- Registry identical to the initial one after reverting: $($report.Cross.RegistryRestored)")
 }
-foreach ($p in $report.RegistryPol) { $md.Add("- Registry.pol $($p.File): $(if ($p.Unchanged) { 'não alterado' } else { 'ALTERADO' }) ($(if ($p.Before) { $p.Before.Substring(0, 12) } else { 'inexistente' }))") }
+foreach ($p in $report.RegistryPol) { $md.Add("- Registry.pol $($p.File): $(if ($p.Unchanged) { 'unchanged' } else { 'CHANGED' }) ($(if ($p.Before) { $p.Before.Substring(0, 12) } else { 'nonexistent' }))") }
 [System.IO.File]::WriteAllLines("$localBase.md", $md, (New-Object System.Text.UTF8Encoding($true)))
 
 Write-Host ''
-Write-Host "Relatório: $localBase.md / .json (saídas e exports em $localBase)"
+Write-Host "Report: $localBase.md / .json (outputs and exports in $localBase)"
 $fails = @($results | Where-Object Verdict -ne 'Pass')
 $crossBad = $report.Cross -and (-not $report.Cross.RegistryRestored -or @($report.Cross.AfterGpupdate | Where-Object { -not $_.Ok }).Count -gt 0)
 $polBad = @($report.RegistryPol | Where-Object { -not $_.Unchanged }).Count -gt 0
 if ($fails.Count -gt 0 -or $crossBad -or $polBad) {
-    Write-Host "$($fails.Count) caso(s) com falha$(if ($crossBad) { '; conferência cruzada com problema' })$(if ($polBad) { '; Registry.pol alterado' })." -ForegroundColor Yellow
+    Write-Host "$($fails.Count) case(s) failed$(if ($crossBad) { '; cross-check has problems' })$(if ($polBad) { '; Registry.pol changed' })." -ForegroundColor Yellow
     exit 1
 }
-Write-Host "Todos os $($results.Count) casos passaram." -ForegroundColor Green
+Write-Host "All $($results.Count) cases passed." -ForegroundColor Green
 exit 0

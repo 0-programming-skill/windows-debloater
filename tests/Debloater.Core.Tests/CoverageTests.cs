@@ -3,7 +3,7 @@ using Debloater.Coverage;
 
 namespace Debloater.Core.Tests;
 
-/// <summary>Extratores e casamento da comparação de cobertura (tools/coverage).</summary>
+/// <summary>Extractors and matching of the coverage comparison (tools/coverage).</summary>
 public class CoverageTests
 {
     [Theory]
@@ -37,7 +37,7 @@ public class CoverageTests
         const string reg = "Windows Registry Editor Version 5.00\r\n\r\n[HKEY_CURRENT_USER\\Software\\A]\r\n\"Enabled\"=dword:00000000\r\n@=\"x\"\r\n\r\n[-HKEY_LOCAL_MACHINE\\SOFTWARE\\B]\r\n";
         var targets = Extractors.FromRegFile(reg).ToList();
         Assert.Contains(targets, t => t.Kind == TargetKind.Registry && t.Display == @"HKCU\Software\A\Enabled");
-        Assert.Contains(targets, t => t.Kind == TargetKind.Registry && t.Display == @"HKCU\Software\A\(padrão)");
+        Assert.Contains(targets, t => t.Kind == TargetKind.Registry && t.Display == @"HKCU\Software\A\(default)");
         Assert.Contains(targets, t => t.Kind == TargetKind.RegistryKey && t.Display == @"HKLM\SOFTWARE\B");
     }
 

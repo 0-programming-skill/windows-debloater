@@ -5,7 +5,7 @@ using Microsoft.Win32;
 namespace Debloater.Core.Tests;
 
 /// <summary>
-/// Regras do esquema ADMX que geram escrita no registro (fixture Writer.admx), contra um registro em memória.
+/// ADMX schema rules that produce registry writes (Writer.admx fixture), against an in-memory registry.
 /// </summary>
 public class PolicyWriterTests
 {
@@ -27,14 +27,14 @@ public class PolicyWriterTests
         var plan = PolicyWriter.Plan(p, s, r);
         Assert.True(plan.IsValid, string.Join(" ", plan.Errors));
         r.Execute(plan);
-        // Idempotente: depois de executar, o mesmo pedido não tem mais nada a fazer.
-        Assert.False(PolicyWriter.Plan(p, s, r).HasEffect, "o plano deveria estar vazio depois de executado");
+        // Idempotent: after running, the same request has nothing left to do.
+        Assert.False(PolicyWriter.Plan(p, s, r).HasEffect, "the plan should be empty after running");
         return plan;
     }
 
     private static List<string> Errors(AdmxPolicy p, PolicySetting s) => PolicyWriter.Plan(p, s, new MemoryPolicyRegistry()).Errors;
 
-    // ---------------- parser: apresentação ----------------
+    // ---------------- parser: presentation ----------------
 
     [Fact]
     public void Parser_ReadsPresentationDefaultsOrderAndLimits()
@@ -67,7 +67,7 @@ public class PolicyWriterTests
         var r = new MemoryPolicyRegistry();
         const string k = @"Software\Policies\Test\W\Implicit";
 
-        // Desabilitar algo que não existe não tem efeito (sem disabledValue o valor é apagado).
+        // Disabling something that does not exist has no effect (without disabledValue the value is deleted).
         Assert.False(PolicyWriter.Plan(p, S("Implicit", PolicyTargetState.Disabled), r).HasEffect);
 
         Run(r, p, S("Implicit", PolicyTargetState.Enabled));
@@ -113,7 +113,7 @@ public class PolicyWriterTests
     {
         var s = S("Mixed", PolicyTargetState.Enabled);
         s.Scope = PolicyScope.Machine;
-        Assert.Contains(Errors(P("Mixed"), s), e => e.Contains("classe User"));
+        Assert.Contains(Errors(P("Mixed"), s), e => e.Contains("class User"));
 
         var r = new MemoryPolicyRegistry();
         var both = S("AllElements", PolicyTargetState.Disabled);
@@ -123,7 +123,7 @@ public class PolicyWriterTests
         Assert.Empty(r.Snapshot(M));
     }
 
-    // ---------------- elementos ----------------
+    // ---------------- elements ----------------
 
     [Fact]
     public void AllElements_EnabledWithPresentationDefaults()
@@ -151,7 +151,7 @@ public class PolicyWriterTests
         var r = new MemoryPolicyRegistry();
         var s = S("AllElements", PolicyTargetState.Enabled)
             .Set("Count", "50").Set("AsText", "42").Set("Big", "18446744073709551615")
-            .Set("Check", "false").Set("CheckLists", "sim")
+            .Set("Check", "false").Set("CheckLists", "yes")
             .Set("Choice", "Low").Set("Named", "HIGH")
             .Set("Server", "0123456789").Set("Path", @"%TEMP%\x")
             .Set("Lines", "a", "", "b\nc")
@@ -160,7 +160,7 @@ public class PolicyWriterTests
             .Set("Prefixed", "p1")
             .Set("Pairs", "n1=v1", "n2 = v=2");
         var plan = Run(r, P("AllElements"), s);
-        Assert.Contains(plan.Notes, n => n.Contains("repetidos"));
+        Assert.Contains(plan.Notes, n => n.Contains("duplicate items"));
 
         Assert.Equal("50 (REG_DWORD)", V(r, All, "Count"));
         Assert.Equal("\"42\" (REG_SZ)", V(r, All, "AsText"));
@@ -190,10 +190,10 @@ public class PolicyWriterTests
         var p = P("AllElements");
         Run(r, p, S("AllElements", PolicyTargetState.Enabled).Set("CheckLists", "true"));
         Assert.Equal("1 (REG_DWORD)", V(r, All + @"\Bool", "T"));
-        // Desmarcado: falseList apaga o mesmo valor.
+        // Unchecked: falseList deletes the same value.
         Run(r, p, S("AllElements", PolicyTargetState.Enabled).Set("CheckLists", "false"));
         Assert.Null(V(r, All + @"\Bool", "T"));
-        Assert.Contains(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Check", "talvez")), e => e.Contains("booleano"));
+        Assert.Contains(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Check", "maybe")), e => e.Contains("boolean"));
     }
 
     [Theory]
@@ -235,17 +235,17 @@ public class PolicyWriterTests
     }
 
     [Theory]
-    [InlineData("Count", "0", "fora do intervalo")]
-    [InlineData("Count", "51", "fora do intervalo")]
-    [InlineData("Count", "-1", "não é um número")]
-    [InlineData("Count", "abc", "não é um número")]
-    [InlineData("Count", "", "obrigatório")]
-    [InlineData("Server", "01234567890", "máximo é 10")]
-    [InlineData("Server", "", "obrigatório")]
-    [InlineData("Choice", "Medium", "não existe")]
-    [InlineData("Choice", "#9", "não existe")]
-    [InlineData("Pairs", "semigual", "nome=valor")]
-    [InlineData("Nope", "1", "não existe nesta política")]
+    [InlineData("Count", "0", "outside the allowed range")]
+    [InlineData("Count", "51", "outside the allowed range")]
+    [InlineData("Count", "-1", "is not a non-negative integer")]
+    [InlineData("Count", "abc", "is not a non-negative integer")]
+    [InlineData("Count", "", "required")]
+    [InlineData("Server", "01234567890", "maximum is 10")]
+    [InlineData("Server", "", "required")]
+    [InlineData("Choice", "Medium", "does not exist")]
+    [InlineData("Choice", "#9", "does not exist")]
+    [InlineData("Pairs", "noequals", "name=value")]
+    [InlineData("Nope", "1", "does not exist in this policy")]
     public void Validation_Errors(string element, string value, string fragment)
     {
         var errors = Errors(P("AllElements"), S("AllElements", PolicyTargetState.Enabled).Set(element, value));
@@ -256,12 +256,12 @@ public class PolicyWriterTests
     public void Validation_MultiTextLimits_DecimalRangeEdges_AndNoWriteWhenInvalid()
     {
         var p = P("AllElements");
-        Assert.Contains(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Lines", "1", "2", "3", "4")), e => e.Contains("máximo é 3"));
-        Assert.Contains(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Lines", "123456789")), e => e.Contains("máximo é 8"));
+        Assert.Contains(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Lines", "1", "2", "3", "4")), e => e.Contains("maximum is 3"));
+        Assert.Contains(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Lines", "123456789")), e => e.Contains("maximum is 8"));
         Assert.Empty(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Count", "1")));
         Assert.Empty(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Count", " 50 ")));
-        Assert.Contains(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Pairs", "a=1", "A=2")), e => e.Contains("repetido"));
-        // Decimal sem limites explícitos usa 0..9999 (padrão do esquema).
+        Assert.Contains(Errors(p, S("AllElements", PolicyTargetState.Enabled).Set("Pairs", "a=1", "A=2")), e => e.Contains("duplicate name"));
+        // A decimal without explicit limits uses 0..9999 (schema default).
         Assert.Contains(Errors(P("ElementsOnly"), S("ElementsOnly", PolicyTargetState.Enabled).Set("Level", "4")), e => e.Contains("0..3"));
 
         var invalid = PolicyWriter.Plan(p, S("AllElements", PolicyTargetState.Enabled).Set("Count", "999"), new MemoryPolicyRegistry());
@@ -269,7 +269,7 @@ public class PolicyWriterTests
         Assert.Empty(invalid.Changes);
     }
 
-    // ---------------- listas ----------------
+    // ---------------- lists ----------------
 
     [Fact]
     public void List_NonAdditive_ReplacesAllValuesOfTheKey()
@@ -277,7 +277,7 @@ public class PolicyWriterTests
         var r = new MemoryPolicyRegistry();
         r.Write(M, All + @"\Plain", "old", PolicyValues.Sz("old"));
         r.Write(M, All + @"\Numbered", "7", PolicyValues.Sz("seven"));
-        r.Write(M, All + @"\Numbered", "Foreign", PolicyValues.Sz("kept"));   // não é numérico: não pertence à lista (prefixo "")
+        r.Write(M, All + @"\Numbered", "Foreign", PolicyValues.Sz("kept"));   // not numeric: does not belong to the list (prefix "")
         Run(r, P("AllElements"), S("AllElements", PolicyTargetState.Enabled).Set("Plain", "new").Set("Numbered", "one"));
         Assert.Equal(["new"], r.ValueNames(M, All + @"\Plain"));
         Assert.Null(V(r, All + @"\Numbered", "7"));
@@ -297,7 +297,7 @@ public class PolicyWriterTests
 
         Assert.Equal("\"a\" (REG_SZ)", V(r, All + @"\Prefixed", "Item1"));
         Assert.Equal("\"c\" (REG_SZ)", V(r, All + @"\Prefixed", "Item3"));
-        Assert.Equal("\"d\" (REG_SZ)", V(r, All + @"\Prefixed", "Item4"));   // "c" já existia: não repete
+        Assert.Equal("\"d\" (REG_SZ)", V(r, All + @"\Prefixed", "Item4"));   // "c" already existed: not repeated
         Assert.Equal("\"foreign\" (REG_SZ)", V(r, All + @"\Prefixed", "Other"));
         Assert.Equal("\"1\" (REG_SZ)", V(r, All + @"\Pairs", "keep"));
         Assert.Equal("\"2\" (REG_SZ)", V(r, All + @"\Pairs", "new"));
@@ -307,14 +307,14 @@ public class PolicyWriterTests
         Assert.Equal(["keep=1", "new=2"], current.Values["Pairs"].Order(StringComparer.Ordinal));
     }
 
-    // ---------------- desabilitada / não configurada ----------------
+    // ---------------- disabled / not configured ----------------
 
     private static MemoryPolicyRegistry Configured(out AdmxPolicy p)
     {
         p = P("AllElements");
         var r = new MemoryPolicyRegistry();
-        r.Write(M, All, "Unrelated", PolicyValues.Dword(5));                 // valor de outro dono, na mesma chave
-        r.Write(M, All + @"\Prefixed", "NotMine", PolicyValues.Sz("x"));     // não casa com o prefixo "Item"
+        r.Write(M, All, "Unrelated", PolicyValues.Dword(5));                 // value of another owner, on the same key
+        r.Write(M, All + @"\Prefixed", "NotMine", PolicyValues.Sz("x"));     // does not match the "Item" prefix
         Run(r, p, S("AllElements", PolicyTargetState.Enabled)
             .Set("Choice", "2").Set("CheckLists", "true").Set("AsText", "1").Set("Named", "low").Set("Lines", "l")
             .Set("Plain", "a").Set("Numbered", "b").Set("Prefixed", "c").Set("Pairs", "d=e"));
@@ -336,7 +336,7 @@ public class PolicyWriterTests
         };
         Assert.Equal(expected, r.Snapshot());
         Assert.Equal(AdmxPolicyState.Disabled, PolicyWriter.ReadCurrent(p, M, r).State);
-        // Chaves das listas continuam existindo (gpedit usa **delvals., que não apaga a chave).
+        // List keys still exist (gpedit uses **delvals., which does not delete the key).
         Assert.True(r.KeyExists(M, All + @"\Plain"));
     }
 
@@ -354,7 +354,7 @@ public class PolicyWriterTests
         Assert.Equal(expected, r.Snapshot());
         Assert.Equal(AdmxPolicyState.NotConfigured, PolicyWriter.ReadCurrent(p, M, r).State);
 
-        // Chaves de lista vazias são apagadas; a que tem valor de outro dono fica.
+        // Empty list keys are deleted; the one with another owner's value stays.
         Assert.Equal([All + @"\Plain", All + @"\Numbered", All + @"\Pairs"], plan.KeysToDelete);
         Assert.False(r.KeyExists(M, All + @"\Plain"));
         Assert.True(r.KeyExists(M, All + @"\Prefixed"));
@@ -368,7 +368,7 @@ public class PolicyWriterTests
         var p = P("ElementsOnly");
         Run(r, p, S("ElementsOnly", PolicyTargetState.Enabled).Set("Level", "2").Set("Mode", "1"));
         var plan = Run(r, p, S("ElementsOnly", PolicyTargetState.Disabled));
-        Assert.Contains(plan.Notes, n => n.Contains("não grava nada"));
+        Assert.Contains(plan.Notes, n => n.Contains("writes nothing"));
         Assert.Empty(r.Snapshot());
     }
 
@@ -377,10 +377,10 @@ public class PolicyWriterTests
     {
         var plan = PolicyWriter.Plan(P("Implicit"), S("Implicit", PolicyTargetState.NotConfigured).Set("x", "1"), new MemoryPolicyRegistry());
         Assert.True(plan.IsValid);
-        Assert.Contains(plan.Notes, n => n.Contains("ignorados"));
+        Assert.Contains(plan.Notes, n => n.Contains("ignored"));
     }
 
-    // ---------------- leitura / prévia ----------------
+    // ---------------- reading / preview ----------------
 
     [Fact]
     public void ReadCurrent_RoundTripsEveryElement()
@@ -395,10 +395,10 @@ public class PolicyWriterTests
 
         var (state, read) = PolicyWriter.ReadCurrent(p, M, r);
         Assert.Equal(AdmxPolicyState.Enabled, state);
-        Assert.Equal(PolicyScope.Machine, read.Scope);   // classe Both: o escopo é registrado
+        Assert.Equal(PolicyScope.Machine, read.Scope);   // class Both: the scope is recorded
         foreach (var (id, values) in s.Values)
             Assert.True(values.SequenceEqual(read.Values[id]), $"{id}: {string.Join("|", values)} != {string.Join("|", read.Values[id])}");
-        // Reaplicar o que foi lido não muda nada.
+        // Re-applying what was read changes nothing.
         Assert.False(PolicyWriter.Plan(p, read, r).HasEffect);
     }
 
@@ -408,9 +408,9 @@ public class PolicyWriterTests
         var r = new MemoryPolicyRegistry();
         r.Write(M, @"Software\Policies\Test\W\Implicit", "Flag", PolicyValues.Dword(0));
         var lines = PolicyWriter.Plan(P("Implicit"), S("Implicit", PolicyTargetState.Enabled), r).Describe().ToList();
-        Assert.Equal([@"+ HKLM\Software\Policies\Test\W\Implicit\Flag = 1 (REG_DWORD) (atual: 0 (REG_DWORD))"], lines);
+        Assert.Equal([@"+ HKLM\Software\Policies\Test\W\Implicit\Flag = 1 (REG_DWORD) (current: 0 (REG_DWORD))"], lines);
         var del = PolicyWriter.Plan(P("Implicit"), S("Implicit", PolicyTargetState.NotConfigured), r).Describe().Single();
-        Assert.StartsWith(@"- HKLM\Software\Policies\Test\W\Implicit\Flag (apagar", del);
+        Assert.StartsWith(@"- HKLM\Software\Policies\Test\W\Implicit\Flag (delete", del);
     }
 
     [Fact]
@@ -429,11 +429,11 @@ public class PolicyWriterTests
         }
     }
 
-    // ---------------- lista na mesma chave que valores de outra política ----------------
+    // ---------------- list on the same key as another policy's values ----------------
 
     /// <summary>
-    /// Achado na VM (ErrorReporting.admx): WerConsentCustomize (list explicitValue na chave ...\Consent)
-    /// apagava, em Não configurada, o DefaultConsent de WerDefaultConsent e o mostrava como item.
+    /// Found in the VM (ErrorReporting.admx): WerConsentCustomize (explicitValue list on the ...\Consent key)
+    /// deleted, on Not configured, WerDefaultConsent's DefaultConsent and showed it as an item.
     /// </summary>
     [Fact]
     public void ExplicitList_DoesNotOwnStaticValuesOfOtherPolicies()
@@ -459,6 +459,7 @@ public class PolicyWriterTests
         Assert.Equal(AdmxPolicyState.Enabled, PolicyWriter.ReadCurrent(P("SharedDefault"), M, r).State);
     }
 
+    // The Portuguese inputs check the aliases kept for compatibility (CLI arguments, saved settings).
     [Theory]
     [InlineData("enabled", PolicyTargetState.Enabled)]
     [InlineData("Habilitada", PolicyTargetState.Enabled)]

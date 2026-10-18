@@ -4,14 +4,14 @@ using Debloater.Core.Model;
 namespace Debloater.Core.Inventory;
 
 /// <summary>
-/// Cruza itens do inventário com o catálogo: para cada item, quais tweaks mexem nele.
-/// Regras por tipo de ação:
-///   service          → services/drivers pelo nome
-///   scheduledTask    → tasks pelo caminho completo
-///   appx             → appx pelo nome (aceita "*" no fim)
-///   optionalFeature  → features pelo nome
-///   registry         → autoruns (valor numa chave Run/RunOnce)
-///   powershell       → qualquer item cujo nome (≥ 5 caracteres) apareça no script
+/// Cross-references inventory items with the catalog: for each item, which tweaks touch it.
+/// Rules per action type:
+///   service          → services/drivers by name
+///   scheduledTask    → tasks by full path
+///   appx             → appx by name (accepts a trailing "*")
+///   optionalFeature  → features by name
+///   registry         → autoruns (value in a Run/RunOnce key)
+///   powershell       → any item whose name (≥ 5 characters) appears in the script
 /// </summary>
 public static class CatalogCrossReference
 {
@@ -58,7 +58,7 @@ public static class CatalogCrossReference
         }
     }
 
-    /// <summary>Nome a procurar em scripts: capacidades sem a versão ("Browser.InternetExplorer~~~~0.0.11.0" → "Browser.InternetExplorer").</summary>
+    /// <summary>Name to look for in scripts: capabilities without the version ("Browser.InternetExplorer~~~~0.0.11.0" → "Browser.InternetExplorer").</summary>
     private static string SearchableName(InventoryItem item)
     {
         var id = item.Id;
@@ -71,7 +71,7 @@ public static class CatalogCrossReference
         return id;
     }
 
-    /// <summary>HKEY_LOCAL_MACHINE → HKLM, SOFTWARE em maiúsculas, sem barras duplas.</summary>
+    /// <summary>HKEY_LOCAL_MACHINE → HKLM, upper case, no trailing backslash.</summary>
     public static string NormalizeRegistryPath(string path)
     {
         var p = path.Trim().TrimEnd('\\');

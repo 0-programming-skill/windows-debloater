@@ -3,7 +3,7 @@ using Debloater.Core.Model;
 
 namespace Debloater.Core.Actions;
 
-/// <summary>Resultado da detecção de uma ação.</summary>
+/// <summary>Result of detecting an action.</summary>
 public sealed record Detection(ActionState State, string Detail)
 {
     public static Detection Desired(string detail) => new(ActionState.Desired, detail);
@@ -12,28 +12,28 @@ public sealed record Detection(ActionState State, string Detail)
     public static Detection Error(string detail) => new(ActionState.Error, detail);
 }
 
-/// <summary>Implementa um tipo de ação do catálogo (registry, service, ...).</summary>
+/// <summary>Implements one catalog action type (registry, service, ...).</summary>
 public interface IActionHandler
 {
-    /// <summary>Valor do campo "type" no YAML.</summary>
+    /// <summary>Value of the "type" field in the YAML.</summary>
     string Type { get; }
 
-    /// <summary>Se o handler consegue restaurar o estado original a partir de um backup.</summary>
+    /// <summary>Whether the handler can restore the original state from a backup.</summary>
     bool CanRestore { get; }
 
-    /// <summary>Valida os campos da ação; adiciona mensagens em <paramref name="errors"/>.</summary>
+    /// <summary>Validates the action's fields; adds messages to <paramref name="errors"/>.</summary>
     void Validate(ActionSpec spec, IList<string> errors);
 
-    /// <summary>A ação já está no estado desejado?</summary>
+    /// <summary>Is the action already in the desired state?</summary>
     Task<Detection> DetectAsync(ActionSpec spec, ScanContext ctx, CancellationToken ct = default);
 
-    /// <summary>Captura o valor atual (original), ou null se não há o que guardar.</summary>
+    /// <summary>Captures the current (original) value, or null if there is nothing to keep.</summary>
     Task<ActionBackup?> CaptureBackupAsync(ActionSpec spec, ScanContext ctx, CancellationToken ct = default);
 
-    /// <summary>Leva o sistema ao estado desejado.</summary>
+    /// <summary>Brings the system to the desired state.</summary>
     Task ApplyAsync(ActionSpec spec, ScanContext ctx, CancellationToken ct = default);
 
-    /// <summary>Restaura o estado original. <paramref name="backup"/> pode ser null (ex.: powershell usa o script revert).</summary>
+    /// <summary>Restores the original state. <paramref name="backup"/> may be null (e.g. powershell uses the revert script).</summary>
     Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default);
 }
 
@@ -54,18 +54,18 @@ public static class ActionHandlers
     public static bool TryGet(string type, out IActionHandler handler) => s_handlers.TryGetValue(type, out handler!);
 
     public static IActionHandler Get(string type) =>
-        s_handlers.TryGetValue(type, out var h) ? h : throw new InvalidOperationException($"Tipo de ação desconhecido: '{type}'.");
+        s_handlers.TryGetValue(type, out var h) ? h : throw new InvalidOperationException($"Unknown action type: '{type}'.");
 
     internal static void RequireField(string? value, string field, string type, IList<string> errors)
     {
-        if (string.IsNullOrWhiteSpace(value)) errors.Add($"ação '{type}' exige o campo '{field}'.");
+        if (string.IsNullOrWhiteSpace(value)) errors.Add($"action '{type}' requires the field '{field}'.");
     }
 
     internal static void RequireOneOf(string? value, string field, string type, IList<string> errors, params string[] allowed)
     {
         if (string.IsNullOrWhiteSpace(value))
-            errors.Add($"ação '{type}' exige o campo '{field}' ({string.Join(" | ", allowed)}).");
+            errors.Add($"action '{type}' requires the field '{field}' ({string.Join(" | ", allowed)}).");
         else if (!allowed.Contains(value, StringComparer.OrdinalIgnoreCase))
-            errors.Add($"ação '{type}': '{field}' inválido '{value}' (esperado: {string.Join(" | ", allowed)}).");
+            errors.Add($"action '{type}': invalid '{field}' '{value}' (expected: {string.Join(" | ", allowed)}).");
     }
 }

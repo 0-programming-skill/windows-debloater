@@ -5,7 +5,7 @@ namespace Debloater.Core.Platform;
 
 public sealed record ProcessResult(int ExitCode, string StdOut, string StdErr);
 
-/// <summary>Executa processos externos (dism, powershell) de forma assíncrona, capturando a saída.</summary>
+/// <summary>Runs external processes (dism, powershell) asynchronously, capturing their output.</summary>
 public static class ProcessRunner
 {
     public static async Task<ProcessResult> RunAsync(string fileName, string arguments, CancellationToken ct = default)
@@ -35,10 +35,10 @@ public static class ProcessRunner
         return new ProcessResult(process.ExitCode, await stdout.ConfigureAwait(false), await stderr.ConfigureAwait(false));
     }
 
-    /// <summary>Roda um script PowerShell (Windows PowerShell 5.1) via -EncodedCommand.</summary>
+    /// <summary>Runs a PowerShell script (Windows PowerShell 5.1) via -EncodedCommand.</summary>
     public static Task<ProcessResult> RunPowerShellAsync(string script, CancellationToken ct = default)
     {
-        // Força saída UTF-8 para não corromper acentos.
+        // Force UTF-8 output so accented characters are not corrupted.
         var full = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n$ProgressPreference = 'SilentlyContinue'\n" + script;
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(full));
         var exe = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe");

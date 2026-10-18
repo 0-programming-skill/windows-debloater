@@ -5,19 +5,19 @@ using Debloater.Core.Model;
 namespace Debloater.Core.SelfTest;
 
 /// <summary>
-/// Executa o ciclo completo de cada tweak: estado antes, aplicar, estado depois (espera Applied),
-/// re-aplicar (o backup original deve ficar intacto), reverter, estado depois de reverter e comparação
-/// ação a ação com o estado de antes. Feito para rodar numa VM descartável: ALTERA o sistema.
-/// Os tweaks são testados um por vez, em sequência, para que um não interfira na leitura do outro.
+/// Runs the full cycle of each tweak: state before, apply, state after (expects Applied),
+/// re-apply (the original backup must stay intact), revert, state after revert and an
+/// action-by-action comparison with the state before. Meant to run in a disposable VM: it CHANGES the system.
+/// Tweaks are tested one at a time, in sequence, so that one does not interfere with reading another.
 /// </summary>
 public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options = null)
 {
     private readonly SelfTestOptions _options = options ?? new SelfTestOptions();
 
-    /// <summary>Chamado ao terminar cada tweak (para mostrar progresso e gravar o relatório parcial).</summary>
+    /// <summary>Raised when each tweak finishes (to show progress and write the partial report).</summary>
     public event Action<TweakSelfTestResult>? TweakCompleted;
 
-    /// <summary>Chamado ao começar cada tweak.</summary>
+    /// <summary>Raised when each tweak starts.</summary>
     public event Action<Tweak>? TweakStarting;
 
     public async Task<List<TweakSelfTestResult>> RunAsync(IEnumerable<Tweak> tweaks, CancellationToken ct = default)
@@ -55,8 +55,8 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Falha inesperada fora das etapas (ex.: ler estado): registra e segue para o próximo tweak.
-            r.Notes.Add($"exceção inesperada: {Describe(ex)}");
+            // Unexpected failure outside the steps (e.g. reading state): record it and move on to the next tweak.
+            r.Notes.Add($"unexpected exception: {Describe(ex)}");
             if (r.Verdict != SelfTestVerdict.Skipped && r.Apply is null)
                 r.Apply = new StepResult { Success = false, Exception = Describe(ex) };
         }
@@ -71,12 +71,12 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
         SelfTestEvaluator.CompareActions(r);
         (r.Verdict, r.Reason) = SelfTestEvaluator.Evaluate(r, applyOnly);
         if (r.Verdict == SelfTestVerdict.NotRestored && r.RebootPending && r.ActionTypes.Contains(ActionSpec.OptionalFeature))
-            r.Notes.Add("há reinicialização pendente: o estado do recurso opcional pode só se acertar depois de reiniciar.");
+            r.Notes.Add("a reboot is pending: the optional feature state may only settle after a restart.");
     }
 
     /// <summary>
-    /// Fase verify do teste de persistência: relê o estado de cada tweak aplicado com sucesso na fase
-    /// apply-only e registra, com o rótulo, se o Windows o manteve (ver <see cref="SelfTestEvaluator.RecordPersistence"/>).
+    /// Verify phase of the persistence test: re-reads the state of each tweak successfully applied in the
+    /// apply-only phase and records, with the label, whether Windows kept it (see <see cref="SelfTestEvaluator.RecordPersistence"/>).
     /// </summary>
     public async Task VerifyAsync(IReadOnlyList<TweakSelfTestResult> results, IReadOnlyDictionary<string, Tweak> tweaks, string label,
         Action<TweakSelfTestResult, PersistenceCheck>? onChecked = null, CancellationToken ct = default)
@@ -87,7 +87,7 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
             if (r.Verdict != SelfTestVerdict.Pass || r.StateAfterApply != TweakState.Applied) continue;
             if (!tweaks.TryGetValue(r.Id, out var tweak))
             {
-                r.Notes.Add($"{label}: tweak não existe mais no catálogo; não conferido.");
+                r.Notes.Add($"{label}: tweak no longer exists in the catalog; not checked.");
                 continue;
             }
             var status = await host.GetStatusAsync(tweak, ct).ConfigureAwait(false);
@@ -97,8 +97,8 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
     }
 
     /// <summary>
-    /// Fase revert do teste de persistência: reverte cada tweak reversível aplicado na fase apply-only,
-    /// relê o estado, compara ação a ação com o estado de antes e recalcula o veredito do ciclo completo.
+    /// Revert phase of the persistence test: reverts each reversible tweak applied in the apply-only phase,
+    /// re-reads the state, compares action by action with the state before and recomputes the full-cycle verdict.
     /// </summary>
     public async Task RevertAppliedAsync(IReadOnlyList<TweakSelfTestResult> results, IReadOnlyDictionary<string, Tweak> tweaks,
         CancellationToken ct = default)
@@ -109,7 +109,7 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
             if (r.Verdict == SelfTestVerdict.Skipped || !r.Reversible || r.Apply is null) continue;
             if (!tweaks.TryGetValue(r.Id, out var tweak))
             {
-                r.Notes.Add("revert: tweak não existe mais no catálogo; não revertido.");
+                r.Notes.Add("revert: tweak no longer exists in the catalog; not reverted.");
                 continue;
             }
             var sw = Stopwatch.StartNew();
@@ -120,7 +120,7 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                r.Notes.Add($"exceção inesperada ao reverter: {Describe(ex)}");
+                r.Notes.Add($"unexpected exception while reverting: {Describe(ex)}");
             }
             Judge(r, applyOnly: false);
             r.DurationMs += sw.ElapsedMilliseconds;
@@ -130,46 +130,46 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
 
     private async Task RunStepsAsync(Tweak tweak, TweakSelfTestResult r, CancellationToken ct)
     {
-        // 0) Filtros que não exigem tocar no sistema.
+        // 0) Filters that do not require touching the system.
         if (tweak.Risk > _options.MaxRisk)
         {
-            Skip(r, $"risco {tweak.Risk} acima de --max-risk {_options.MaxRisk}");
+            Skip(r, $"risk {tweak.Risk} above --max-risk {_options.MaxRisk}");
             return;
         }
         if (!tweak.Reversible && !_options.IncludeIrreversible)
         {
-            Skip(r, "irreversível (use --include-irreversible para testar só aplicar + estado)");
+            Skip(r, "irreversible (use --include-irreversible to test apply + state only)");
             return;
         }
 
-        // 1) Estado antes.
+        // 1) State before.
         var before = await host.GetStatusAsync(tweak, ct).ConfigureAwait(false);
         r.StateBefore = before.State;
         Record(r, before, (a, s) => a.Before = s);
         if (before.State == TweakState.NotApplicable)
         {
-            Skip(r, "não se aplica a este sistema: " + (before.Message ?? DescribeActions(before)));
+            Skip(r, "does not apply to this system: " + (before.Message ?? DescribeActions(before)));
             return;
         }
         if (before.State == TweakState.Error)
         {
-            Skip(r, "erro ao ler o estado inicial: " + (before.Message ?? DescribeActions(before)));
+            Skip(r, "error reading the initial state: " + (before.Message ?? DescribeActions(before)));
             return;
         }
         if (before.State == TweakState.Applied)
-            r.Notes.Add("já estava aplicado antes do teste; aplicar/reverter devem manter os valores atuais.");
+            r.Notes.Add("already applied before the test; apply/revert must keep the current values.");
 
-        // Backup de uma execução anterior mascararia o valor original deste teste.
+        // A backup from a previous run would mask this test's original value.
         if (host.ReadBackupJson(tweak.Id) is not null)
         {
             r.Backup.ExistedBefore = true;
-            Skip(r, "já existe um backup deste tweak (execução anterior?); apague-o ou use outra --backup-dir");
+            Skip(r, "a backup of this tweak already exists (previous run?); delete it or use another --backup-dir");
             return;
         }
 
         r.RebootPendingBefore = [.. host.RebootPendingReasons()];
 
-        // 2) Aplicar.
+        // 2) Apply.
         r.Apply = await RunStepAsync(() => host.ApplyAsync(tweak, ct)).ConfigureAwait(false);
         r.Backup.Json = host.ReadBackupJson(tweak.Id);
         r.Backup.WrittenOnApply = r.Backup.Json is not null;
@@ -179,12 +179,12 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
         Record(r, afterApply, (a, s) => a.AfterApply = s);
         r.RebootPendingAfterApply = [.. host.RebootPendingReasons()];
 
-        // 3) Re-aplicar: o backup deve continuar idêntico (guarda o valor ORIGINAL verdadeiro).
+        // 3) Re-apply: the backup must stay identical (it keeps the true ORIGINAL value).
         if (_options.CheckReapply && r.Apply.Success && r.Backup.Json is not null)
         {
             r.Reapply = await RunStepAsync(() => host.ApplyAsync(tweak, ct)).ConfigureAwait(false);
             r.Backup.KeptOnReapply = string.Equals(host.ReadBackupJson(tweak.Id), r.Backup.Json, StringComparison.Ordinal);
-            if (!r.Reapply.Success) r.Notes.Add($"re-aplicar falhou: {r.Reapply.Describe()}");
+            if (!r.Reapply.Success) r.Notes.Add($"re-apply failed: {r.Reapply.Describe()}");
         }
 
         if (!tweak.Reversible || _options.ApplyOnly) return;
@@ -193,12 +193,12 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
 
     private async Task RevertStepsAsync(Tweak tweak, TweakSelfTestResult r, CancellationToken ct)
     {
-        // 4) Reverter. Mesmo se aplicar falhou, tenta (limpeza), desde que haja backup.
+        // 4) Revert. Even if apply failed, try it (cleanup), as long as there is a backup.
         if (host.ReadBackupJson(tweak.Id) is null)
         {
             r.Notes.Add(r.Apply is { Success: true }
-                ? "não há backup na hora de reverter: reversão não tentada."
-                : "aplicar falhou e não há backup: reversão não tentada.");
+                ? "no backup at revert time: revert not attempted."
+                : "apply failed and there is no backup: revert not attempted.");
             return;
         }
         r.Revert = await RunStepAsync(() => host.RevertAsync(tweak, ct)).ConfigureAwait(false);
@@ -231,7 +231,7 @@ public sealed class SelfTestRunner(ISelfTestHost host, SelfTestOptions? options 
         }
     }
 
-    /// <summary>Copia o estado de cada ação para o resultado, casando por posição (as ações vêm na ordem do YAML).</summary>
+    /// <summary>Copies each action's state into the result, matching by position (actions come in YAML order).</summary>
     private static void Record(TweakSelfTestResult r, TweakStatus status, Action<ActionSelfTest, ActionSnapshot> set)
     {
         for (int i = 0; i < r.Actions.Count && i < status.Actions.Count; i++)

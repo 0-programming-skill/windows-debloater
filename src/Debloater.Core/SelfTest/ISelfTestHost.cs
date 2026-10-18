@@ -5,31 +5,31 @@ using Debloater.Core.Platform;
 namespace Debloater.Core.SelfTest;
 
 /// <summary>
-/// O que o <see cref="SelfTestRunner"/> precisa do sistema. A implementação real
-/// (<see cref="EngineSelfTestHost"/>) usa o <see cref="TweakEngine"/>; os testes usam um falso em memória.
+/// What the <see cref="SelfTestRunner"/> needs from the system. The real implementation
+/// (<see cref="EngineSelfTestHost"/>) uses the <see cref="TweakEngine"/>; tests use an in-memory fake.
 /// </summary>
 public interface ISelfTestHost
 {
     Task<TweakStatus> GetStatusAsync(Tweak tweak, CancellationToken ct = default);
 
-    /// <summary>Aplica sem controle de risco (o runner já filtrou pelo --max-risk).</summary>
+    /// <summary>Applies without risk gating (the runner has already filtered by --max-risk).</summary>
     Task<OperationResult> ApplyAsync(Tweak tweak, CancellationToken ct = default);
 
     Task<OperationResult> RevertAsync(Tweak tweak, CancellationToken ct = default);
 
-    /// <summary>Conteúdo do arquivo de backup do tweak, ou null se não existe.</summary>
+    /// <summary>Contents of the tweak's backup file, or null if it does not exist.</summary>
     string? ReadBackupJson(string tweakId);
 
-    /// <summary>Motivos de reinicialização pendente (vazio = nenhuma).</summary>
+    /// <summary>Pending reboot reasons (empty = none).</summary>
     IReadOnlyList<string> RebootPendingReasons();
 }
 
-/// <summary>Host real: o engine sobre o sistema em execução.</summary>
+/// <summary>Real host: the engine over the running system.</summary>
 public sealed class EngineSelfTestHost(TweakEngine engine) : ISelfTestHost
 {
     public TweakEngine Engine { get; } = engine;
 
-    // Cada chamada cria um ScanContext novo: o estado lido depois de aplicar não pode vir de cache.
+    // Each call creates a new ScanContext: the state read after applying must not come from a cache.
     public Task<TweakStatus> GetStatusAsync(Tweak tweak, CancellationToken ct = default) => Engine.GetStatusAsync(tweak, null, ct);
 
     public Task<OperationResult> ApplyAsync(Tweak tweak, CancellationToken ct = default) => Engine.ApplyAsync(tweak, RiskLevel.Critical, ct);

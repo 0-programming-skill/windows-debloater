@@ -1,13 +1,14 @@
-name: Verificação de referências
+name: Reference check
 
-# Toda semana: baixa de novo a documentação da Policy CSP (Microsoft Learn), regenera
-# reference/msdocs-policy-csp.json e roda 'validate --reference' antes e depois. Se a referência
-# mudou ou surgiram avisos novos, abre (ou comenta) uma issue com o resumo. O JSON novo fica como
-# artefato para o mantenedor revisar e commitar (o workflow só tem permissão de leitura no código).
+# Weekly: re-downloads the Policy CSP documentation (Microsoft Learn), regenerates
+# reference/msdocs-policy-csp.json and runs 'validate --reference' before and after. If the reference
+# changed or new warnings appeared, opens (or comments on) an issue with the summary. The new JSON is
+# uploaded as an artifact for the maintainer to review and commit (the workflow has read-only access to the code).
+# The Markdown summary only goes into the issue body and the run artifact; nothing is written to a docs path.
 
 on:
   schedule:
-    - cron: "17 6 * * 1" # segundas, 06:17 UTC
+    - cron: "17 6 * * 1" # Mondays, 06:17 UTC
   workflow_dispatch:
 
 permissions:
@@ -35,25 +36,27 @@ jobs:
       - name: Build
         run: dotnet build Debloater.slnx -c Release
 
-      # "Antes" e "depois" rodam no MESMO runner (mesmos ADMX em C:\Windows\PolicyDefinitions),
-      # então a diferença entre eles vem só da documentação da Microsoft.
-      - name: Validação com a referência commitada (antes)
+      # "Before" and "after" run on the SAME runner (same ADMX in C:\Windows\PolicyDefinitions),
+      # so any difference between them comes only from the Microsoft documentation.
+      # The comparison relies on the --warnings-out file (one finding per line, warnings prefixed
+      # with "WARN "), not on the CLI's console text.
+      - name: Validate with the committed reference (before)
         shell: pwsh
         run: |
           Copy-Item $env:CSP "$env:RUNNER_TEMP/old-csp.json"
           dotnet run --project $env:CLI -c Release --no-build -- validate --reference --csp "$env:RUNNER_TEMP/old-csp.json" --warnings-out "$env:RUNNER_TEMP/before.txt"
 
-      - name: Regenera a referência da Policy CSP
+      - name: Regenerate the Policy CSP reference
         shell: pwsh
         run: dotnet run --project $env:REFGEN -c Release --no-build -- --out $env:CSP
 
-      - name: Validação com a referência nova (depois)
+      - name: Validate with the new reference (after)
         shell: pwsh
         run: |
           dotnet run --project $env:CLI -c Release --no-build -- validate --reference --verbose --csp $env:CSP --warnings-out "$env:RUNNER_TEMP/after.txt" |
             Tee-Object -FilePath "$env:RUNNER_TEMP/validate.log"
 
-      - name: Compara
+      - name: Compare
         id: compare
         shell: pwsh
         run: |
@@ -69,42 +72,42 @@ jobs:
           $allWarnings = @($after | Where-Object { $_ -like 'WARN *' })
 
           $body = New-Object System.Text.StringBuilder
-          [void]$body.AppendLine("Execução: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID")
+          [void]$body.AppendLine("Run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID")
           [void]$body.AppendLine("")
           if ($refChanged) {
-            [void]$body.AppendLine("## A documentação da Policy CSP mudou")
+            [void]$body.AppendLine("## The Policy CSP documentation changed")
             [void]$body.AppendLine("")
             [void]$body.AppendLine((Get-Content "$t/csp-diff.md" -Raw))
-            [void]$body.AppendLine("Baixe o artefato **msdocs-policy-csp** desta execução, revise e commite em ``reference/msdocs-policy-csp.json`` (ou rode ``dotnet run --project tools/Debloater.RefGen`` localmente).")
+            [void]$body.AppendLine("Download the **msdocs-policy-csp** artifact from this run, review it and commit it to ``reference/msdocs-policy-csp.json`` (or run ``dotnet run --project tools/Debloater.RefGen`` locally).")
             [void]$body.AppendLine("")
           }
           if ($newWarnings.Count -gt 0) {
-            [void]$body.AppendLine("## Avisos novos do validate --reference ($($newWarnings.Count))")
+            [void]$body.AppendLine("## New validate --reference warnings ($($newWarnings.Count))")
             [void]$body.AppendLine("")
             foreach ($w in $newWarnings) { [void]$body.AppendLine("- $w") }
             [void]$body.AppendLine("")
           }
           if ($goneWarnings.Count -gt 0) {
-            [void]$body.AppendLine("## Avisos que deixaram de aparecer ($($goneWarnings.Count))")
+            [void]$body.AppendLine("## Warnings no longer reported ($($goneWarnings.Count))")
             [void]$body.AppendLine("")
             foreach ($w in $goneWarnings) { [void]$body.AppendLine("- $w") }
             [void]$body.AppendLine("")
           }
-          [void]$body.AppendLine("<details><summary>Todos os avisos atuais ($($allWarnings.Count))</summary>")
+          [void]$body.AppendLine("<details><summary>All current warnings ($($allWarnings.Count))</summary>")
           [void]$body.AppendLine("")
           foreach ($w in $allWarnings) { [void]$body.AppendLine("- $w") }
           [void]$body.AppendLine("")
           [void]$body.AppendLine("</details>")
 
           $text = $body.ToString()
-          if ($text.Length -gt 60000) { $text = $text.Substring(0, 60000) + "`n`n… (truncado; veja o log da execução)" }
+          if ($text.Length -gt 60000) { $text = $text.Substring(0, 60000) + "`n`n… (truncated; see the run log)" }
           Set-Content -Path "$t/issue.md" -Value $text -Encoding utf8
 
           $notify = $refChanged -or $newWarnings.Count -gt 0
           "notify=$($notify.ToString().ToLower())" >> $env:GITHUB_OUTPUT
-          "Referência mudou: $refChanged | avisos novos: $($newWarnings.Count) | avisos atuais: $($allWarnings.Count)"
+          "Reference changed: $refChanged | new warnings: $($newWarnings.Count) | current warnings: $($allWarnings.Count)"
 
-      - name: Artefatos
+      - name: Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -114,21 +117,22 @@ jobs:
             ${{ runner.temp }}/validate.log
             ${{ runner.temp }}/csp-diff.md
             ${{ runner.temp }}/after.txt
+            ${{ runner.temp }}/issue.md
           if-no-files-found: ignore
 
-      - name: Abre ou atualiza a issue
+      - name: Open or update the issue
         if: steps.compare.outputs.notify == 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $label = "reference-check"
-          gh label create $label --color FBCA04 --description "Mudanças na documentação/ADMX de referência" --force | Out-Null
+          gh label create $label --color FBCA04 --description "Changes in the reference documentation/ADMX" --force | Out-Null
           $existing = gh issue list --label $label --state open --json number --jq '.[0].number'
           if ($existing) {
             gh issue comment $existing --body-file "$env:RUNNER_TEMP/issue.md"
-            "Comentado na issue #$existing."
+            "Commented on issue #$existing."
           } else {
-            $title = "Referências: mudanças na documentação da Microsoft ($(Get-Date -Format 'yyyy-MM-dd'))"
+            $title = "References: changes in the Microsoft documentation ($(Get-Date -Format 'yyyy-MM-dd'))"
             gh issue create --title $title --label $label --body-file "$env:RUNNER_TEMP/issue.md"
           }

@@ -14,10 +14,10 @@ public enum PolicyWarningLevel
 
 public sealed record PolicyWarning(PolicyWarningLevel Level, string Text)
 {
-    public override string ToString() => (Level == PolicyWarningLevel.Warning ? "Atenção: " : "") + Text;
+    public override string ToString() => (Level == PolicyWarningLevel.Warning ? "Warning: " : "") + Text;
 }
 
-/// <summary>Contexto do PC para os avisos (injetável nos testes).</summary>
+/// <summary>PC context for the warnings (injectable in tests).</summary>
 public sealed record PolicyEnvironment(int Build, string EditionId, bool DomainJoined, IReadOnlyList<RegistryPolEntry> LocalGpoMachine, IReadOnlyList<RegistryPolEntry> LocalGpoUser)
 {
     public static PolicyEnvironment Current(SystemInfo? system = null)
@@ -29,16 +29,19 @@ public sealed record PolicyEnvironment(int Build, string EditionId, bool DomainJ
 }
 
 /// <summary>
-/// Risco e avisos de edição/build de uma política, antes de aplicar.
+/// Risk and edition/build warnings for a policy, before applying it.
 /// <para>
-/// Risco (heurística simples): <b>Alto</b> quando o arquivo, a categoria ou a chave da política fala de
-/// segurança, Windows Update ou Defender (palavras: defender, update, atualiza, security, segurança,
-/// bitlocker, firewall, credential/credenciais, smartscreen, device guard, kerberos, laps, applocker,
-/// tpm, uac); <b>Médio</b> nos demais casos. Políticas nunca são Baixo: o programa não as curou.
+/// Risk (simple heuristic): <b>High</b> when the policy's file, category or key mentions
+/// security, Windows Update or Defender (words: defender, update, security, bitlocker, firewall,
+/// credential, smartscreen, device guard, kerberos, laps, applocker, tpm, uac, plus their Portuguese
+/// equivalents); <b>Medium</b> otherwise. Policies are never Low: the program has not curated them.
 /// </para>
 /// </summary>
 public static partial class PolicyAdvisor
 {
+    // Category names come from the ADML in the UI language (en-US or pt-BR), so the list keeps
+    // Portuguese keywords ("atualiza", "segurança", "credenciais"...) next to the English ones.
+    // They are matched against data, not shown to the user.
     private static readonly string[] s_highWords =
     [
         "defender", "update", "atualiza", "security", "segurança", "seguranca", "bitlocker", "firewall",
@@ -51,14 +54,14 @@ public static partial class PolicyAdvisor
         var haystack = $"{policy.File} {string.Join(" ", policy.CategoryPath)} {policy.Key}";
         foreach (var w in s_highWords)
         {
-            // Palavras curtas (laps, tpm, uac, fve) só como palavra inteira: "laps" não casa com "Collapse".
+            // Short words (laps, tpm, uac, fve) only as whole words: "laps" must not match "Collapse".
             var pattern = w.Length <= 4 ? $@"(?<!\p{{L}}){Regex.Escape(w)}(?!\p{{L}})" : Regex.Escape(w);
             if (Regex.IsMatch(haystack, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)) return RiskLevel.High;
         }
         return RiskLevel.Medium;
     }
 
-    /// <summary>Família da edição a partir do EditionID do registro (Professional → Pro, Core → Home...).</summary>
+    /// <summary>Edition family from the registry EditionID (Professional → Pro, Core → Home...).</summary>
     public static string EditionFamily(string editionId)
     {
         var e = editionId.Trim();
@@ -71,6 +74,8 @@ public static partial class PolicyAdvisor
         return e;
     }
 
+    // supportedOn text comes from the ADML in the UI language (en-US or pt-BR): keep the
+    // Portuguese words ("somente", "apenas") next to "only".
     [GeneratedRegex(@"\b(only|somente|apenas)\b", RegexOptions.IgnoreCase)]
     private static partial Regex OnlyWord();
 
@@ -87,61 +92,61 @@ public static partial class PolicyAdvisor
         void Info(string text) => list.Add(new PolicyWarning(PolicyWarningLevel.Info, text));
 
         var family = EditionFamily(env.EditionId);
-        // Avisos de edição/build só importam quando algo vai ser gravado (Não configurada só apaga).
+        // Edition/build warnings only matter when something will be written (Not configured only deletes).
         bool writes = target != PolicyTargetState.NotConfigured;
         if (family == "Home" && writes)
-            Warn("Windows Home não processa oficialmente Políticas de Grupo: muitas funcionam pelo registro, outras são ignoradas.");
+            Warn("Windows Home does not officially process Group Policy: many policies work through the registry, others are ignored.");
 
-        // supportedOn (texto do ADML).
+        // supportedOn (ADML text).
         var sup = writes ? policy.SupportedOn ?? "" : "";
         if (sup.Length > 0)
         {
             if (OnlyWord().IsMatch(sup) && !ModernWindows().IsMatch(sup))
-                Warn($"Com suporte em \"{sup}\": provavelmente sem efeito neste Windows (build {env.Build}).");
+                Warn($"Supported on \"{sup}\": probably has no effect on this Windows (build {env.Build}).");
             else if (sup.Contains("Server", StringComparison.OrdinalIgnoreCase) && !ClientWindows().IsMatch(sup) && family != "Server")
-                Warn($"Com suporte em \"{sup}\": política de Windows Server; provavelmente sem efeito neste PC.");
+                Warn($"Supported on \"{sup}\": Windows Server policy; probably has no effect on this PC.");
             if (sup.Contains("Internet Explorer", StringComparison.OrdinalIgnoreCase))
-                Warn("Política do Internet Explorer, que foi desativado no Windows 11: em geral não tem efeito.");
+                Warn("Internet Explorer policy; IE is disabled on Windows 11, so it usually has no effect.");
             foreach (var ed in new[] { "Enterprise", "Education" })
             {
                 if (sup.Contains(ed, StringComparison.OrdinalIgnoreCase) && !sup.Contains("Pro", StringComparison.OrdinalIgnoreCase)
                     && family is "Pro" or "Home")
                 {
-                    Warn($"Com suporte em \"{sup}\": a edição deste PC ({env.EditionId}) pode ignorar esta política.");
+                    Warn($"Supported on \"{sup}\": this PC's edition ({env.EditionId}) may ignore this policy.");
                     break;
                 }
             }
         }
 
-        // Policy CSP (documentação Microsoft Learn).
+        // Policy CSP (Microsoft Learn documentation).
         if (csp is not null && writes)
         {
             if (csp.Editions.Count > 0 && family is not ("Server" or "")
                 && !csp.Editions.Any(e => e.StartsWith(family, StringComparison.OrdinalIgnoreCase)))
-                Warn($"Pela documentação ({csp.Reference}), a política só tem efeito em: {string.Join(", ", csp.Editions)}. Este PC é {family} ({env.EditionId}).");
+                Warn($"According to the documentation ({csp.Reference}), the policy only takes effect on: {string.Join(", ", csp.Editions)}. This PC is {family} ({env.EditionId}).");
             if (csp.Win11MinBuild is { } min && env.Build >= 22000 && env.Build < min)
-                Warn($"Pela documentação, exige o build {min} ou mais novo; este PC está no {env.Build}.");
-            if (csp.Deprecated) Warn($"A documentação marca a política como obsoleta ({csp.Reference}).");
-            if (csp.InsiderOnly) Warn("A documentação diz que a política só existe em builds do Windows Insider.");
-            foreach (var note in (csp.EditionNotes ?? []).Take(2)) Info("Documentação: " + note);
+                Warn($"According to the documentation, it requires build {min} or newer; this PC is on {env.Build}.");
+            if (csp.Deprecated) Warn($"The documentation marks the policy as deprecated ({csp.Reference}).");
+            if (csp.InsiderOnly) Warn("The documentation says the policy only exists in Windows Insider builds.");
+            foreach (var note in (csp.EditionNotes ?? []).Take(2)) Info("Documentation: " + note);
         }
 
         if (env.DomainJoined)
-            Warn("Este PC está num domínio: GPOs do domínio têm prioridade e podem sobrescrever o valor gravado aqui na próxima atualização de política.");
+            Warn("This PC is joined to a domain: domain GPOs take precedence and may overwrite the value written here on the next policy refresh.");
 
-        // GPO local (gpedit): se ela também configura a política, o Windows reaplica o valor dela.
+        // Local GPO (gpedit): if it also configures the policy, Windows reapplies its value.
         var gpo = scope == PolicyScope.Machine ? env.LocalGpoMachine : env.LocalGpoUser;
         if (gpo.Count > 0 && PolicyKeys(policy).Any(k => gpo.Any(e => RegistryPolFile.Touches(e, k.Key, k.Name))))
-            Warn("A GPO local (gpedit.msc) também configura esta política: ao atualizar a política (gpupdate, ~90 min ou ao reiniciar) o Windows reaplica o valor do gpedit. Ajuste-a no gpedit ou deixe-a como Não configurada lá.");
+            Warn("The local GPO (gpedit.msc) also configures this policy: on the next policy refresh (gpupdate, ~90 min or at restart) Windows reapplies the gpedit value. Change it in gpedit or leave it as Not configured there.");
 
         if (target != PolicyTargetState.NotConfigured)
-            Info("Gravação direta no registro: o gpedit.msc continua mostrando \"Não configurada\". Para desfazer, use Reverter ou Não configurada aqui.");
+            Info("Written directly to the registry: gpedit.msc keeps showing \"Not configured\". To undo, use Revert or Not configured here.");
         if (scope == PolicyScope.User)
-            Info("Escopo Usuário: grava no HKCU da conta que executa o programa (como administrador, a conta elevada).");
+            Info("User scope: writes to the HKCU of the account running the program (when run as administrator, the elevated account).");
         return list;
     }
 
-    /// <summary>Índice "Arquivo.admx:Nome" → política da CSP, pelo mapeamento ADMX da documentação.</summary>
+    /// <summary>Index "File.admx:Name" → CSP policy, from the documentation's ADMX mapping.</summary>
     public static Dictionary<string, CspPolicy> IndexCspByAdmx(IEnumerable<CspPolicy> csp)
     {
         var index = new Dictionary<string, CspPolicy>(StringComparer.OrdinalIgnoreCase);
@@ -152,7 +157,7 @@ public static partial class PolicyAdvisor
         return index;
     }
 
-    /// <summary>(chave, nome) que a política grava; nome null = a chave inteira (list).</summary>
+    /// <summary>(key, name) pairs the policy writes; null name = the whole key (list).</summary>
     public static IEnumerable<(string Key, string? Name)> PolicyKeys(AdmxPolicy policy)
     {
         foreach (var (key, name, _) in PolicyWriter.OwnedValues(policy)) yield return (key, name);

@@ -3,7 +3,7 @@ using Debloater.Core.Model;
 
 namespace Debloater.Core.Fingerprint;
 
-/// <summary>Tipos de candidato (o que a camada 2 deve investigar).</summary>
+/// <summary>Candidate kinds (what layer 2 should investigate).</summary>
 public static class CandidateKinds
 {
     public const string PolicyPath = "policyPath";
@@ -37,16 +37,16 @@ public static class CandidateKinds
         kind is PolicyPath or RegistryPath or CspPath or SubscribedContent or ValueName or NearName or Wnf or Feature;
 }
 
-/// <summary>Chaves e nomes de valores que o catálogo já usa (para "já coberto" e "perto de chave conhecida").</summary>
+/// <summary>Keys and value names the catalog already uses (for "already covered" and "near a known key").</summary>
 public sealed class CatalogRegistryIndex
 {
-    /// <summary>Caminho normalizado (sem colmeia, minúsculas) → ids dos tweaks.</summary>
+    /// <summary>Normalized path (no hive, case-insensitive) → tweak ids.</summary>
     public Dictionary<string, List<string>> Paths { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Nome do valor → ids dos tweaks.</summary>
+    /// <summary>Value name → tweak ids.</summary>
     public Dictionary<string, List<string>> Names { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>(caminho normalizado, nome) de cada ação registry, com o tweak.</summary>
+    /// <summary>(normalized path, name) of each registry action, with its tweak.</summary>
     public List<(string Path, string Name, Tweak Tweak)> Actions { get; } = [];
 
     public static CatalogRegistryIndex Build(IEnumerable<Tweak> tweaks)
@@ -78,7 +78,7 @@ public sealed class CatalogRegistryIndex
         @"HKLM\", @"HKCU\", @"HKU\", @"HKCR\", @"\Registry\Machine\", @"Registry\Machine\", @"\Registry\User\", @"Registry\User\", @"MACHINE\", @"USER\",
     ];
 
-    /// <summary>Remove a colmeia (HKLM\, HKEY_CURRENT_USER\, \Registry\Machine\...) e barras nas pontas.</summary>
+    /// <summary>Strips the hive (HKLM\, HKEY_CURRENT_USER\, \Registry\Machine\...) and leading/trailing backslashes.</summary>
     public static string NormalizeRegistryPath(string path)
     {
         var p = path.Trim().Trim('\\');
@@ -90,7 +90,7 @@ public sealed class CatalogRegistryIndex
         return p.Trim('\\');
     }
 
-    /// <summary>"Chave[Valor]" (forma usada por alguns binários) → (chave, valor); sem colchetes → (texto, null).</summary>
+    /// <summary>"Key[Value]" (form used by some binaries) → (key, value); without brackets → (text, null).</summary>
     public static (string Path, string? Name) SplitValueSuffix(string value)
     {
         if (value.EndsWith(']') && value.LastIndexOf('[') is var i and > 0 && i < value.Length - 2)
@@ -98,7 +98,7 @@ public sealed class CatalogRegistryIndex
         return (value, null);
     }
 
-    /// <summary>Tweaks cuja chave/valor é exatamente este candidato.</summary>
+    /// <summary>Tweaks whose key/value is exactly this candidate.</summary>
     public List<string> CoveredBy(string kind, string value, string? contextPath)
     {
         var ids = new List<string>();
@@ -110,7 +110,7 @@ public sealed class CatalogRegistryIndex
         {
             if (Names.TryGetValue(value, out var n))
             {
-                // Com contexto, só conta se a chave também bate (nomes genéricos se repetem em chaves diferentes).
+                // With context, it only counts if the key also matches (generic names repeat across different keys).
                 if (contextPath is null) ids.AddRange(n);
                 else
                 {
@@ -126,10 +126,10 @@ public sealed class CatalogRegistryIndex
 }
 
 /// <summary>
-/// Pontua candidatos: mais alto para caminhos de política, Explorer\Advanced, ContentDeliveryManager
-/// e SubscribedContent, nomes com IA/Copilot/Recall/Widgets/anúncios/sugestões/telemetria/diagnóstico,
-/// e cadeias no mesmo binário (ou na mesma chave) que algo do catálogo; mais baixo para ruído genérico
-/// (log, trace, debug, teste...). A pontuação é só uma ordem de investigação, não uma prova.
+/// Scores candidates: higher for policy paths, Explorer\Advanced, ContentDeliveryManager
+/// and SubscribedContent, names with AI/Copilot/Recall/Widgets/ads/suggestions/telemetry/diagnostics,
+/// and strings in the same binary (or the same key) as something in the catalog; lower for generic noise
+/// (log, trace, debug, test...). The score is only an investigation order, not proof.
 /// </summary>
 public static partial class CandidateScorer
 {
@@ -165,7 +165,7 @@ public static partial class CandidateScorer
         _ => 5,
     };
 
-    // Palavras quentes (sensível a maiúsculas para siglas; o resto sem diferenciar).
+    // Hot words (case-sensitive for acronyms; the rest effectively case-insensitive).
     [GeneratedRegex(@"(?<![a-z])AI(?![a-z])|(?<![a-z])Agent|(?<![a-z])Mcp(?![a-z])|Copilot|Recall|Widget|Advertis|(?<![a-z])Ads(?![a-z])|Suggest|Recommend|Telemetry|Diag|Spotlight|Bing|Feedback|Promot|Sponsor|Consumer|Iris|Edge|Tracking|Census|Tips|Cortana|Search(Box|Highlight)|Chat|Teams|Gaming|GameBar", RegexOptions.CultureInvariant)]
     private static partial Regex HotWordRegex();
 
@@ -175,7 +175,7 @@ public static partial class CandidateScorer
     [GeneratedRegex(@"(^|[^A-Za-z])(Log|Logs|Logging|Logger|Trace|Tracing|Debug|Etw|Wpp|Test|Tests|Assert|Verbose|Dump|Crash|Perf|Counter|Mock|Fake|Stub|Leak)([^a-z]|$)|(?<=[a-z])(Log|Logging|Trace|Tracing|Debug|Test|Assert|Verbose|Dump|Perf|Mock)([A-Z_]|$)", RegexOptions.CultureInvariant)]
     private static partial Regex NoiseRegex();
 
-    // Nomes de recursos de interface (XAML): perto de uma chave por acaso, quase nunca são valores de registro.
+    // UI resource names (XAML): near a key by chance, almost never registry values.
     [GeneratedRegex(@"(Brush|Thickness|Margin|Padding|Style|Template|Storyboard|Animation|FontSize|FontWeight|Width|Height|Opacity|Glyph|CornerRadius|Duration)\d*$", RegexOptions.CultureInvariant)]
     private static partial Regex UiResourceRegex();
 
@@ -191,81 +191,81 @@ public static partial class CandidateScorer
         bool isPathKind = c.Kind is CandidateKinds.PolicyPath or CandidateKinds.RegistryPath or CandidateKinds.CspPath;
         string text = c.Value + (c.ExtraText is null ? "" : " " + c.ExtraText);
 
-        // Chave quente no próprio caminho ou no contexto (nome perto de uma chave quente). Para nomes
-        // que só estão perto de uma chave (nearName), a proximidade é indício fraco: metade do bônus.
+        // Hot key in the path itself or in the context (name near a hot key). For names that are
+        // only near a key (nearName), proximity is weak evidence: half the bonus.
         bool near = c.Kind == CandidateKinds.NearName;
         var hotPath = HotPathRegex().Match(isPathKind ? c.Value : c.ContextPath ?? c.ExtraText ?? "");
         if (hotPath.Success)
         {
             score += isPathKind ? 25 : near ? 10 : 20;
-            reasons.Add($"chave relevante ({hotPath.Value.Trim('\\')})");
+            reasons.Add($"relevant key ({hotPath.Value.Trim('\\')})");
         }
         if (!isPathKind && c.Kind != CandidateKinds.AdmxPolicy && c.ContextPath is not null && StringClassifier.IsPolicyPath(c.ContextPath))
         {
             score += near ? 5 : 15;
-            reasons.Add("perto de uma chave de política");
+            reasons.Add("near a policy key");
         }
 
         var hot = HotWordRegex().Matches(text).Select(m => m.Value).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (hot.Count > 0)
         {
             score += Math.Min(30, 20 + 5 * (hot.Count - 1));
-            reasons.Add($"palavra-chave: {string.Join(", ", hot)}");
+            reasons.Add($"keyword: {string.Join(", ", hot)}");
         }
 
         if (c.CatalogKeySameKeyTweak is not null)
         {
             score += near ? 10 : 25;
-            reasons.Add($"mesma chave de um tweak ({c.CatalogKeySameKeyTweak})");
+            reasons.Add($"same key as a tweak ({c.CatalogKeySameKeyTweak})");
         }
         else if (c.CatalogKeyInSameBinary is not null)
         {
             score += 10;
-            reasons.Add($"binário também usa uma chave do catálogo ({c.CatalogKeyInSameBinary})");
+            reasons.Add($"binary also uses a catalog key ({c.CatalogKeyInSameBinary})");
         }
-        if (c.CuratedBinary) { score += 5; reasons.Add("binário da lista curada"); }
-        if (c.NewBinary) { score += 5; reasons.Add("binário novo"); }
+        if (c.CuratedBinary) { score += 5; reasons.Add("binary from the curated list"); }
+        if (c.NewBinary) { score += 5; reasons.Add("new binary"); }
 
-        if (c.Value.Length < 8 && !isPathKind) { score -= 10; reasons.Add("curto"); }
-        if (NoiseRegex().IsMatch(c.Value)) { score -= 15; reasons.Add("ruído provável (log/trace/debug/teste)"); }
-        if (isPathKind && RegistryNoiseRegex().IsMatch(c.Value)) { score -= 15; reasons.Add("chave genérica (COM/classes/dispositivos)"); }
-        if (near && UiResourceRegex().IsMatch(c.Value)) { score -= 15; reasons.Add("recurso de interface (XAML)"); }
-        if (!isPathKind && c.Value.Count(ch => ch == '_') >= 2) { score -= 20; reasons.Add("parece chave de recurso de texto (vários _)"); }
+        if (c.Value.Length < 8 && !isPathKind) { score -= 10; reasons.Add("short"); }
+        if (NoiseRegex().IsMatch(c.Value)) { score -= 15; reasons.Add("likely noise (log/trace/debug/test)"); }
+        if (isPathKind && RegistryNoiseRegex().IsMatch(c.Value)) { score -= 15; reasons.Add("generic key (COM/classes/devices)"); }
+        if (near && UiResourceRegex().IsMatch(c.Value)) { score -= 15; reasons.Add("UI resource (XAML)"); }
+        if (!isPathKind && c.Value.Count(ch => ch == '_') >= 2) { score -= 20; reasons.Add("looks like a string resource key (several _)"); }
         if (c.BinaryPath is not null && c.BinaryPath.Contains("Microsoft-Edge-WebView", StringComparison.OrdinalIgnoreCase))
         {
             score -= 20;
-            reasons.Add("WebView2/Edge (atualiza à parte do Windows)");
+            reasons.Add("WebView2/Edge (updates separately from Windows)");
         }
 
         if (c.Moved)
         {
             score = (int)Math.Round(score * 0.3);
-            reasons.Add("já existia, mudou de binário (fraco)");
+            reasons.Add("already existed, moved to another binary (weak)");
         }
         if (c.CoveredBy is { Count: > 0 })
         {
             score -= 40;
-            reasons.Add($"já coberto: {string.Join(", ", c.CoveredBy)}");
+            reasons.Add($"already covered: {string.Join(", ", c.CoveredBy)}");
         }
         return (Math.Max(0, score), reasons);
     }
 
     public static string KindLabel(string kind) => kind switch
     {
-        CandidateKinds.AdmxPolicy => "política ADMX nova",
-        CandidateKinds.PolicyPath => "caminho de política",
-        CandidateKinds.RegistryPath => "caminho de registro",
-        CandidateKinds.CspPath => "caminho de CSP",
+        CandidateKinds.AdmxPolicy => "new ADMX policy",
+        CandidateKinds.PolicyPath => "policy path",
+        CandidateKinds.RegistryPath => "registry path",
+        CandidateKinds.CspPath => "CSP path",
         CandidateKinds.SubscribedContent => "SubscribedContent",
-        CandidateKinds.ValueName => "nome de valor (padrão)",
-        CandidateKinds.NearName => "nome perto de chave",
-        CandidateKinds.Wnf => "nome WNF",
-        CandidateKinds.Feature => "nome de feature",
-        CandidateKinds.Service => "serviço novo",
-        CandidateKinds.Task => "tarefa nova",
-        CandidateKinds.Appx => "app novo",
-        CandidateKinds.OptionalFeature => "recurso opcional novo",
-        CandidateKinds.Capability => "capacidade nova",
+        CandidateKinds.ValueName => "value name (pattern)",
+        CandidateKinds.NearName => "name near a key",
+        CandidateKinds.Wnf => "WNF name",
+        CandidateKinds.Feature => "feature name",
+        CandidateKinds.Service => "new service",
+        CandidateKinds.Task => "new task",
+        CandidateKinds.Appx => "new app",
+        CandidateKinds.OptionalFeature => "new optional feature",
+        CandidateKinds.Capability => "new capability",
         _ => kind,
     };
 }

@@ -3,7 +3,7 @@ using Debloater.Core.Model;
 
 namespace Debloater.Core.Engine;
 
-/// <summary>Persiste backups de tweaks como JSON, um arquivo por tweak.</summary>
+/// <summary>Persists tweak backups as JSON, one file per tweak.</summary>
 public sealed class BackupStore
 {
     private static readonly JsonSerializerOptions s_json = new()

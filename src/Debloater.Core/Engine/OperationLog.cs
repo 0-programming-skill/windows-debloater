@@ -3,8 +3,8 @@ using System.Text;
 namespace Debloater.Core.Engine;
 
 /// <summary>
-/// Log de uma sessão de aplicar/reverter, em texto (UTF-8), um arquivo por sessão:
-/// %ProgramData%\Debloater\logs\aaaa-MM-dd_HHmmss.log. Falhas de escrita nunca interrompem a operação.
+/// Log of an apply/revert session, as text (UTF-8), one file per session:
+/// %ProgramData%\Debloater\logs\yyyy-MM-dd_HHmmss.log. Write failures never interrupt the operation.
 /// </summary>
 public sealed class OperationLog : IDisposable
 {
@@ -35,7 +35,7 @@ public sealed class OperationLog : IDisposable
 
     public string FilePath { get; }
 
-    /// <summary>Motivo de o log não poder ser gravado (o texto continua disponível via <see cref="Lines"/>).</summary>
+    /// <summary>Why the log could not be written (the text is still available via <see cref="Lines"/>).</summary>
     public string? Error { get; }
 
     public List<string> Lines { get; } = [];

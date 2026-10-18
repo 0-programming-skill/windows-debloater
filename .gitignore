@@ -14,28 +14,28 @@ artifacts/
 *.suo
 *.rsuser
 
-# Testes
+# Tests
 TestResults/
 *.trx
 coverage*.xml
 
-# VM de teste (tools/vm): credencial DPAPI da VM e relatórios do selftest
+# Test VM (tools/vm): the VM's DPAPI credential and selftest reports
 .vmcred.xml
 *.vmcred.xml
 tests/vm-reports/
 
-# Impressões digitais de builds (fingerprint create): nunca commitar
+# Build fingerprints (fingerprint create): never commit
 tests/fingerprints/
 
-# Engenharia reversa (docs/re): só os achados vão para o git; nada de binários, PDBs ou projetos
+# Reverse engineering: no binaries, PDBs or projects in git
 rea-work/
 *.gpr
 *.rep/
 *.lock~
 ghidra-out/
 
-# Comparação de cobertura (tools/coverage): cache dos arquivos das outras ferramentas
+# Coverage comparison (tools/coverage): cache of the other tools' files
 tools/coverage/.cache/
 
-# C�pias de trabalho dos agentes
+# Agent worktrees and local docs (.claude/docs holds all Markdown documentation, kept out of git)
 .claude/

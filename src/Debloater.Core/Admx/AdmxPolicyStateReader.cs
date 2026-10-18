@@ -4,25 +4,25 @@ using Microsoft.Win32;
 
 namespace Debloater.Core.Admx;
 
-/// <summary>Estado de uma política ADMX no registro deste PC.</summary>
+/// <summary>State of an ADMX policy in this PC's registry.</summary>
 public enum AdmxPolicyState
 {
-    /// <summary>Nenhum valor da política presente.</summary>
+    /// <summary>No value of the policy is present.</summary>
     NotConfigured,
     Enabled,
     Disabled,
-    /// <summary>Há valores, mas não correspondem exatamente a Habilitada nem a Desabilitada.</summary>
+    /// <summary>There are values, but they match neither Enabled nor Disabled exactly.</summary>
     Unknown,
 }
 
-/// <summary>Estado de uma política num escopo (HKLM ou HKCU), com os valores encontrados.</summary>
+/// <summary>State of a policy in a scope (HKLM or HKCU), with the values found.</summary>
 public sealed record AdmxScopeState(string Scope, AdmxPolicyState State, IReadOnlyList<string> Values);
 
 /// <summary>
-/// Lê, somente leitura, o estado atual de uma política ADMX (Não configurada / Habilitada /
-/// Desabilitada / valores). Segue a semântica do ADMX: sem &lt;enabledValue&gt;, "habilitada" grava
-/// REG_DWORD 1; sem &lt;disabledValue&gt;, "desabilitada" apaga o valor (o que no registro é
-/// indistinguível de "não configurada").
+/// Reads (read-only) the current state of an ADMX policy (Not Configured / Enabled /
+/// Disabled / values). Follows ADMX semantics: without &lt;enabledValue&gt;, "enabled" writes
+/// REG_DWORD 1; without &lt;disabledValue&gt;, "disabled" deletes the value (which in the registry is
+/// indistinguishable from "not configured").
 /// </summary>
 public static class AdmxPolicyStateReader
 {
@@ -34,7 +34,7 @@ public static class AdmxPolicyStateReader
         return result;
     }
 
-    /// <summary>Estado combinado: o de HKLM prevalece sobre o de HKCU, como no Windows.</summary>
+    /// <summary>Combined state: HKLM takes precedence over HKCU, as in Windows.</summary>
     public static AdmxPolicyState Combined(IReadOnlyList<AdmxScopeState> scopes) =>
         scopes.FirstOrDefault(s => s.State != AdmxPolicyState.NotConfigured)?.State ?? AdmxPolicyState.NotConfigured;
 
@@ -48,11 +48,11 @@ public static class AdmxPolicyStateReader
         }
         catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)
         {
-            return new AdmxScopeState(scope, AdmxPolicyState.Unknown, [$"sem acesso: {ex.Message}"]);
+            return new AdmxScopeState(scope, AdmxPolicyState.Unknown, [$"no access: {ex.Message}"]);
         }
     }
 
-    /// <summary>Valor lido do registro: tipo + dado.</summary>
+    /// <summary>Value read from the registry: type + data.</summary>
     public readonly record struct RegValue(RegistryValueKind Kind, object Data)
     {
         public override string ToString() => Data switch
@@ -64,7 +64,7 @@ public static class AdmxPolicyStateReader
         };
     }
 
-    /// <summary>Avalia o estado com leitores injetados (testável sem tocar no registro real).</summary>
+    /// <summary>Evaluates the state with injected readers (testable without touching the real registry).</summary>
     public static AdmxScopeState Evaluate(AdmxPolicy policy, string scope,
         Func<string, string, RegValue?> read, Func<string, IReadOnlyList<(string Name, RegValue Value)>> listValues)
     {
@@ -130,7 +130,7 @@ public static class AdmxPolicyStateReader
         return all;
     }
 
-    /// <summary>O valor do registro corresponde ao valor ADMX esperado?</summary>
+    /// <summary>Does the registry value match the expected ADMX value?</summary>
     public static bool Matches(AdmxValue expected, RegValue? actual)
     {
         if (expected.Kind == AdmxValueKind.Delete) return actual is null;

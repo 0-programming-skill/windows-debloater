@@ -29,19 +29,19 @@ public class InventoryTests
                     Item(InventoryKinds.Services, "Same", ("start", "manual")),
                 ],
             });
-        var neu = Snap("26200.1",
+        var current = Snap("26200.1",
             new InventorySection
             {
                 Kind = InventoryKinds.Services,
                 Items =
                 [
-                    Item(InventoryKinds.Services, "diagtrack", ("start", "disabled")), // id sem diferenciar maiúsculas
+                    Item(InventoryKinds.Services, "diagtrack", ("start", "disabled")), // id is case-insensitive
                     Item(InventoryKinds.Services, "NewSvc", ("start", "automatic")),
                     Item(InventoryKinds.Services, "Same", ("start", "manual")),
                 ],
             });
 
-        var diff = InventoryDiff.Compare(old, neu);
+        var diff = InventoryDiff.Compare(old, current);
 
         Assert.Equal("26100.1", diff.OldBuild);
         Assert.Equal(3, diff.Entries.Count);
@@ -79,14 +79,14 @@ public class InventoryTests
             var snap = Snap("26200.1", new InventorySection
             {
                 Kind = InventoryKinds.Tasks,
-                Note = "nota",
+                Note = "note",
                 Items = [new InventoryItem { Kind = InventoryKinds.Tasks, Id = @"\A\B", TweakIds = ["t.one"], Properties = { ["enabled"] = "true" } }],
             });
             InventoryDiff.Save(snap, file);
             var loaded = InventoryDiff.Load(file);
 
             var section = Assert.Single(loaded.Sections);
-            Assert.Equal("nota", section.Note);
+            Assert.Equal("note", section.Note);
             var item = Assert.Single(section.Items);
             Assert.Equal(@"\A\B", item.Id);
             Assert.Equal("true", item.Properties["enabled"]);

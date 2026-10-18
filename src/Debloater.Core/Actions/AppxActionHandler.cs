@@ -6,9 +6,9 @@ using Windows.Management.Deployment;
 namespace Debloater.Core.Actions;
 
 /// <summary>
-/// Ação "appx": remove um pacote da Store/inbox para todos os usuários e o desprovisiona
-/// (para não voltar em novas contas). Não é reversível pelo engine; "storeId" fica registrado
-/// para reinstalação futura via winget.
+/// "appx" action: removes a Store/inbox package for all users and deprovisions it
+/// (so it does not come back on new accounts). Not reversible by the engine; "storeId" is recorded
+/// for a later reinstall via winget.
 /// </summary>
 public sealed class AppxActionHandler : IActionHandler
 {
@@ -23,14 +23,14 @@ public sealed class AppxActionHandler : IActionHandler
         ActionHandlers.RequireOneOf(spec.State, "state", Type, errors, "removed");
     }
 
-    /// <summary>Inventário de pacotes, coletado uma vez por varredura.</summary>
+    /// <summary>Package inventory, collected once per scan.</summary>
     internal sealed class Inventory
     {
         public required HashSet<string> CurrentUser { get; init; }
-        /// <summary>Pacotes de todos os usuários (nome, nome completo); null quando não foi possível listar (requer administrador).
-        /// Inclui pacotes só "Staged" (preparados, sem usuário com o app instalado): ver <see cref="InstalledForSomeone"/>.</summary>
+        /// <summary>Packages of all users (name, full name); null when they could not be listed (requires administrator).
+        /// Includes packages that are only "Staged" (prepared, with no user having the app installed): see <see cref="InstalledForSomeone"/>.</summary>
         public List<(string Name, string FullName)>? AllUsers { get; init; }
-        /// <summary>null quando não foi possível listar (requer administrador).</summary>
+        /// <summary>null when they could not be listed (requires administrator).</summary>
         public HashSet<string>? Provisioned { get; init; }
     }
 
@@ -52,7 +52,7 @@ public sealed class AppxActionHandler : IActionHandler
             return new Inventory { CurrentUser = current, AllUsers = all, Provisioned = provisioned };
         }));
 
-    /// <summary>Casa o nome do pacote; aceita "*" no fim como curinga de prefixo.</summary>
+    /// <summary>Matches the package name; accepts a trailing "*" as a prefix wildcard.</summary>
     internal static bool NameMatches(string pattern, string name) =>
         pattern.EndsWith('*')
             ? name.StartsWith(pattern[..^1], StringComparison.OrdinalIgnoreCase)
@@ -62,9 +62,9 @@ public sealed class AppxActionHandler : IActionHandler
         names is not null && names.Any(n => NameMatches(pattern, n));
 
     /// <summary>
-    /// Algum pacote com o nome está INSTALADO para algum usuário? FindPackages() também devolve pacotes só
-    /// preparados (Staged), ex.: o MSTeams 1.0.0.1 do SYSTEM no 26300, que não são apps instalados e não
-    /// podem ser removidos "para todos os usuários" (0x80073D19).
+    /// Is any package with this name INSTALLED for some user? FindPackages() also returns packages that are only
+    /// prepared (Staged), e.g. SYSTEM's MSTeams 1.0.0.1 on 26300, which are not installed apps and cannot
+    /// be removed "for all users" (0x80073D19).
     /// </summary>
     private static bool InstalledForSomeone(PackageManager pm, IEnumerable<(string Name, string FullName)>? packages, string pattern) =>
         packages is not null && packages.Where(p => NameMatches(pattern, p.Name)).Any(p => IsInstalled(pm, p.FullName));
@@ -77,7 +77,7 @@ public sealed class AppxActionHandler : IActionHandler
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or COMException)
         {
-            return true; // na dúvida, conta como instalado
+            return true; // when in doubt, count it as installed
         }
     }
 
@@ -87,12 +87,12 @@ public sealed class AppxActionHandler : IActionHandler
         {
             var inv = await GetInventoryAsync(ctx).ConfigureAwait(false);
             var name = spec.Name!;
-            if (AnyMatch(inv.CurrentUser, name)) return Detection.NotDesired("instalado (usuário atual)");
-            if (InstalledForSomeone(new PackageManager(), inv.AllUsers, name)) return Detection.NotDesired("instalado para outro usuário");
-            if (AnyMatch(inv.Provisioned, name)) return Detection.NotDesired("provisionado para novos usuários");
+            if (AnyMatch(inv.CurrentUser, name)) return Detection.NotDesired("installed (current user)");
+            if (InstalledForSomeone(new PackageManager(), inv.AllUsers, name)) return Detection.NotDesired("installed for another user");
+            if (AnyMatch(inv.Provisioned, name)) return Detection.NotDesired("provisioned for new users");
             return Detection.Desired(inv.Provisioned is null
-                ? "não instalado (usuário atual; provisionamento não verificado sem administrador)"
-                : "não instalado nem provisionado");
+                ? "not installed (current user; provisioning not checked without administrator)"
+                : "neither installed nor provisioned");
         }
         catch (Exception ex)
         {
@@ -124,7 +124,7 @@ public sealed class AppxActionHandler : IActionHandler
             families.Add(pkg.Id.FamilyName);
             var fullName = pkg.Id.FullName;
             if (await TryDeployAsync(() => pm.RemovePackageAsync(fullName, RemovalOptions.RemoveForAllUsers)).ConfigureAwait(false) is { } error)
-                errors.Add($"remover {fullName}: {error}");
+                errors.Add($"remove {fullName}: {error}");
         }
 
         try
@@ -138,25 +138,25 @@ public sealed class AppxActionHandler : IActionHandler
         {
             ct.ThrowIfCancellationRequested();
             if (await TryDeployAsync(() => pm.DeprovisionPackageForAllUsersAsync(family)).ConfigureAwait(false) is { } error)
-                errors.Add($"desprovisionar {family}: {error}");
+                errors.Add($"deprovision {family}: {error}");
         }
 
         ctx.Invalidate(CacheKey);
         if (errors.Count == 0) return;
 
-        // Etapas podem "falhar" por já estarem feitas: remover o pacote principal leva junto os pacotes
-        // de recursos, e RemoveForAllUsers já desprovisiona ("Elemento não encontrado"). Quem decide é o
-        // estado final: só é erro se o pacote ainda está instalado para alguém ou provisionado.
+        // Steps may "fail" because they are already done: removing the main package takes its resource
+        // packages with it, and RemoveForAllUsers already deprovisions ("Element not found"). The final
+        // state decides: it is only an error if the package is still installed for someone or provisioned.
         var remaining = Remaining(pm, spec.Name!);
         if (remaining.Count == 0)
         {
-            ctx.AddNote($"{spec.Name}: removido; o Windows reportou erro em etapas que já estavam feitas (ignorado): {string.Join("; ", errors)}");
+            ctx.AddNote($"{spec.Name}: removed; Windows reported errors in steps that were already done (ignored): {string.Join("; ", errors)}");
             return;
         }
-        throw new InvalidOperationException($"ainda presente: {string.Join(", ", remaining)}. Erros: {string.Join("; ", errors)}");
+        throw new InvalidOperationException($"still present: {string.Join(", ", remaining)}. Errors: {string.Join("; ", errors)}");
     }
 
-    /// <summary>Executa uma operação de implantação; devolve a mensagem de erro, ou null se deu certo.</summary>
+    /// <summary>Runs a deployment operation; returns the error message, or null on success.</summary>
     private static async Task<string?> TryDeployAsync(
         Func<Windows.Foundation.IAsyncOperationWithProgress<DeploymentResult, DeploymentProgress>> operation)
     {
@@ -174,14 +174,14 @@ public sealed class AppxActionHandler : IActionHandler
     private static string Clean(string text) =>
         string.Join(" ", text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
-    /// <summary>Pacotes que ainda casam com o nome: instalados para algum usuário ou provisionados.</summary>
+    /// <summary>Packages that still match the name: installed for some user or provisioned.</summary>
     private static List<string> Remaining(PackageManager pm, string name)
     {
         var left = pm.FindPackages().Where(p => NameMatches(name, p.Id.Name) && IsInstalled(pm, p.Id.FullName))
-            .Select(p => $"{p.Id.FullName} (instalado)").ToList();
+            .Select(p => $"{p.Id.FullName} (installed)").ToList();
         try
         {
-            left.AddRange(pm.FindProvisionedPackages().Where(p => NameMatches(name, p.Id.Name)).Select(p => $"{p.Id.FullName} (provisionado)"));
+            left.AddRange(pm.FindProvisionedPackages().Where(p => NameMatches(name, p.Id.Name)).Select(p => $"{p.Id.FullName} (provisioned)"));
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or COMException) { }
         return left;
@@ -189,6 +189,6 @@ public sealed class AppxActionHandler : IActionHandler
 
     public Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default) =>
         throw new NotSupportedException(
-            $"A remoção do pacote '{spec.Name}' não pode ser desfeita pelo engine." +
-            (spec.StoreId is null ? "" : $" Reinstale com: winget install --id {spec.StoreId} --source msstore"));
+            $"Removal of package '{spec.Name}' cannot be undone by the engine." +
+            (spec.StoreId is null ? "" : $" Reinstall with: winget install --id {spec.StoreId} --source msstore"));
 }

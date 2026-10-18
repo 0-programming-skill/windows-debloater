@@ -8,20 +8,20 @@ using System.Text.RegularExpressions;
 namespace Debloater.Core.Fingerprint;
 
 /// <summary>
-/// Varre binários PE de uma instalação do Windows (viva ou montada numa pasta): versão, tamanho,
-/// SHA-256 e as cadeias interessantes (<see cref="StringExtractor"/>). Em paralelo, um arquivo
-/// inteiro por vez em memória (buffer reaproveitado).
+/// Scans PE binaries of a Windows installation (live or mounted in a folder): version, size,
+/// SHA-256 and the interesting strings (<see cref="StringExtractor"/>). Runs in parallel, one whole
+/// file at a time in memory (reused buffer).
 /// </summary>
 public static partial class BinaryScanner
 {
-    /// <summary>Uma raiz de varredura, relativa à raiz da instalação.</summary>
+    /// <summary>A scan root, relative to the installation root.</summary>
     public sealed record ScanRoot(string RelativePath, bool Recursive, bool CuratedFolder);
 
     /// <summary>
-    /// Raízes: a pasta Windows (só o primeiro nível: explorer.exe), System32 (recursivo, sem
-    /// DriverStore), SystemApps, ImmersiveControlPanel e as pastas Shell* (ShellComponents,
-    /// ShellExperiences). SysWOW64 e WinSxS ficam de fora (duplicatas); Program Files\WindowsApps
-    /// não é legível sem privilégios.
+    /// Roots: the Windows folder (top level only: explorer.exe), System32 (recursive, without
+    /// DriverStore), SystemApps, ImmersiveControlPanel and the Shell* folders (ShellComponents,
+    /// ShellExperiences). SysWOW64 and WinSxS are left out (duplicates); Program Files\WindowsApps
+    /// is not readable without privileges.
     /// </summary>
     public static IReadOnlyList<ScanRoot> DefaultRoots(string root)
     {
@@ -41,7 +41,7 @@ public static partial class BinaryScanner
         return list;
     }
 
-    // Subpastas de System32 que não interessam (drivers de hardware, logs, bancos de dados...).
+    // System32 subfolders that are not of interest (hardware drivers, logs, databases...).
     private static readonly HashSet<string> ExcludedDirs = new(StringComparer.OrdinalIgnoreCase)
     {
         "DriverStore", "catroot", "catroot2", "config", "LogFiles", "spool", "Tasks", "winevt", "sru",
@@ -54,9 +54,9 @@ public static partial class BinaryScanner
     };
 
     /// <summary>
-    /// Nomes de arquivo relevantes para debloat (modo default): shell/Explorer/barra/Iniciar, busca,
-    /// widgets, Configurações, telemetria/diagnóstico, integração do Edge, Copilot/Recall/IA,
-    /// conteúdo patrocinado, notificações, OOBE, conta Microsoft, Windows Update, políticas/CSP.
+    /// File names relevant to debloating (default mode): shell/Explorer/taskbar/Start, search,
+    /// widgets, Settings, telemetry/diagnostics, Edge integration, Copilot/Recall/AI,
+    /// sponsored content, notifications, OOBE, Microsoft account, Windows Update, policies/CSP.
     /// </summary>
     [GeneratedRegex("""
         ^(explorer\.exe|shell32\.dll|ExplorerFrame\.dll|windows\.storage\.dll|windows\.immersiveshell\.serviceprovider\.dll
@@ -77,7 +77,7 @@ public static partial class BinaryScanner
 
     public sealed record Candidate(string FullPath, string RelativePath, bool Curated);
 
-    /// <summary>Lista os PE das raízes (modo default: só os curados; all: todos).</summary>
+    /// <summary>Lists the PE files under the roots (default mode: curated only; all: everything).</summary>
     public static List<Candidate> Enumerate(string root, string mode, IReadOnlyList<ScanRoot>? roots = null)
     {
         var result = new Dictionary<string, Candidate>(StringComparer.OrdinalIgnoreCase);
@@ -115,7 +115,7 @@ public static partial class BinaryScanner
         public long TotalBytes { get; init; }
     }
 
-    /// <summary>Arquivos maiores que isso têm só hash e versão (sem extração de cadeias).</summary>
+    /// <summary>Files larger than this get only hash and version (no string extraction).</summary>
     public const long MaxExtractBytes = 512L * 1024 * 1024;
 
     public static ScanResult Scan(IReadOnlyList<Candidate> candidates, StringExtractorOptions? options = null,
@@ -151,7 +151,7 @@ public static partial class BinaryScanner
         };
     }
 
-    /// <summary>Lê um arquivo; null se não for PE (sem "MZ").</summary>
+    /// <summary>Reads a file; null if it is not a PE (no "MZ").</summary>
     public static BinaryEntry? ScanFile(Candidate c, StringExtractorOptions? options = null)
     {
         using var handle = File.OpenHandle(c.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, FileOptions.SequentialScan);

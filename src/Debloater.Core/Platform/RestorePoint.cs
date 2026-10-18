@@ -2,16 +2,16 @@ using System.Management;
 
 namespace Debloater.Core.Platform;
 
-/// <summary>Resultado da tentativa de criar um ponto de restauração.</summary>
-/// <param name="Created">true se um ponto novo foi criado.</param>
-/// <param name="Message">Explicação em pt-BR (inclui o motivo quando nada foi criado).</param>
+/// <summary>Result of trying to create a restore point.</summary>
+/// <param name="Created">true if a new point was created.</param>
+/// <param name="Message">Explanation (includes the reason when nothing was created).</param>
 public sealed record RestorePointResult(bool Created, string Message);
 
 /// <summary>
-/// Cria pontos de restauração do sistema via WMI (root\default:SystemRestore.CreateRestorePoint).
-/// Requer administrador e a Proteção do Sistema ativa na unidade do Windows. O Windows cria no
-/// máximo um ponto a cada 24 h (SystemRestorePointCreationFrequency): dentro desse intervalo o método
-/// retorna sucesso sem criar nada. O programa NÃO altera essa configuração; apenas avisa.
+/// Creates system restore points via WMI (root\default:SystemRestore.CreateRestorePoint).
+/// Requires administrator and System Protection enabled on the Windows drive. Windows creates at
+/// most one point every 24 h (SystemRestorePointCreationFrequency): within that interval the method
+/// returns success without creating anything. The program does NOT change that setting; it only warns.
 /// </summary>
 public static class RestorePoint
 {
@@ -21,7 +21,7 @@ public static class RestorePoint
     private const int ModifySettings = 12;
     private const int BeginSystemChange = 100;
 
-    /// <summary>Data do ponto de restauração mais recente (UTC), ou null se não houver / não der para ler.</summary>
+    /// <summary>Date of the most recent restore point (UTC), or null if there is none / it cannot be read.</summary>
     public static DateTime? LatestUtc()
     {
         try
@@ -53,7 +53,7 @@ public static class RestorePoint
     public static RestorePointResult Create(string description)
     {
         if (!SystemInfo.IsProcessElevated())
-            return new RestorePointResult(false, "Criar ponto de restauração requer administrador.");
+            return new RestorePointResult(false, "Creating a restore point requires administrator.");
 
         var before = LatestUtc();
         uint code;
@@ -69,25 +69,25 @@ public static class RestorePoint
         }
         catch (Exception ex) when (ex is ManagementException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
         {
-            return new RestorePointResult(false, $"Falha ao criar o ponto de restauração: {ex.Message}");
+            return new RestorePointResult(false, $"Failed to create the restore point: {ex.Message}");
         }
 
         if (code != 0)
         {
             var hint = code == 1058
-                ? " A Proteção do Sistema parece estar desativada (ative em Propriedades do Sistema > Proteção do Sistema)."
+                ? " System Protection seems to be turned off (turn it on in System Properties > System Protection)."
                 : "";
-            return new RestorePointResult(false, $"O Windows recusou o ponto de restauração (código {code}).{hint}");
+            return new RestorePointResult(false, $"Windows refused the restore point (code {code}).{hint}");
         }
 
         var after = LatestUtc();
         if (after is not null && (before is null || after > before))
-            return new RestorePointResult(true, $"Ponto de restauração criado ({after.Value.ToLocalTime():g}).");
+            return new RestorePointResult(true, $"Restore point created ({after.Value.ToLocalTime():g}).");
 
-        // Sucesso sem ponto novo: limite de frequência do Windows (um a cada 24 h).
-        var when = before is null ? "" : $" O mais recente é de {before.Value.ToLocalTime():g}.";
+        // Success without a new point: Windows frequency limit (one every 24 h).
+        var when = before is null ? "" : $" The most recent one is from {before.Value.ToLocalTime():g}.";
         return new RestorePointResult(false,
-            "O Windows não criou um ponto novo: ele permite no máximo um a cada 24 horas." + when +
-            " Esse ponto existente continua disponível para restauração.");
+            "Windows did not create a new point: it allows at most one every 24 hours." + when +
+            " That existing point is still available for restoring.");
     }
 }

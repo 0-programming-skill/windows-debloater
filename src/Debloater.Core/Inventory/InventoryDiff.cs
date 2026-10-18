@@ -10,7 +10,7 @@ public enum DiffChange
     Changed,
 }
 
-/// <summary>Uma diferença entre dois snapshots.</summary>
+/// <summary>A difference between two snapshots.</summary>
 public sealed record InventoryDiffEntry(
     string Kind,
     string Id,
@@ -25,13 +25,13 @@ public sealed class InventoryDiffResult
     public string? NewBuild { get; init; }
     public required IReadOnlyList<InventoryDiffEntry> Entries { get; init; }
 
-    /// <summary>Tipos que não puderam ser comparados (indisponíveis em um dos snapshots ou ausentes).</summary>
+    /// <summary>Kinds that could not be compared (unavailable in one of the snapshots, or missing).</summary>
     public required IReadOnlyList<string> Warnings { get; init; }
 }
 
 /// <summary>
-/// Compara dois snapshots de inventário. É o que o mantenedor roda quando sai um build novo do
-/// Windows: o que apareceu (candidato a tweak novo), sumiu (tweak a marcar maxBuild) ou mudou.
+/// Compares two inventory snapshots. This is what the maintainer runs when a new Windows build
+/// comes out: what appeared (candidate for a new tweak), disappeared (tweak to mark with maxBuild) or changed.
 /// </summary>
 public static class InventoryDiff
 {
@@ -46,16 +46,16 @@ public static class InventoryDiff
         {
             if (!oldSections.TryGetValue(kind, out var o) || !newSections.TryGetValue(kind, out var n))
             {
-                warnings.Add($"{kind}: presente em apenas um dos snapshots; não comparado.");
+                warnings.Add($"{kind}: present in only one of the snapshots; not compared.");
                 continue;
             }
             if (!o.Available || !n.Available)
             {
-                warnings.Add($"{kind}: indisponível em um dos snapshots; não comparado.");
+                warnings.Add($"{kind}: unavailable in one of the snapshots; not compared.");
                 continue;
             }
             if (o.Note != n.Note && (o.Note is not null || n.Note is not null))
-                warnings.Add($"{kind}: coletado em condições diferentes (antes: {o.Note ?? "completo"}; depois: {n.Note ?? "completo"}).");
+                warnings.Add($"{kind}: collected under different conditions (before: {o.Note ?? "complete"}; after: {n.Note ?? "complete"}).");
 
             var oldItems = ToDictionary(o.Items);
             var newItems = ToDictionary(n.Items);
@@ -113,7 +113,7 @@ public static class InventoryDiff
             before.TryGetValue(key, out var b);
             after.TryGetValue(key, out var a);
             if (!string.Equals(a, b, StringComparison.Ordinal))
-                changes.Add($"{key}: {b ?? "(ausente)"} → {a ?? "(ausente)"}");
+                changes.Add($"{key}: {b ?? "(absent)"} → {a ?? "(absent)"}");
         }
         return changes;
     }
@@ -121,7 +121,7 @@ public static class InventoryDiff
     private static List<string> Describe(IDictionary<string, string> props) =>
         props.Select(p => $"{p.Key}={p.Value}").ToList();
 
-    // ---------------- persistência ----------------
+    // ---------------- persistence ----------------
 
     public static JsonSerializerOptions JsonOptions { get; } = new()
     {
@@ -140,5 +140,5 @@ public static class InventoryDiff
 
     public static InventorySnapshot Load(string file) =>
         JsonSerializer.Deserialize<InventorySnapshot>(File.ReadAllText(file), JsonOptions)
-        ?? throw new InvalidDataException($"snapshot vazio: {file}");
+        ?? throw new InvalidDataException($"empty snapshot: {file}");
 }

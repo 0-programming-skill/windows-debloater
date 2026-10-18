@@ -36,13 +36,13 @@ public class CspMarkdownParserTests
         Assert.True(p.ScopeUser);
         Assert.Equal(["Pro", "Enterprise", "Education", "IoT Enterprise / IoT Enterprise LTSC"], p.Editions);
         Assert.Null(p.NotEditions);
-        Assert.Null(p.Win11MinBuild); // Windows 10 1507 e posteriores: todo o Windows 11
+        Assert.Null(p.Win11MinBuild); // Windows 10 1507 and later: all of Windows 11
         Assert.False(p.InsiderOnly);
         Assert.Equal("int", p.Format);
         Assert.Equal("1", p.DefaultValue);
         Assert.Equal(["0", "1", "3"], p.AllowedValues!.Select(v => v.Value));
         Assert.True(p.AllowedValues![1].IsDefault);
-        Assert.Equal("Basic. See the docs.", p.AllowedValues[1].Description); // links viram texto
+        Assert.Equal("Basic. See the docs.", p.AllowedValues[1].Description); // links become text
 
         var gp = Assert.Single(p.GpMappings!);
         Assert.Equal(("AllowTelemetry", "DataCollection.admx", @"Software\Policies\Microsoft\Windows\DataCollection"), (gp.Name, gp.AdmxFile, gp.RegistryKey));
@@ -149,15 +149,15 @@ public class ReferenceMatcherTests
         var hit = Assert.Single(machine.Admx);
         Assert.Equal(("Sample.admx:DisableThing", AdmxVia.PolicyValue, true), (hit.Policy.QualifiedName, hit.Via, hit.HiveMatches));
 
-        // Mesma chave em HKCU: a política é Machine → corresponde, mas com a raiz errada.
+        // Same key in HKCU: the policy is Machine → matches, but with the wrong hive.
         var user = m.MatchAction(Reg(@"HKCU\SOFTWARE\POLICIES\TEST\THING", "disablething", 1));
         Assert.False(Assert.Single(user.Admx).HiveMatches);
 
-        // Classe Both aceita as duas raízes; elemento enum.
+        // Class Both accepts both hives; enum element.
         var both = m.MatchAction(Reg(@"HKCU\Software\Policies\Test\Data", "Level", 0));
         Assert.Equal(AdmxVia.Element, Assert.Single(both.Admx).Via);
 
-        // enabledList em subchave; valueList de opção de enum.
+        // enabledList in a subkey; valueList of an enum option.
         Assert.Equal(AdmxVia.List, Assert.Single(m.MatchAction(Reg(@"HKCU\Software\Policies\Test\Lists\Sub", "B", "on", "string")).Admx).Via);
         Assert.Equal(AdmxVia.ElementList, Assert.Single(m.MatchAction(Reg(@"HKLM\Software\Policies\Test\Extra", "Full", "yes", "string")).Admx).Via);
 
@@ -177,9 +177,9 @@ public class ReferenceMatcherTests
         var m = new ReferenceMatcher(Admx.Policies, csp);
 
         Assert.Equal("Policy CSP - Test/DisableThing", Assert.Single(m.MatchAction(Reg(@"HKLM\Software\Policies\Test\Thing", "DisableThing", 1)).Csp).Reference);
-        // Telemetry → duas entradas da CSP; fica a de nome igual ao valor.
+        // Telemetry → two CSP entries; the one named like the value wins.
         Assert.Equal("Level", Assert.Single(m.MatchAction(Reg(@"HKLM\Software\Policies\Test\Data", "Level", 1)).Csp).Name);
-        // Sem ADMX local: casa pela chave + valor documentados; Location "Computer" exige HKLM.
+        // No local ADMX: matches by the documented key + value; Location "Computer" requires HKLM.
         Assert.Single(m.MatchAction(Reg(@"HKLM\Software\Policies\Test\Reg", "Value", 1)).Csp);
         Assert.Empty(m.MatchAction(Reg(@"HKCU\Software\Policies\Test\Reg", "Value", 1)).Csp);
     }
@@ -233,7 +233,7 @@ public class ReferenceValidatorTests
     [InlineData(@"HKLM\Software\Policies\Test\Elements", "Timeout", 600, null)]          // decimal min..max
     [InlineData(@"HKLM\Software\Policies\Test\Elements", "Timeout", 4, ReferenceValidator.AdmxValue)]
     [InlineData(@"HKCU\Software\Policies\Test\Thing", "DisableThing", 1, ReferenceValidator.AdmxHive)]
-    [InlineData(@"HKLM\Software\Policies\Test\Thing", "DisableThing", null, null)]       // apagar é sempre válido
+    [InlineData(@"HKLM\Software\Policies\Test\Thing", "DisableThing", null, null)]       // delete is always valid
     [InlineData(@"HKLM\Software\Policies\Test\Unknown", "X", 1, ReferenceValidator.PolicyUnknown)]
     public void AdmxChecks(string path, string name, object? value, string? expectedCode)
     {
@@ -267,15 +267,15 @@ public class ReferenceValidatorTests
         Assert.Contains(findings, f => f is { Code: ReferenceValidator.CspEditionValue, Severity: FindingSeverity.Warning });
         Assert.Contains(findings, f => f is { Code: ReferenceValidator.CspBuild, Severity: FindingSeverity.Warning });
 
-        // Com minBuild correto e valor sem restrição: nada.
+        // With the correct minBuild and an unrestricted value: nothing.
         var ok = Tweak("t.ok", Reg(@"HKLM\Software\Policies\Test\Data", "Level", 1));
         ok.MinBuild = 26100;
         Assert.Empty(Run([csp], ok));
 
-        // Tweak que já menciona a restrição de edição: só informativo.
+        // Tweak that already mentions the edition restriction: informational only.
         var mentions = Tweak("t.mentions", Reg(@"HKLM\Software\Policies\Test\Data", "Level", 0));
         mentions.MinBuild = 26100;
-        mentions.Description = "O valor 0 só vale no Enterprise.";
+        mentions.Description = "Value 0 only applies on Enterprise.";
         Assert.Equal(FindingSeverity.Info, Assert.Single(Run([csp], mentions)).Severity);
     }
 
@@ -298,19 +298,19 @@ public class ReferenceValidatorTests
 
 public class CatalogAnnotatorTests
 {
-    // Normalizado para LF: o checkout no Windows (autocrlf) pode trazer CRLF no literal.
+    // Normalized to LF: the Windows checkout (autocrlf) may bring CRLF into the literal.
     private static readonly string Yaml = """
-        # Comentário do arquivo.
+        # File comment.
         category: A/B
 
         tweaks:
           - id: test.one
-            name: Um
+            name: One
             description: >
-              Texto longo
-              em duas linhas.
+              Long text
+              on two lines.
             risk: low
-            tags: [x]   # comentário na linha
+            tags: [x]   # inline comment
             actions:
               - type: registry
                 path: HKLM\SOFTWARE\Policies\X
@@ -318,9 +318,9 @@ public class CatalogAnnotatorTests
                 kind: dword
                 value: 1
 
-          # comentário entre tweaks
+          # comment between tweaks
           - id: test.two
-            name: Dois
+            name: Two
             description: d
             risk: medium
             confidence: community
@@ -341,9 +341,9 @@ public class CatalogAnnotatorTests
     {
         var (text, changed) = CatalogAnnotator.Annotate(Yaml, Annotations, force: false);
         Assert.Equal(1, changed);
-        Assert.Contains("    risk: low\n    confidence: official\n    sources:\n      - { kind: msdocs, ref: \"Policy CSP - X/A\" }\n      - { kind: admx, ref: \"X.admx:A \\\"q\\\"\" }\n    tags: [x]   # comentário na linha", text);
-        Assert.Contains("# comentário entre tweaks", text);
-        Assert.Contains("    confidence: community\n", text); // test.two intacto
+        Assert.Contains("    risk: low\n    confidence: official\n    sources:\n      - { kind: msdocs, ref: \"Policy CSP - X/A\" }\n      - { kind: admx, ref: \"X.admx:A \\\"q\\\"\" }\n    tags: [x]   # inline comment", text);
+        Assert.Contains("# comment between tweaks", text);
+        Assert.Contains("    confidence: community\n", text); // test.two untouched
 
         var loaded = CatalogLoader.Load([("a.yaml", () => text)]);
         Assert.True(loaded.IsValid, string.Join("\n", loaded.Errors));
@@ -382,15 +382,15 @@ public class CatalogAnnotatorTests
     {
         var bad = Yaml.Replace("    risk: low\n", "    risk: low\n    confidence: official\n    sources:\n      - { kind: blog, ref: x }\n");
         var result = CatalogLoader.Load([("a.yaml", () => bad)]);
-        Assert.Contains(result.Errors, e => e.Message.Contains("kind inválido"));
+        Assert.Contains(result.Errors, e => e.Message.Contains("invalid kind"));
     }
 
     [Fact]
     public void Loader_AcceptsReverseEngineeringSourceKind()
     {
-        var yaml = Yaml.Replace("    risk: low\n", "    risk: low\n    confidence: community\n    sources:\n      - { kind: re, ref: \"docs/re/26300/x.md\" }\n");
+        var yaml = Yaml.Replace("    risk: low\n", "    risk: low\n    confidence: community\n    sources:\n      - { kind: re, ref: \"26300/x\" }\n");
         var result = CatalogLoader.Load([("a.yaml", () => yaml)]);
         Assert.True(result.IsValid, string.Join("\n", result.Errors));
-        Assert.Contains(result.Tweaks, t => t.Sources.Any(s => s.Kind == SourceRef.ReKind && s.Ref == "docs/re/26300/x.md"));
+        Assert.Contains(result.Tweaks, t => t.Sources.Any(s => s.Kind == SourceRef.ReKind && s.Ref == "26300/x"));
     }
 }

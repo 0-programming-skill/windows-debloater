@@ -9,19 +9,19 @@ public enum ChangeKind
     Revert,
 }
 
-/// <summary>Uma mudança pendente: aplicar ou reverter um tweak.</summary>
-/// <param name="BlockedReason">Preenchido quando a mudança não pode ser executada (ex.: reverter sem backup).</param>
+/// <summary>A pending change: apply or revert a tweak.</summary>
+/// <param name="BlockedReason">Set when the change cannot be executed (e.g. revert without a backup).</param>
 public sealed record PlannedChange(Tweak Tweak, ChangeKind Kind, TweakState CurrentState, string? BlockedReason = null)
 {
     public bool IsBlocked => BlockedReason is not null;
 }
 
 /// <summary>
-/// Calcula as mudanças pendentes a partir do estado atual de cada tweak e do estado desejado.
-/// Regras:
-///   desejado Aplicado     + atual NãoAplicado/Parcial/Erro → aplicar;
-///   desejado NãoAplicado  + atual Aplicado/Parcial         → reverter (exige backup e tweak reversível);
-///   atual NãoSeAplica, ou já no estado desejado            → nada.
+/// Computes the pending changes from each tweak's current state and the desired state.
+/// Rules:
+///   desired Applied     + current NotApplied/Partial/Error → apply;
+///   desired NotApplied  + current Applied/Partial          → revert (requires a backup and a reversible tweak);
+///   current NotApplicable, or already in the desired state → nothing.
 /// </summary>
 public static class ChangePlanner
 {
@@ -51,20 +51,20 @@ public static class ChangePlanner
 
             string? blocked = null;
             if (!status.Tweak.Reversible)
-                blocked = "Este ajuste não é reversível pelo programa (ex.: app removido; reinstale pela Microsoft Store).";
+                blocked = "This tweak cannot be reverted by the program (e.g. removed app; reinstall it from the Microsoft Store).";
             else if (!hasBackup(status.Tweak.Id))
-                blocked = "Sem backup: o ajuste não foi aplicado por este programa, então não há valor original para restaurar.";
+                blocked = "No backup: the tweak was not applied by this program, so there is no original value to restore.";
             changes.Add(new PlannedChange(status.Tweak, ChangeKind.Revert, status.State, blocked));
         }
-        // Do maior para o menor risco, depois por categoria e nome: o que exige atenção aparece primeiro.
+        // From highest to lowest risk, then by category and name: what needs attention comes first.
         return changes
             .OrderByDescending(c => c.Tweak.Risk)
             .ThenBy(c => c.Tweak.Category, StringComparer.CurrentCulture)
-            .ThenBy(c => c.Tweak.Name, StringComparer.CurrentCulture)
+            .ThenBy(c => c.Tweak.DisplayName, StringComparer.CurrentCulture)
             .ToList();
     }
 
-    /// <summary>Risco máximo entre as mudanças executáveis (para o controle de risco do engine).</summary>
+    /// <summary>Maximum risk among the executable changes (for the engine's risk gate).</summary>
     public static RiskLevel MaxRisk(IEnumerable<PlannedChange> changes) =>
         changes.Where(c => !c.IsBlocked).Select(c => c.Tweak.Risk).DefaultIfEmpty(RiskLevel.Low).Max();
 }

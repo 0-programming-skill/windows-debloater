@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fixture para o gravador de políticas: cobre cada regra do esquema ADMX que gera escrita no registro. -->
+<!-- Fixture for the policy writer: covers each ADMX schema rule that produces a registry write. -->
 <policyDefinitions revision="1.0" schemaVersion="1.0"
   xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
   <policyNamespaces>
@@ -13,14 +13,14 @@
     </category>
   </categories>
   <policies>
-    <!-- valueName sem enabledValue/disabledValue: habilitada = DWORD 1, desabilitada = apaga. -->
+    <!-- valueName without enabledValue/disabledValue: enabled = DWORD 1, disabled = delete. -->
     <policy name="Implicit" class="Machine" displayName="$(string.Implicit)" explainText="$(string.Implicit)"
             key="Software\Policies\Test\W\Implicit" valueName="Flag">
       <parentCategory ref="WriterCat" />
       <supportedOn ref="b:SUPPORTED_Win11" />
     </policy>
 
-    <!-- enabledValue string, disabledValue decimal, enabledList/disabledList em outra chave. -->
+    <!-- enabledValue string, disabledValue decimal, enabledList/disabledList in another key. -->
     <policy name="Mixed" class="User" displayName="$(string.Mixed)" explainText="$(string.Mixed)"
             key="Software\Policies\Test\W\Mixed" valueName="Mode">
       <parentCategory ref="WriterCat" />
@@ -36,7 +36,7 @@
       </disabledList>
     </policy>
 
-    <!-- Um elemento de cada tipo, com chaves sobrepostas por elemento. -->
+    <!-- One element of each type, with keys overridden per element. -->
     <policy name="AllElements" class="Both" displayName="$(string.AllElements)" explainText="$(string.AllElements)"
             presentation="$(presentation.AllElements)" key="Software\Policies\Test\W\All" valueName="Enabled">
       <parentCategory ref="WriterCat" />
@@ -73,7 +73,7 @@
       </elements>
     </policy>
 
-    <!-- Política sem valueName, só elementos: desabilitada = nada gravado. -->
+    <!-- Policy without valueName, elements only: disabled = nothing written. -->
     <policy name="ElementsOnly" class="Machine" displayName="$(string.ElementsOnly)" explainText="$(string.ElementsOnly)"
             presentation="$(presentation.ElementsOnly)" key="Software\Policies\Test\W\Only">
       <parentCategory ref="WriterCat" />
@@ -85,8 +85,8 @@
         </enum>
       </elements>
     </policy>
-    <!-- Como WerDefaultConsent / WerConsentCustomize (ErrorReporting.admx): um valor fixo de uma política
-         mora na mesma chave que a lista explicitValue de outra. O valor não é item da lista. -->
+    <!-- Like WerDefaultConsent / WerConsentCustomize (ErrorReporting.admx): a fixed value of one policy
+         lives in the same key as another policy's explicitValue list. The value is not a list item. -->
     <policy name="SharedDefault" class="Machine" displayName="$(string.ElementsOnly)" explainText="$(string.ElementsOnly)"
             key="Software\Policies\Test\W\Shared">
       <parentCategory ref="WriterCat" />

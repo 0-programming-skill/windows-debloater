@@ -1,4 +1,5 @@
-﻿using Debloater.Core.Engine;
+﻿using System.Globalization;
+using Debloater.Core.Engine;
 using Debloater.Core.Model;
 using Debloater.Core.Platform;
 using Microsoft.Win32;
@@ -6,7 +7,7 @@ using Microsoft.Win32;
 namespace Debloater.Core.Tests;
 
 /// <summary>
-/// Testes do engine usando apenas a sandbox de registro em HKCU e um diretório de backup temporário.
+/// Engine tests using only the registry sandbox in HKCU and a temporary backup directory.
 /// </summary>
 public sealed class TweakEngineTests : IDisposable
 {
@@ -19,7 +20,7 @@ public sealed class TweakEngineTests : IDisposable
         if (Directory.Exists(_backupDir)) Directory.Delete(_backupDir, recursive: true);
         var parent = Path.GetDirectoryName(_backupDir)!;
         try { if (Directory.Exists(parent) && !Directory.EnumerateFileSystemEntries(parent).Any()) Directory.Delete(parent); }
-        catch (IOException) { /* outro teste em paralelo ainda usa a pasta */ }
+        catch (IOException) { /* another test running in parallel still uses the folder */ }
     }
 
     private TweakEngine Engine(bool requireElevation = false, bool elevated = false) => new(new TweakEngineOptions
@@ -34,13 +35,13 @@ public sealed class TweakEngineTests : IDisposable
         Id = "test.sandbox",
         Name = "Sandbox",
         Description = "d",
-        Category = "Teste",
+        Category = "Test",
         Risk = risk,
         MinBuild = minBuild,
         Actions =
         [
             new ActionSpec { Type = ActionSpec.Registry, Path = _sandbox.Path, Name = "A", Kind = "dword", Value = "1" },
-            new ActionSpec { Type = ActionSpec.Registry, Path = _sandbox.Path, Name = "B", Kind = "string", Value = "novo" },
+            new ActionSpec { Type = ActionSpec.Registry, Path = _sandbox.Path, Name = "B", Kind = "string", Value = "new" },
         ],
     };
 
@@ -79,7 +80,7 @@ public sealed class TweakEngineTests : IDisposable
         Assert.Equal(TweakState.Applied, applied.StatusAfter!.State);
         Assert.True(File.Exists(Path.Combine(_backupDir, "test.sandbox.json")));
 
-        // Alguém muda o valor depois; re-aplicar NÃO pode sobrescrever o backup original.
+        // Someone changes the value later; re-applying must NOT overwrite the original backup.
         using (var k = _sandbox.Open(writable: true)) k.SetValue("A", 9, RegistryValueKind.DWord);
         await engine.ApplyAsync(tweak);
         var backup = engine.Backups.Load(tweak.Id)!;
@@ -120,7 +121,7 @@ public sealed class TweakEngineTests : IDisposable
         var result = await Engine().RevertAsync(SandboxTweak());
 
         Assert.False(result.Success);
-        Assert.Contains("Nenhum backup", result.Message);
+        Assert.Contains("No backup", result.Message);
         using var key = _sandbox.Open();
         Assert.Equal(1, key.GetValue("A"));
     }
@@ -148,7 +149,7 @@ public sealed class TweakEngineTests : IDisposable
         Assert.True(ok.Success);
     }
 
-    // ---------- pré-condição ----------
+    // ---------- precondition ----------
 
     private TweakEngine EngineWithPrecondition(PreconditionResult result, List<string>? calls = null) => new(new TweakEngineOptions
     {
@@ -164,26 +165,50 @@ public sealed class TweakEngineTests : IDisposable
 
     private Tweak WithPrecondition(Tweak t)
     {
-        t.Precondition = new Precondition { Powershell = "$false", Reason = "sem suporte a hibernação" };
+        t.Precondition = new Precondition { Powershell = "$false", Reason = "no hibernation support" };
         return t;
     }
 
     [Fact]
     public async Task Precondition_False_MakesTweakNotApplicable_AndApplyChangesNothing()
     {
-        var engine = EngineWithPrecondition(PreconditionResult.False("sem suporte a hibernação"));
+        var engine = EngineWithPrecondition(PreconditionResult.False("no hibernation support"));
         var tweak = WithPrecondition(SandboxTweak());
 
         var status = await engine.GetStatusAsync(tweak);
         Assert.Equal(TweakState.NotApplicable, status.State);
-        Assert.Equal("sem suporte a hibernação", status.Message);
+        Assert.Equal("no hibernation support", status.Message);
         Assert.Empty(status.Actions);
 
         var applied = await engine.ApplyAsync(tweak);
         Assert.False(applied.Success);
-        Assert.Contains("sem suporte a hibernação", applied.Message);
+        Assert.Contains("no hibernation support", applied.Message);
         Assert.Null(_sandbox.TryOpen());
         Assert.False(engine.Backups.Exists(tweak.Id));
+    }
+
+    [Theory]
+    [InlineData("en-US", "no hibernation support")]
+    [InlineData("pt-BR", "sem suporte a hibernação")]
+    public async Task Precondition_False_ShowsTheReasonInTheUiLanguage(string uiCulture, string expected)
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(uiCulture);
+            var engine = EngineWithPrecondition(PreconditionResult.False("no hibernation support"));
+            var tweak = WithPrecondition(SandboxTweak());
+            tweak.I18n = new() { ["pt-BR"] = new TweakText { Reason = "sem suporte a hibernação" } };
+
+            var status = await engine.GetStatusAsync(tweak);
+            Assert.Equal(expected, status.Message);
+            var applied = await engine.ApplyAsync(tweak);
+            Assert.Contains(expected, applied.Message);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
     }
 
     [Fact]
@@ -205,22 +230,22 @@ public sealed class TweakEngineTests : IDisposable
     [Fact]
     public async Task Precondition_ScriptFailure_IsError()
     {
-        var engine = EngineWithPrecondition(PreconditionResult.Failed("pré-condição retornou 'x'"));
+        var engine = EngineWithPrecondition(PreconditionResult.Failed("precondition returned 'x'"));
         var status = await engine.GetStatusAsync(WithPrecondition(SandboxTweak()));
         Assert.Equal(TweakState.Error, status.State);
-        Assert.Contains("retornou 'x'", status.Message);
+        Assert.Contains("returned 'x'", status.Message);
     }
 
     [Theory]
     [InlineData("True\r\n", true)]
-    [InlineData("aviso qualquer\nfalse\n", false)]
+    [InlineData("some warning\nfalse\n", false)]
     [InlineData("", null)]
-    [InlineData("talvez", null)]
+    [InlineData("maybe", null)]
     public void PreconditionEvaluator_InterpretsLastLine(string stdout, bool? expected)
     {
-        var r = PreconditionEvaluator.Interpret(stdout, "", "motivo");
+        var r = PreconditionEvaluator.Interpret(stdout, "", "reason");
         Assert.Equal(expected, r.Met);
-        if (expected == false) Assert.Equal("motivo", r.Detail);
+        if (expected == false) Assert.Equal("reason", r.Detail);
     }
 
     [Fact]
@@ -233,12 +258,12 @@ public sealed class TweakEngineTests : IDisposable
         Assert.Equal("r", no.Detail);
     }
 
-    // ---------- registro protegido ----------
+    // ---------- protected registry ----------
 
     [Fact]
     public async Task Apply_ProtectedRegistryValue_ReportsClearError()
     {
-        // Simula uma chave protegida: o próprio usuário sem direito de gravar valores nela.
+        // Simulates a protected key: the user itself has no right to write values in it.
         using (var k = _sandbox.Create())
         {
             var acl = k.GetAccessControl();
@@ -248,11 +273,11 @@ public sealed class TweakEngineTests : IDisposable
                 System.Security.AccessControl.AccessControlType.Deny));
             k.SetAccessControl(acl);
         }
-        // O Dispose da sandbox apaga a chave: negar SetValue não impede apagar a árvore inteira.
+        // The sandbox Dispose deletes the key: denying SetValue does not prevent deleting the whole tree.
         var applied = await Engine().ApplyAsync(SandboxTweak());
         Assert.False(applied.Success);
         Assert.Equal(2, applied.Errors.Count);
-        Assert.All(applied.Errors, e => Assert.Contains("chave protegida pelo sistema", e));
+        Assert.All(applied.Errors, e => Assert.Contains("key protected by the system", e));
         Assert.DoesNotContain(applied.Errors, e => e.Contains("Attempted to perform", StringComparison.Ordinal));
     }
 
@@ -262,14 +287,14 @@ public sealed class TweakEngineTests : IDisposable
         _sandbox.Create().Dispose();
         var tweak = new Tweak
         {
-            Id = "test.sub", Name = "S", Description = "d", Category = "Teste",
-            Actions = [new ActionSpec { Type = ActionSpec.Registry, Path = _sandbox.Path + @"\Criada", Name = "A", Kind = "dword", Value = "1" }],
+            Id = "test.sub", Name = "S", Description = "d", Category = "Test",
+            Actions = [new ActionSpec { Type = ActionSpec.Registry, Path = _sandbox.Path + @"\Created", Name = "A", Kind = "dword", Value = "1" }],
         };
         var engine = Engine();
         Assert.True((await engine.ApplyAsync(tweak)).Success);
 
         var user = System.Security.Principal.WindowsIdentity.GetCurrent().User!;
-        var sub = _sandbox.SubKey + @"\Criada";
+        var sub = _sandbox.SubKey + @"\Created";
         void SetDenyDelete(bool deny)
         {
             using var k = Registry.CurrentUser.OpenSubKey(sub, RegistryKeyPermissionCheck.ReadWriteSubTree,
@@ -285,8 +310,8 @@ public sealed class TweakEngineTests : IDisposable
         {
             var reverted = await engine.RevertAsync(tweak);
             Assert.True(reverted.Success, string.Join('\n', reverted.Errors));
-            Assert.Contains(reverted.Notes, n => n.Contains("chave vazia") && n.Contains("Criada"));
-            using var k = _sandbox.TryOpen("Criada");
+            Assert.Contains(reverted.Notes, n => n.Contains("empty key") && n.Contains("Created"));
+            using var k = _sandbox.TryOpen("Created");
             Assert.NotNull(k);
             Assert.Null(k!.GetValue("A"));
         }

@@ -5,31 +5,31 @@ using RegValue = Debloater.Core.Admx.AdmxPolicyStateReader.RegValue;
 namespace Debloater.Core.Policies;
 
 /// <summary>
-/// Calcula, a partir da definição ADMX, exatamente quais valores do registro uma configuração de
-/// política grava e apaga — a mesma semântica do Editor de Política de Grupo (gpedit) depois que o
-/// cliente de GP processa o Registry.pol:
+/// Computes, from the ADMX definition, exactly which registry values a policy setting writes and
+/// deletes — the same semantics as the Group Policy Editor (gpedit) after the GP client processes
+/// Registry.pol:
 /// <list type="bullet">
-/// <item><b>Habilitada</b>: valueName ← enabledValue (padrão REG_DWORD 1); itens de enabledList; cada
-/// elemento grava o seu valor (decimal → REG_DWORD ou REG_SZ com storeAsText; longDecimal → REG_QWORD;
-/// text → REG_SZ/REG_EXPAND_SZ; multiText → REG_MULTI_SZ; boolean → trueValue/falseValue (padrão 1/0)
-/// + trueList/falseList; enum → valor do item + valueList do item; list → um valor por item).</item>
-/// <item><b>Desabilitada</b>: valueName ← disabledValue (sem disabledValue: o valor é apagado); itens
-/// de disabledList; valores dos elementos são apagados (gpedit grava "**del." / "**delvals.").</item>
-/// <item><b>Não configurada</b>: apaga todos os valores que a política possui (valueName, itens das
-/// listas enabled/disabled, valores dos elementos, valueList dos enums, trueList/falseList, valores
-/// das chaves de list) e apaga a chave de cada list que ficar vazia. Nada mais é tocado.</item>
+/// <item><b>Enabled</b>: valueName ← enabledValue (default REG_DWORD 1); enabledList items; each
+/// element writes its value (decimal → REG_DWORD, or REG_SZ with storeAsText; longDecimal → REG_QWORD;
+/// text → REG_SZ/REG_EXPAND_SZ; multiText → REG_MULTI_SZ; boolean → trueValue/falseValue (default 1/0)
+/// + trueList/falseList; enum → item value + item valueList; list → one value per item).</item>
+/// <item><b>Disabled</b>: valueName ← disabledValue (without disabledValue: the value is deleted);
+/// disabledList items; element values are deleted (gpedit writes "**del." / "**delvals.").</item>
+/// <item><b>Not configured</b>: deletes every value the policy owns (valueName, enabled/disabled list
+/// items, element values, enum valueLists, trueList/falseList, values of list keys) and deletes the
+/// key of each list left empty. Nothing else is touched.</item>
 /// </list>
-/// Valores que a política possui mas a configuração não grava são apagados (o cliente de GP remove o
-/// que não está mais na política). Listas: sem additive, a chave da lista fica exatamente com os itens
-/// pedidos; com additive, os itens existentes são mantidos e os novos são acrescentados (com
-/// valuePrefix, a numeração continua depois do maior índice existente, sem sobrescrever).
+/// Values the policy owns that the setting does not write are deleted (the GP client removes what is
+/// no longer in the policy). Lists: without additive, the list key ends up with exactly the requested
+/// items; with additive, existing items are kept and the new ones are appended (with valuePrefix,
+/// numbering continues after the highest existing index, without overwriting).
 /// </summary>
 public static class PolicyWriter
 {
-    /// <summary>maxLength padrão de text/multiText no esquema ADMX.</summary>
+    /// <summary>Default maxLength of text/multiText in the ADMX schema.</summary>
     public const int DefaultTextMaxLength = 1023;
 
-    // ---------------- plano ----------------
+    // ---------------- plan ----------------
 
     public static PolicyWritePlan Plan(AdmxPolicy policy, PolicySetting setting, IPolicyRegistry registry)
     {
@@ -37,7 +37,7 @@ public static class PolicyWriter
         var plan = new PolicyWritePlan { Policy = policy, Setting = setting, Scope = scope };
         if (!PolicySetting.ScopeAllowed(policy.Class, scope))
         {
-            plan.Errors.Add($"a política é da classe {policy.Class}: não pode ser gravada em {PolicySetting.ScopeText(scope)}.");
+            plan.Errors.Add($"the policy is of class {policy.Class}: it cannot be written to {PolicySetting.ScopeText(scope)}.");
             return plan;
         }
 
@@ -49,7 +49,7 @@ public static class PolicyWriter
             {
                 case PolicyTargetState.Enabled:
                     if (policy.ValueName is { } vn)
-                        targets.Set(policy.Key, vn, PolicyValues.FromAdmx(policy.EnabledValue ?? new AdmxValue(AdmxValueKind.Decimal, "1")), "valor da política (habilitada)");
+                        targets.Set(policy.Key, vn, PolicyValues.FromAdmx(policy.EnabledValue ?? new AdmxValue(AdmxValueKind.Decimal, "1")), "policy value (enabled)");
                     foreach (var item in policy.EnabledList ?? [])
                         targets.Set(item.Key, item.ValueName, PolicyValues.FromAdmx(item.Value), "enabledList");
                     CheckUnknownElements(policy, setting, plan.Errors);
@@ -59,16 +59,16 @@ public static class PolicyWriter
 
                 case PolicyTargetState.Disabled:
                     if (policy.ValueName is { } dvn)
-                        targets.Set(policy.Key, dvn, policy.DisabledValue is { } off ? PolicyValues.FromAdmx(off) : null, "valor da política (desabilitada)");
+                        targets.Set(policy.Key, dvn, policy.DisabledValue is { } off ? PolicyValues.FromAdmx(off) : null, "policy value (disabled)");
                     foreach (var item in policy.DisabledList ?? [])
                         targets.Set(item.Key, item.ValueName, PolicyValues.FromAdmx(item.Value), "disabledList");
-                    if (setting.Values.Count > 0) plan.Notes.Add("valores dos elementos são ignorados: a política fica desabilitada.");
+                    if (setting.Values.Count > 0) plan.Notes.Add("element values are ignored: the policy is disabled.");
                     if (policy.ValueName is null && policy.DisabledList is not { Count: > 0 })
-                        plan.Notes.Add("esta política não grava nada quando desabilitada; no registro, Desabilitada fica igual a Não configurada.");
+                        plan.Notes.Add("this policy writes nothing when disabled; in the registry, Disabled is the same as Not configured.");
                     break;
 
                 default:
-                    if (setting.Values.Count > 0) plan.Notes.Add("valores dos elementos são ignorados: a política fica não configurada.");
+                    if (setting.Values.Count > 0) plan.Notes.Add("element values are ignored: the policy is not configured.");
                     break;
             }
         }
@@ -78,14 +78,14 @@ public static class PolicyWriter
         }
         if (!plan.IsValid) return plan;
 
-        // Tudo o que a política possui e não foi gravado acima é apagado.
+        // Everything the policy owns that was not written above is deleted.
         var owned = OwnedValues(policy);
         var ownedSet = new HashSet<(string, string)>(owned.Select(o => Targets.Norm(o.Key, o.Name)));
         foreach (var el in policy.Elements.Where(e => e.Type == "list"))
         {
             if (additiveKeep.Contains(el)) continue;
             foreach (var name in OwnedListValues(el, scope, registry, ownedSet))
-                if (!targets.Has(el.Key, name)) targets.Set(el.Key, name, null, $"lista '{ElementName(el)}'");
+                if (!targets.Has(el.Key, name)) targets.Set(el.Key, name, null, $"list '{ElementName(el)}'");
         }
         foreach (var (key, name, origin) in owned)
             if (!targets.Has(key, name)) targets.Set(key, name, null, origin);
@@ -117,8 +117,8 @@ public static class PolicyWriter
         foreach (var id in setting.Values.Keys)
         {
             if (policy.Elements.Any(e => e.Id.Equals(id, StringComparison.OrdinalIgnoreCase))) continue;
-            var known = policy.Elements.Count == 0 ? "a política não tem elementos" : "elementos: " + string.Join(", ", policy.Elements.Select(e => e.Id));
-            errors.Add($"elemento '{id}' não existe nesta política ({known}).");
+            var known = policy.Elements.Count == 0 ? "the policy has no elements" : "elements: " + string.Join(", ", policy.Elements.Select(e => e.Id));
+            errors.Add($"element '{id}' does not exist in this policy ({known}).");
         }
     }
 
@@ -130,7 +130,7 @@ public static class PolicyWriter
         return null;
     }
 
-    /// <summary>Valor escalar: o informado, senão o padrão da apresentação, senão null.</summary>
+    /// <summary>Scalar value: the given one, else the presentation default, else null.</summary>
     private static string? Scalar(PolicySetting setting, AdmxElement el, bool useDefault = true)
     {
         var input = Input(setting, el);
@@ -143,7 +143,7 @@ public static class PolicyWriter
     {
         var errors = plan.Errors;
         var name = ElementName(el);
-        var origin = $"elemento '{name}'";
+        var origin = $"element '{name}'";
         switch (el.Type)
         {
             case "decimal":
@@ -152,23 +152,23 @@ public static class PolicyWriter
                 var text = Scalar(setting, el)?.Trim();
                 if (string.IsNullOrEmpty(text))
                 {
-                    if (el.Required) errors.Add($"{origin}: valor obrigatório.");
+                    if (el.Required) errors.Add($"{origin}: value required.");
                     return;
                 }
                 if (!ulong.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var n))
                 {
-                    errors.Add($"{origin}: '{text}' não é um número inteiro não negativo.");
+                    errors.Add($"{origin}: '{text}' is not a non-negative integer.");
                     return;
                 }
                 ulong min = el.MinValue ?? 0, max = el.MaxValue ?? (el.Type == "decimal" ? uint.MaxValue : ulong.MaxValue);
                 if (n < min || n > max)
                 {
-                    errors.Add($"{origin}: {n} fora do intervalo permitido ({min}..{max}).");
+                    errors.Add($"{origin}: {n} is outside the allowed range ({min}..{max}).");
                     return;
                 }
                 if (el.Type == "decimal" && n > uint.MaxValue)
                 {
-                    errors.Add($"{origin}: {n} não cabe num REG_DWORD.");
+                    errors.Add($"{origin}: {n} does not fit in a REG_DWORD.");
                     return;
                 }
                 if (el.ValueName is null) return;
@@ -184,7 +184,7 @@ public static class PolicyWriter
                 bool on = false;
                 if (text is not null && !TryParseBool(text, out on))
                 {
-                    errors.Add($"{origin}: '{text}' não é um booleano (use true/false).");
+                    errors.Add($"{origin}: '{text}' is not a boolean (use true/false).");
                     return;
                 }
                 if (el.ValueName is { } vn)
@@ -202,14 +202,14 @@ public static class PolicyWriter
                 var text = Scalar(setting, el);
                 if (string.IsNullOrWhiteSpace(text))
                 {
-                    if (el.Required) errors.Add($"{origin}: escolha uma opção.");
+                    if (el.Required) errors.Add($"{origin}: choose an option.");
                     return;
                 }
                 var index = ResolveEnum(el, text);
                 if (index is not { } i)
                 {
                     var options = string.Join(", ", (el.Items ?? []).Select((it, k) => $"{EnumToken(el, k)} ({it.DisplayName})"));
-                    errors.Add($"{origin}: opção '{text}' não existe (opções: {options}).");
+                    errors.Add($"{origin}: option '{text}' does not exist (options: {options}).");
                     return;
                 }
                 var chosen = el.Items![i];
@@ -224,13 +224,13 @@ public static class PolicyWriter
                 var text = Scalar(setting, el);
                 if (string.IsNullOrEmpty(text))
                 {
-                    if (el.Required) errors.Add($"{origin}: texto obrigatório.");
+                    if (el.Required) errors.Add($"{origin}: text required.");
                     return;
                 }
                 int maxLength = el.MaxLength ?? DefaultTextMaxLength;
                 if (text.Length > maxLength)
                 {
-                    errors.Add($"{origin}: texto com {text.Length} caracteres; o máximo é {maxLength}.");
+                    errors.Add($"{origin}: text has {text.Length} characters; the maximum is {maxLength}.");
                     return;
                 }
                 if (el.ValueName is null) return;
@@ -246,18 +246,18 @@ public static class PolicyWriter
                     .ToList();
                 if (lines.Count == 0)
                 {
-                    if (el.Required) errors.Add($"{origin}: informe ao menos uma linha.");
+                    if (el.Required) errors.Add($"{origin}: enter at least one line.");
                     return;
                 }
                 int maxLength = el.MaxLength ?? DefaultTextMaxLength;
                 if (lines.FirstOrDefault(l => l.Length > maxLength) is { } tooLong)
                 {
-                    errors.Add($"{origin}: a linha '{Short(tooLong)}' tem {tooLong.Length} caracteres; o máximo é {maxLength}.");
+                    errors.Add($"{origin}: line '{Short(tooLong)}' has {tooLong.Length} characters; the maximum is {maxLength}.");
                     return;
                 }
                 if (el.MaxStrings is > 0 and var maxStrings && lines.Count > maxStrings)
                 {
-                    errors.Add($"{origin}: {lines.Count} linhas; o máximo é {maxStrings}.");
+                    errors.Add($"{origin}: {lines.Count} lines; the maximum is {maxStrings}.");
                     return;
                 }
                 if (el.ValueName is null) return;
@@ -270,7 +270,7 @@ public static class PolicyWriter
                 return;
 
             default:
-                plan.Notes.Add($"elemento '{el.Id}' de tipo desconhecido '{el.Type}' foi ignorado.");
+                plan.Notes.Add($"element '{el.Id}' of unknown type '{el.Type}' was ignored.");
                 return;
         }
     }
@@ -281,7 +281,7 @@ public static class PolicyWriter
         var items = input.Select(i => i.Trim()).Where(i => i.Length > 0).ToList();
         if (items.Count == 0 && el.Required)
         {
-            plan.Errors.Add($"{origin}: informe ao menos um item.");
+            plan.Errors.Add($"{origin}: enter at least one item.");
             return;
         }
 
@@ -294,13 +294,13 @@ public static class PolicyWriter
                 int eq = item.IndexOf('=');
                 if (eq <= 0)
                 {
-                    plan.Errors.Add($"{origin}: item '{Short(item)}' deve ser 'nome=valor'.");
+                    plan.Errors.Add($"{origin}: item '{Short(item)}' must be 'name=value'.");
                     return;
                 }
                 var n = item[..eq].Trim();
                 if (entries.Any(e => e.Name.Equals(n, StringComparison.OrdinalIgnoreCase)))
                 {
-                    plan.Errors.Add($"{origin}: nome '{n}' repetido.");
+                    plan.Errors.Add($"{origin}: duplicate name '{n}'.");
                     return;
                 }
                 entries.Add((n, item[(eq + 1)..].Trim()));
@@ -309,13 +309,13 @@ public static class PolicyWriter
         else
         {
             var distinct = items.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            if (distinct.Count < items.Count) plan.Notes.Add($"{origin}: itens repetidos foram ignorados.");
+            if (distinct.Count < items.Count) plan.Notes.Add($"{origin}: duplicate items were ignored.");
             if (el.ValuePrefix is { } prefix)
             {
                 int start = 1;
                 if (el.Additive)
                 {
-                    // Aditiva: não sobrescreve itens existentes; numera depois do maior índice e não repete dados.
+                    // Additive: does not overwrite existing items; numbers after the highest index and does not repeat data.
                     var existing = ListEntries(el, scope, registry);
                     start = existing.Count == 0 ? 1 : existing.Max(e => ListIndex(prefix, e.Name) ?? 0) + 1;
                     distinct = distinct.Where(d => !existing.Any(e => string.Equals(e.Data, d, StringComparison.OrdinalIgnoreCase))).ToList();
@@ -335,25 +335,25 @@ public static class PolicyWriter
 
     private static string Short(string s) => s.Length > 40 ? s[..37] + "..." : s;
 
-    // ---------------- posse de valores ----------------
+    // ---------------- value ownership ----------------
 
-    /// <summary>Valores (chave, nome) que a política possui, exceto os das chaves de list.</summary>
+    /// <summary>(key, name) values the policy owns, except those of list keys.</summary>
     public static List<(string Key, string Name, string Origin)> OwnedValues(AdmxPolicy policy)
     {
         var result = new List<(string, string, string)>();
         var seen = new HashSet<(string, string)>();
         foreach (var (key, name, el) in policy.StaticValues())
         {
-            var origin = el is null ? "valor da política" : $"elemento '{ElementName(el)}'";
+            var origin = el is null ? "policy value" : $"element '{ElementName(el)}'";
             if (seen.Add(Targets.Norm(key, name))) result.Add((key, name, origin));
         }
         return result;
     }
 
     /// <summary>
-    /// O nome de valor pertence à list? Com explicitValue ou sem valuePrefix, todo valor nomeado da
-    /// chave pertence; com valuePrefix "P", só "P1", "P2"... (prefixo vazio: "1", "2"...). Valores fixos
-    /// de qualquer política na mesma chave (<see cref="AdmxElement.ReservedValueNames"/>) nunca pertencem.
+    /// Does the value name belong to the list? With explicitValue or without valuePrefix, every named
+    /// value of the key belongs; with valuePrefix "P", only "P1", "P2"... (empty prefix: "1", "2"...).
+    /// Fixed values of any policy on the same key (<see cref="AdmxElement.ReservedValueNames"/>) never belong.
     /// </summary>
     public static bool ListOwns(AdmxElement el, string valueName) => el.OwnsListValue(valueName);
 
@@ -362,7 +362,7 @@ public static class PolicyWriter
     private static IEnumerable<string> OwnedListValues(AdmxElement el, PolicyScope scope, IPolicyRegistry registry, HashSet<(string, string)> staticOwned) =>
         registry.ValueNames(scope, el.Key).Where(n => ListOwns(el, n) && !staticOwned.Contains(Targets.Norm(el.Key, n)));
 
-    /// <summary>Itens atuais de uma list no registro (nome, dado), em ordem.</summary>
+    /// <summary>Current items of a list in the registry (name, data), in order.</summary>
     public static List<(string Name, string Data)> ListEntries(AdmxElement el, PolicyScope scope, IPolicyRegistry registry)
     {
         var entries = new List<(string Name, string Data)>();
@@ -377,11 +377,11 @@ public static class PolicyWriter
         return entries;
     }
 
-    // ---------------- leitura da configuração atual ----------------
+    // ---------------- reading the current setting ----------------
 
     /// <summary>
-    /// Lê do registro o estado e os valores atuais de cada elemento (para preencher o editor e
-    /// salvar perfis). Elementos sem valor no registro ficam de fora.
+    /// Reads the current state and each element's current values from the registry (to fill the
+    /// editor and save profiles). Elements without a value in the registry are left out.
     /// </summary>
     public static (AdmxPolicyState State, PolicySetting Setting) ReadCurrent(AdmxPolicy policy, PolicyScope scope, IPolicyRegistry registry)
     {
@@ -438,7 +438,7 @@ public static class PolicyWriter
                     if (found < 0 && el.ValueName is not null && v is not null)
                         for (int k = 0; k < items.Count && found < 0; k++)
                             if (AdmxPolicyStateReader.Matches(items[k].Value, v)) found = k;
-                    // Item com <delete/> casa com "ausente": só vale se a política está habilitada.
+                    // An item with <delete/> matches "absent": only counts if the policy is enabled.
                     if (found >= 0 && (v is not null || state is AdmxPolicyState.Enabled)) setting.Set(el.Id, EnumToken(el, found));
                     break;
                 }
@@ -461,9 +461,9 @@ public static class PolicyWriter
         return (state, setting);
     }
 
-    // ---------------- enum e booleano ----------------
+    // ---------------- enum and boolean ----------------
 
-    /// <summary>Identificador estável de um item de enum: o valor gravado (se único entre os itens), senão "#índice".</summary>
+    /// <summary>Stable identifier of an enum item: the stored value (if unique among the items), else "#index".</summary>
     public static string EnumToken(AdmxElement el, int index)
     {
         var items = el.Items ?? [];
@@ -475,7 +475,7 @@ public static class PolicyWriter
         return "#" + index.ToString(CultureInfo.InvariantCulture);
     }
 
-    /// <summary>Índice do item: aceita o token, "#índice", o valor gravado ou o nome exibido.</summary>
+    /// <summary>Item index: accepts the token, "#index", the stored value or the display name.</summary>
     public static int? ResolveEnum(AdmxElement el, string input)
     {
         var items = el.Items ?? [];
@@ -493,6 +493,7 @@ public static class PolicyWriter
 
     public static bool TryParseBool(string text, out bool value)
     {
+        // The Portuguese words are user input accepted for compatibility (CLI arguments, saved settings).
         switch (text.Trim().ToLowerInvariant())
         {
             case "true": case "1": case "sim": case "yes": case "on": case "marcado": case "verdadeiro":
@@ -504,7 +505,7 @@ public static class PolicyWriter
         }
     }
 
-    // ---------------- alvos ----------------
+    // ---------------- targets ----------------
 
     private sealed class Targets
     {

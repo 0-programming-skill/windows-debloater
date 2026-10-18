@@ -1,19 +1,19 @@
 namespace Debloater.Core.Model;
 
-/// <summary>Estado de uma única ação no sistema.</summary>
+/// <summary>State of a single action on the system.</summary>
 public enum ActionState
 {
-    /// <summary>Já está no estado desejado pelo tweak.</summary>
+    /// <summary>Already in the state the tweak wants.</summary>
     Desired,
-    /// <summary>Não está no estado desejado.</summary>
+    /// <summary>Not in the desired state.</summary>
     NotDesired,
-    /// <summary>O alvo não existe neste sistema (serviço, tarefa ou recurso ausente).</summary>
+    /// <summary>The target does not exist on this system (missing service, task or feature).</summary>
     NotApplicable,
-    /// <summary>Não foi possível determinar.</summary>
+    /// <summary>Could not be determined.</summary>
     Error,
 }
 
-/// <summary>Estado agregado de um tweak.</summary>
+/// <summary>Aggregate state of a tweak.</summary>
 public enum TweakState
 {
     Applied,
@@ -30,10 +30,10 @@ public sealed record TweakStatus(Tweak Tweak, TweakState State, IReadOnlyList<Ac
 public static class StatusAggregator
 {
     /// <summary>
-    /// Regras:
-    /// - qualquer ação com erro: Error;
-    /// - ignorando as NotApplicable, se não sobrar nenhuma: NotApplicable;
-    /// - todas Desired: Applied; nenhuma Desired: NotApplied; senão: Partial.
+    /// Rules:
+    /// - any action with an error: Error;
+    /// - ignoring NotApplicable ones, if none are left: NotApplicable;
+    /// - all Desired: Applied; none Desired: NotApplied; otherwise: Partial.
     /// </summary>
     public static TweakState Aggregate(IEnumerable<ActionState> states)
     {

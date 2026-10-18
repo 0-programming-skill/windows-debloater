@@ -6,7 +6,7 @@ using Debloater.Core.Model;
 
 namespace Debloater.Core.Fingerprint;
 
-/// <summary>Resumo de um lado do diff.</summary>
+/// <summary>Summary of one side of the diff.</summary>
 public sealed class FingerprintSide
 {
     public string Build { get; set; } = "";
@@ -44,7 +44,7 @@ public sealed class FingerprintSide
 
 public sealed record DiffCount(string Label, int Value);
 
-/// <summary>Mudança de inventário, com a indicação de provável ruído de ambiente (hardware, apps de terceiros...).</summary>
+/// <summary>Inventory change, flagged when it is likely environment noise (hardware, third-party apps...).</summary>
 public sealed class InventoryChange
 {
     public string Kind { get; set; } = "";
@@ -57,7 +57,7 @@ public sealed class InventoryChange
     public List<string> Details { get; set; } = [];
     public List<string> TweakIds { get; set; } = [];
 
-    /// <summary>Motivo pelo qual a mudança é provavelmente do ambiente, não do build (null = do sistema).</summary>
+    /// <summary>Why the change likely comes from the environment, not the build (null = from the system).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Noise { get; set; }
 }
@@ -86,10 +86,10 @@ public sealed class BinaryChange
     public bool Curated { get; set; }
 }
 
-/// <summary>Binário onde um candidato aparece (o que a camada 2 abre no Ghidra).</summary>
+/// <summary>Binary where a candidate appears (what layer 2 opens in Ghidra).</summary>
 public sealed class CandidateBinary
 {
-    /// <summary>Caminho relativo à raiz da impressão digital nova (ex.: Windows\System32\shell32.dll).</summary>
+    /// <summary>Path relative to the root of the new fingerprint (e.g. Windows\System32\shell32.dll).</summary>
     public string Path { get; set; } = "";
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -105,46 +105,46 @@ public sealed class CandidateBinary
         new() { Path = b.Path, Version = b.Version, Sha256 = b.Sha256, Size = b.Size, Curated = b.Curated };
 }
 
-/// <summary>Algo novo a investigar (entrada da camada 2).</summary>
+/// <summary>Something new to investigate (layer 2 input).</summary>
 public sealed class Candidate
 {
     public int Rank { get; set; }
     public string Value { get; set; } = "";
 
-    /// <summary>Ver <see cref="CandidateKinds"/>.</summary>
+    /// <summary>See <see cref="CandidateKinds"/>.</summary>
     public string Kind { get; set; } = "";
 
-    /// <summary>new = não existia no build antigo; moved = existia, mas em outro(s) binário(s).</summary>
+    /// <summary>new = did not exist in the old build; moved = existed, but in other binaries.</summary>
     public string Status { get; set; } = "new";
 
     public int Score { get; set; }
     public List<string> Reasons { get; set; } = [];
 
-    /// <summary>Chave de registro associada (o próprio caminho, a chave mais próxima no binário, ou a chave da política).</summary>
+    /// <summary>Associated registry key (the path itself, the nearest key in the binary, or the policy key).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? RegistryPath { get; set; }
 
-    /// <summary>Nome do valor associado (políticas ADMX).</summary>
+    /// <summary>Associated value name (ADMX policies).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ValueName { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description { get; set; }
 
-    /// <summary>Binários (até 5, curados primeiro) que contêm a cadeia no build novo.</summary>
+    /// <summary>Binaries (up to 5, curated first) that contain the string in the new build.</summary>
     public List<CandidateBinary> Binaries { get; set; } = [];
 
-    /// <summary>Total de binários que contêm a cadeia (pode ser maior que <see cref="Binaries"/>).</summary>
+    /// <summary>Total number of binaries that contain the string (may be larger than <see cref="Binaries"/>).</summary>
     public int BinaryCount { get; set; }
 
-    /// <summary>moved: onde estava no build antigo.</summary>
+    /// <summary>moved: where it was in the old build.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? OldBinaries { get; set; }
 
     public List<string> CoveredBy { get; set; } = [];
 }
 
-/// <summary>Tweak do catálogo cujo alvo sumiu no build novo.</summary>
+/// <summary>Catalog tweak whose target disappeared in the new build.</summary>
 public sealed class ObsoleteTweak
 {
     public string TweakId { get; set; } = "";
@@ -162,10 +162,10 @@ public sealed class FingerprintDiffResult
     public List<string> Warnings { get; set; } = [];
     public List<DiffCount> Counts { get; set; } = [];
 
-    /// <summary>Candidatos ordenados por pontuação (no máximo <see cref="FingerprintDiff.MaxCandidates"/>).</summary>
+    /// <summary>Candidates ordered by score (at most <see cref="FingerprintDiff.MaxCandidates"/>).</summary>
     public List<Candidate> Candidates { get; set; } = [];
 
-    /// <summary>Cadeias relevantes que sumiram (pontuadas como se fossem candidatos), as mais altas.</summary>
+    /// <summary>Relevant strings that disappeared (scored as if they were candidates), highest first.</summary>
     public List<Candidate> RemovedStrings { get; set; } = [];
 
     public List<ObsoleteTweak> PossiblyObsolete { get; set; } = [];
@@ -173,16 +173,16 @@ public sealed class FingerprintDiffResult
     public List<InventoryChange> Inventory { get; set; } = [];
     public List<BinaryChange> Binaries { get; set; } = [];
 
-    /// <summary>Preenchido quando o filtro de privacidade foi aplicado (<see cref="FingerprintPrivacy"/>).</summary>
+    /// <summary>Set when the privacy filter was applied (<see cref="FingerprintPrivacy"/>).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public FingerprintPrivacyInfo? Privacy { get; set; }
 }
 
 /// <summary>
-/// Compara duas impressões digitais: inventário, políticas ADMX, binários e cadeias. Cadeias que
-/// aparecem no build novo e em nenhum binário do antigo são candidatos fortes; as que mudaram de
-/// binário, fracos. Cruza com o catálogo: marca o que já está coberto e aponta tweaks cujos nomes
-/// sumiram de todos os binários ("possivelmente obsoletos").
+/// Compares two fingerprints: inventory, ADMX policies, binaries and strings. Strings that appear
+/// in the new build and in no binary of the old one are strong candidates; those that moved to
+/// another binary are weak ones. Cross-references the catalog: marks what is already covered and
+/// points out tweaks whose names disappeared from every binary ("possibly obsolete").
 /// </summary>
 public static partial class FingerprintDiff
 {
@@ -215,14 +215,14 @@ public static partial class FingerprintDiff
         ComparePolicies(oldFp, newFp, result);
         CompareBinaries(oldFp, newFp, result);
 
-        // ---- cadeias ----
+        // ---- strings ----
         bool comparable = oldFp.Binaries.Mode != BinaryScanModes.None && newFp.Binaries.Mode != BinaryScanModes.None
             && oldFp.Binaries.Files.Count > 0 && newFp.Binaries.Files.Count > 0;
         Dictionary<string, IndexEntry> oldIndex = new(StringComparer.OrdinalIgnoreCase), newIndex = new(StringComparer.OrdinalIgnoreCase);
         var candidates = new List<Candidate>();
         if (!comparable)
         {
-            result.Warnings.Add("cadeias não comparadas: uma das impressões digitais não tem varredura de binários.");
+            result.Warnings.Add("strings not compared: one of the fingerprints has no binary scan.");
         }
         else
         {
@@ -230,7 +230,7 @@ public static partial class FingerprintDiff
             if (oldFp.Binaries.Mode != newFp.Binaries.Mode)
             {
                 include = b => b.Curated;
-                result.Warnings.Add($"modos de varredura diferentes ({oldFp.Binaries.Mode} x {newFp.Binaries.Mode}): cadeias comparadas só nos binários da lista curada.");
+                result.Warnings.Add($"different scan modes ({oldFp.Binaries.Mode} vs {newFp.Binaries.Mode}): strings compared only in the curated-list binaries.");
             }
             oldIndex = BuildIndex(oldFp, include);
             newIndex = BuildIndex(newFp, include);
@@ -252,17 +252,17 @@ public static partial class FingerprintDiff
         result.Candidates = [.. ordered.Take(MaxCandidates)];
 
         if (oldFp.Os.Build > newFp.Os.Build)
-            result.Warnings.Add($"o build 'antigo' ({oldFp.Os.FullBuild}) é maior que o 'novo' ({newFp.Os.FullBuild}): a ordem dos argumentos está invertida?");
+            result.Warnings.Add($"the 'old' build ({oldFp.Os.FullBuild}) is newer than the 'new' one ({newFp.Os.FullBuild}): are the arguments swapped?");
         if (oldFp.Elevated != newFp.Elevated)
-            result.Warnings.Add($"elevação diferente (antigo: {(oldFp.Elevated ? "elevado" : "sem elevação")}; novo: {(newFp.Elevated ? "elevado" : "sem elevação")}): appx comparados só por presença (sem allUsers/provisioned) e capacidades só as instaladas.");
+            result.Warnings.Add($"different elevation (old: {(oldFp.Elevated ? "elevated" : "not elevated")}; new: {(newFp.Elevated ? "elevated" : "not elevated")}): appx compared by presence only (no allUsers/provisioned) and capabilities only the installed ones.");
         if (oldFp.Live && newFp.Live && oldFp.MachineName is not null && !string.Equals(oldFp.MachineName, newFp.MachineName, StringComparison.OrdinalIgnoreCase))
-            result.Warnings.Add("máquinas diferentes: serviços, drivers, apps e tarefas de terceiros/hardware aparecem como ruído (marcados).");
+            result.Warnings.Add("different machines: third-party/hardware services, drivers, apps and tasks show up as noise (flagged).");
 
         FillCounts(result, oldIndex, newIndex, candidates.Count);
         return result;
     }
 
-    // ---------------- índice de cadeias ----------------
+    // ---------------- string index ----------------
 
     private static Dictionary<string, IndexEntry> BuildIndex(WindowsFingerprint fp, Func<BinaryEntry, bool> include)
     {
@@ -316,14 +316,14 @@ public static partial class FingerprintDiff
             }
             else if (CatalogRegistryIndex.SplitValueSuffix(e.Value) is (_, { Length: > 0 } suffixName) && oldIndex.TryGetValue(suffixName, out var byName))
             {
-                // "Chave[Valor]" nova, mas o nome do valor já existia: só a forma mudou (fraco).
+                // New "Key[Value]", but the value name already existed: only the form changed (weak).
                 moved = true;
                 oldBins = [.. byName.Binaries.Select(b => b.Path).Order(StringComparer.OrdinalIgnoreCase).Take(MaxBinariesPerCandidate)];
             }
             list.Add(MakeStringCandidate(e, moved, oldBins, catalog, catalogKeyByBinary, oldPaths));
         }
 
-        // Cadeias que sumiram (pontuadas do mesmo jeito; só as mais altas entram no relatório).
+        // Strings that disappeared (scored the same way; only the highest go into the report).
         var oldCatalogKeys = CatalogKeysByBinary(oldFp, catalog);
         removed = [.. oldIndex.Values
             .Where(e => !newIndex.ContainsKey(e.Value))
@@ -380,7 +380,7 @@ public static partial class FingerprintDiff
         };
     }
 
-    /// <summary>Para cada binário, a primeira chave do catálogo que ele contém (se alguma).</summary>
+    /// <summary>For each binary, the first catalog key it contains (if any).</summary>
     private static Dictionary<string, string> CatalogKeysByBinary(WindowsFingerprint fp, CatalogRegistryIndex catalog)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -397,7 +397,7 @@ public static partial class FingerprintDiff
         return map;
     }
 
-    // ---------------- tweaks possivelmente obsoletos ----------------
+    // ---------------- possibly obsolete tweaks ----------------
 
     private static List<ObsoleteTweak> FindObsolete(WindowsFingerprint oldFp, WindowsFingerprint newFp,
         Dictionary<string, IndexEntry> oldIndex, Dictionary<string, IndexEntry> newIndex, CatalogRegistryIndex catalog)
@@ -410,7 +410,7 @@ public static partial class FingerprintDiff
 
         foreach (var (path, name, tweak) in catalog.Actions)
         {
-            if (tweak.MaxBuild is int max && max < newFp.Os.Build) continue;   // já limitado a builds antigos
+            if (tweak.MaxBuild is int max && max < newFp.Os.Build) continue;   // already limited to older builds
             if (tweak.MinBuild is int min && min > newFp.Os.Build) continue;
             var target = name.Length > 0 ? $@"{path}\{name}" : path;
             var reasons = new List<string>();
@@ -418,16 +418,16 @@ public static partial class FingerprintDiff
 
             if (name.Length > 0 && oldIndex.TryGetValue(name, out var o) && !newIndex.ContainsKey(name))
             {
-                reasons.Add($"o nome '{name}' estava em {o.Binaries.Count} binário(s) do build antigo e não aparece em nenhum do novo");
+                reasons.Add($"the name '{name}' was in {o.Binaries.Count} binary(ies) of the old build and appears in none of the new one");
                 bins.AddRange(o.Binaries.Select(b => $"{b.Path} {b.Version}"));
             }
             if (oldPaths.ContainsKey(path) && !newPaths.ContainsKey(path))
             {
-                reasons.Add($"a chave '{path}' sumiu de todos os binários");
+                reasons.Add($"the key '{path}' disappeared from every binary");
                 bins.AddRange(oldPaths[path]);
             }
             if (name.Length > 0 && oldAdmx.Contains(target) && !newAdmx.Contains(target))
-                reasons.Add("o valor saiu das políticas ADMX");
+                reasons.Add("the value was removed from the ADMX policies");
             if (reasons.Count == 0) continue;
 
             if (!byTweak.TryGetValue(tweak.Id, out var ot)) byTweak[tweak.Id] = ot = new ObsoleteTweak { TweakId = tweak.Id };
@@ -452,13 +452,13 @@ public static partial class FingerprintDiff
         return map;
     }
 
-    // ---------------- políticas ADMX ----------------
+    // ---------------- ADMX policies ----------------
 
     private static void ComparePolicies(WindowsFingerprint oldFp, WindowsFingerprint newFp, FingerprintDiffResult result)
     {
         if (oldFp.Policies.Count == 0 || newFp.Policies.Count == 0)
         {
-            result.Warnings.Add("políticas ADMX não comparadas: uma das impressões digitais não tem ADMX.");
+            result.Warnings.Add("ADMX policies not compared: one of the fingerprints has no ADMX.");
             return;
         }
         var oldMap = ToMap(oldFp.Policies);
@@ -473,29 +473,29 @@ public static partial class FingerprintDiff
                 result.Policies.Add(new PolicyChange
                 {
                     Change = DiffChange.Added, Policy = p, Details = [.. p.Values],
-                    Note = oldFiles.Contains(p.File) ? null : "arquivo ADMX novo",
+                    Note = oldFiles.Contains(p.File) ? null : "new ADMX file",
                 });
                 continue;
             }
             var details = new List<string>();
             void Cmp(string label, string? a, string? b)
             {
-                if (!string.Equals(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase)) details.Add($"{label}: {a ?? "(nada)"} → {b ?? "(nada)"}");
+                if (!string.Equals(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase)) details.Add($"{label}: {a ?? "(none)"} → {b ?? "(none)"}");
             }
-            Cmp("classe", before.Class, p.Class);
-            Cmp("chave", before.Key, p.Key);
-            Cmp("valor", before.ValueName, p.ValueName);
-            // O texto do supportedOn depende do idioma do ADML; a referência crua não.
+            Cmp("class", before.Class, p.Class);
+            Cmp("key", before.Key, p.Key);
+            Cmp("value", before.ValueName, p.ValueName);
+            // The supportedOn text depends on the ADML language; the raw reference does not.
             if (before.SupportedOnRef is not null && p.SupportedOnRef is not null)
             {
                 if (!string.Equals(before.SupportedOnRef, p.SupportedOnRef, StringComparison.OrdinalIgnoreCase))
-                    details.Add($"com suporte em: {before.SupportedOn} ({before.SupportedOnRef}) → {p.SupportedOn} ({p.SupportedOnRef})");
+                    details.Add($"supported on: {before.SupportedOn} ({before.SupportedOnRef}) → {p.SupportedOn} ({p.SupportedOnRef})");
             }
-            else Cmp("com suporte em", before.SupportedOn, p.SupportedOn);
+            else Cmp("supported on", before.SupportedOn, p.SupportedOn);
             var added = p.Values.Except(before.Values, StringComparer.OrdinalIgnoreCase).ToList();
             var gone = before.Values.Except(p.Values, StringComparer.OrdinalIgnoreCase).ToList();
-            if (added.Count > 0) details.Add($"valores novos: {string.Join(", ", added)}");
-            if (gone.Count > 0) details.Add($"valores removidos: {string.Join(", ", gone)}");
+            if (added.Count > 0) details.Add($"new values: {string.Join(", ", added)}");
+            if (gone.Count > 0) details.Add($"removed values: {string.Join(", ", gone)}");
             if (details.Count > 0) result.Policies.Add(new PolicyChange { Change = DiffChange.Changed, Policy = p, Details = details });
         }
         foreach (var (name, p) in oldMap)
@@ -504,7 +504,7 @@ public static partial class FingerprintDiff
             result.Policies.Add(new PolicyChange
             {
                 Change = DiffChange.Removed, Policy = p, Details = [.. p.Values],
-                Note = newFiles.Contains(p.File) ? null : "arquivo ADMX ausente no novo (template instalado à parte?)",
+                Note = newFiles.Contains(p.File) ? null : "ADMX file missing in the new one (separately installed template?)",
             });
         }
         result.Policies = [.. result.Policies.OrderBy(c => c.Change).ThenBy(c => c.Policy.QualifiedName, StringComparer.OrdinalIgnoreCase)];
@@ -528,7 +528,7 @@ public static partial class FingerprintDiff
             var (score, reasons) = CandidateScorer.Score(new CandidateScorer.Input(
                 p.Name, CandidateKinds.AdmxPolicy, p.Key, CoveredBy: covered,
                 ExtraText: $"{p.Key} {p.ValueName} {p.Category}"));
-            if (bins.Count == 0) reasons.Add("nenhum binário varrido contém o nome do valor");
+            if (bins.Count == 0) reasons.Add("no scanned binary contains the value name");
             yield return new Candidate
             {
                 Value = p.QualifiedName,
@@ -545,7 +545,7 @@ public static partial class FingerprintDiff
         }
     }
 
-    // ---------------- binários ----------------
+    // ---------------- binaries ----------------
 
     private static void CompareBinaries(WindowsFingerprint oldFp, WindowsFingerprint newFp, FingerprintDiffResult result)
     {
@@ -566,13 +566,13 @@ public static partial class FingerprintDiff
         result.Binaries = [.. result.Binaries.OrderBy(b => b.Change).ThenByDescending(b => b.Curated).ThenBy(b => b.Path, StringComparer.OrdinalIgnoreCase)];
     }
 
-    // ---------------- inventário ----------------
+    // ---------------- inventory ----------------
 
     private static void CompareInventory(WindowsFingerprint oldFp, WindowsFingerprint newFp, IReadOnlyList<Tweak> catalog, FingerprintDiffResult result)
     {
         if (oldFp.Inventory is null || newFp.Inventory is null)
         {
-            result.Warnings.Add("inventário não comparado: ausente numa das impressões digitais.");
+            result.Warnings.Add("inventory not compared: missing from one of the fingerprints.");
             return;
         }
         bool strip = oldFp.Elevated != newFp.Elevated;
@@ -584,10 +584,10 @@ public static partial class FingerprintDiff
             CatalogCrossReference.Annotate(newSnap, catalog);
         }
         var diff = InventoryDiff.Compare(oldSnap, newSnap);
-        result.Warnings.AddRange(diff.Warnings.Select(w => $"inventário: {w}"));
+        result.Warnings.AddRange(diff.Warnings.Select(w => $"inventory: {w}"));
         var oldItems = Lookup(oldSnap);
         var newItems = Lookup(newSnap);
-        // Máquinas diferentes: um driver cujo .sys só existe de um lado é hardware/VM, não mudança do build.
+        // Different machines: a driver whose .sys exists on only one side is hardware/VM, not a build change.
         bool hardwareCheck = oldFp.Live && newFp.Live && !string.Equals(oldFp.MachineName, newFp.MachineName, StringComparison.OrdinalIgnoreCase)
             && oldFp.Binaries.Mode == BinaryScanModes.All && newFp.Binaries.Mode == BinaryScanModes.All;
         var oldBins = new HashSet<string>(oldFp.Binaries.Files.Select(b => b.Path), StringComparer.OrdinalIgnoreCase);
@@ -600,14 +600,14 @@ public static partial class FingerprintDiff
             if (noise is null && hardwareCheck && item is not null && e.Kind == InventoryKinds.Drivers && e.Change != DiffChange.Changed
                 && ResolveImagePath(item.Properties.GetValueOrDefault("imagePath") ?? $@"\SystemRoot\System32\drivers\{item.Id}.sys") is { } sys)
             {
-                if (e.Change == DiffChange.Removed && !newBins.Contains(sys)) noise = "driver cujo .sys só existe no PC antigo (hardware provável)";
-                if (e.Change == DiffChange.Added && !oldBins.Contains(sys)) noise = "driver cujo .sys só existe no PC novo (hardware/VM provável)";
+                if (e.Change == DiffChange.Removed && !newBins.Contains(sys)) noise = "driver whose .sys exists only on the old PC (likely hardware)";
+                if (e.Change == DiffChange.Added && !oldBins.Contains(sys)) noise = "driver whose .sys exists only on the new PC (likely hardware/VM)";
             }
-            // Sem elevação, tarefas com ACL restrita somem da enumeração sem erro: quem só aparece do lado elevado é incerto.
+            // Without elevation, tasks with a restricted ACL silently drop out of the enumeration: those that only show up on the elevated side are uncertain.
             if (noise is null && e.Kind == InventoryKinds.Tasks && oldFp.Elevated != newFp.Elevated
                 && (e.Change == DiffChange.Added && newFp.Elevated || e.Change == DiffChange.Removed && oldFp.Elevated))
                 noise = ElevationNoise;
-            // O PC comparado pode já ter tweaks aplicados: mudança num alvo do catálogo não é necessariamente do build.
+            // The compared PC may already have tweaks applied: a change in a catalog target is not necessarily from the build.
             if (noise is null && e.TweakIds.Count > 0 && (e.Change == DiffChange.Changed || e.Kind == InventoryKinds.Appx && e.Change == DiffChange.Added))
                 noise = e.Change == DiffChange.Changed ? CatalogTargetNoise : CatalogAppNoise;
             result.Inventory.Add(new InventoryChange
@@ -626,7 +626,7 @@ public static partial class FingerprintDiff
         return map;
     }
 
-    /// <summary>Cópia comparável: sem as propriedades que só existem com elevação (se as elevações diferem).</summary>
+    /// <summary>Comparable copy: without the properties that only exist with elevation (if the elevations differ).</summary>
     internal static InventorySnapshot NormalizeInventory(InventorySnapshot s, bool stripElevatedOnly)
     {
         var copy = new InventorySnapshot { CreatedUtc = s.CreatedUtc, WindowsBuild = s.WindowsBuild, Edition = s.Edition, Elevated = s.Elevated };
@@ -638,7 +638,7 @@ public static partial class FingerprintDiff
                 var clone = new InventoryItem
                 {
                     Kind = item.Kind,
-                    // Capacidades: o índice do CBS (sem elevação) dá só o nome; o DISM dá Nome~~~~versão. Compara pelo nome.
+                    // Capabilities: the CBS index (no elevation) gives only the name; DISM gives Name~~~~version. Compare by name.
                     Id = section.Kind == InventoryKinds.Capabilities && item.Id.Contains('~') ? item.Id[..item.Id.IndexOf('~')] : item.Id, DisplayName = item.DisplayName, Info = item.Info,
                     Properties = new SortedDictionary<string, string>(item.Properties, StringComparer.Ordinal),
                 };
@@ -659,13 +659,13 @@ public static partial class FingerprintDiff
     [GeneratedRegex(@"S-1-5-21-[\d-]+|\{?[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}?")]
     private static partial Regex MachineSpecificRegex();
 
-    internal const string ElevationNoise = "pode ser só elevação (sem administrador, tarefas com ACL restrita não aparecem)";
-    internal const string CatalogTargetNoise = "alvo de tweak do catálogo: o estado pode ter sido mudado no PC, não pelo build";
-    internal const string CatalogAppNoise = "app que o catálogo remove: provavelmente removido no PC antigo";
+    internal const string ElevationNoise = "may be just elevation (without administrator, tasks with a restricted ACL do not show up)";
+    internal const string CatalogTargetNoise = "catalog tweak target: the state may have been changed on the PC, not by the build";
+    internal const string CatalogAppNoise = "app the catalog removes: probably removed on the old PC";
 
     private static readonly HashSet<string> MicrosoftPublishers = new(StringComparer.OrdinalIgnoreCase) { "8wekyb3d8bbwe", "cw5n1h2txyewy" };
 
-    /// <summary>Por que a mudança é provavelmente do ambiente (hardware, apps instalados), e não do build. null = do sistema.</summary>
+    /// <summary>Why the change likely comes from the environment (hardware, installed apps) and not the build. null = from the system.</summary>
     internal static string? NoiseReason(InventoryItem item)
     {
         switch (item.Kind)
@@ -674,26 +674,26 @@ public static partial class FingerprintDiff
             case InventoryKinds.Drivers:
             {
                 var image = item.Properties.GetValueOrDefault("imagePath") ?? "";
-                if (image.Contains(@"\DriverStore\", StringComparison.OrdinalIgnoreCase)) return "driver de hardware (DriverStore)";
-                if (image.Length > 0 && !IsWindowsPath(image)) return "fora da pasta do Windows (terceiros)";
+                if (image.Contains(@"\DriverStore\", StringComparison.OrdinalIgnoreCase)) return "hardware driver (DriverStore)";
+                if (image.Length > 0 && !IsWindowsPath(image)) return "outside the Windows folder (third party)";
                 return null;
             }
             case InventoryKinds.Tasks:
-                if (!item.Id.StartsWith(@"\Microsoft\", StringComparison.OrdinalIgnoreCase)) return "tarefa de terceiros";
-                if (MachineSpecificRegex().IsMatch(item.Id)) return "específica do usuário/PC (SID/GUID no nome)";
+                if (!item.Id.StartsWith(@"\Microsoft\", StringComparison.OrdinalIgnoreCase)) return "third-party task";
+                if (MachineSpecificRegex().IsMatch(item.Id)) return "user/PC-specific (SID/GUID in the name)";
                 if (Regex.IsMatch(item.Id, @"^\\Microsoft\\(Office|VisualStudio|EdgeUpdate|OneDrive|Teams|XblGameSave)", RegexOptions.IgnoreCase))
-                    return "app instalado à parte";
+                    return "separately installed app";
                 return null;
             case InventoryKinds.Appx:
                 if (item.Properties.GetValueOrDefault("framework") == "true") return "framework (VCLibs, .NET, WinAppSDK...)";
                 var publisher = item.Properties.GetValueOrDefault("publisher");
-                if (publisher is not null && !MicrosoftPublishers.Contains(publisher)) return "app de terceiros";
+                if (publisher is not null && !MicrosoftPublishers.Contains(publisher)) return "third-party app";
                 return null;
             case InventoryKinds.Capabilities:
-                if (item.Id.StartsWith("Language.", StringComparison.OrdinalIgnoreCase)) return "pacote de idioma";
+                if (item.Id.StartsWith("Language.", StringComparison.OrdinalIgnoreCase)) return "language pack";
                 return null;
             case InventoryKinds.Autoruns:
-                return "inicialização do usuário/PC";
+                return "user/PC startup entry";
             default:
                 return null;
         }
@@ -710,7 +710,7 @@ public static partial class FingerprintDiff
             || Regex.IsMatch(p, @"^[A-Za-z]:\\Windows\\", RegexOptions.IgnoreCase);
     }
 
-    /// <summary>ImagePath/ServiceDll → caminho relativo à raiz (Windows\System32\x.dll), ou null.</summary>
+    /// <summary>ImagePath/ServiceDll → path relative to the root (Windows\System32\x.dll), or null.</summary>
     internal static string? ResolveImagePath(string? imagePath)
     {
         if (string.IsNullOrWhiteSpace(imagePath)) return null;
@@ -763,7 +763,7 @@ public static partial class FingerprintDiff
             if (e.Noise == ElevationNoise)
             {
                 score = Math.Max(0, score - 20);
-                reasons.Add("incerto: pode existir no antigo, invisível sem elevação");
+                reasons.Add("uncertain: may exist in the old one, invisible without elevation");
             }
             yield return new Candidate
             {
@@ -779,31 +779,31 @@ public static partial class FingerprintDiff
         }
     }
 
-    // ---------------- contagens ----------------
+    // ---------------- counts ----------------
 
     private static void FillCounts(FingerprintDiffResult r, Dictionary<string, IndexEntry> oldIndex, Dictionary<string, IndexEntry> newIndex, int totalCandidates)
     {
         var c = r.Counts;
         void Add(string label, int value) => c.Add(new DiffCount(label, value));
-        Add("candidatos (total)", totalCandidates);
-        Add("candidatos novos com pontuação ≥ 50", r.Candidates.Count(x => x.Status == "new" && x.Score >= 50 && x.CoveredBy.Count == 0));
-        Add("cadeias novas", r.Candidates.Count(x => CandidateKinds.IsString(x.Kind) && x.Status == "new"));
-        Add("cadeias que mudaram de binário", r.Candidates.Count(x => CandidateKinds.IsString(x.Kind) && x.Status == "moved"));
-        Add("cadeias que sumiram", oldIndex.Keys.Count(k => !newIndex.ContainsKey(k)));
-        Add("políticas ADMX novas", r.Policies.Count(p => p.Change == DiffChange.Added));
-        Add("políticas ADMX alteradas", r.Policies.Count(p => p.Change == DiffChange.Changed));
-        Add("políticas ADMX removidas", r.Policies.Count(p => p.Change == DiffChange.Removed));
-        Add("tweaks possivelmente obsoletos", r.PossiblyObsolete.Count);
+        Add("candidates (total)", totalCandidates);
+        Add("new candidates with score ≥ 50", r.Candidates.Count(x => x.Status == "new" && x.Score >= 50 && x.CoveredBy.Count == 0));
+        Add("new strings", r.Candidates.Count(x => CandidateKinds.IsString(x.Kind) && x.Status == "new"));
+        Add("strings that moved to another binary", r.Candidates.Count(x => CandidateKinds.IsString(x.Kind) && x.Status == "moved"));
+        Add("strings that disappeared", oldIndex.Keys.Count(k => !newIndex.ContainsKey(k)));
+        Add("new ADMX policies", r.Policies.Count(p => p.Change == DiffChange.Added));
+        Add("changed ADMX policies", r.Policies.Count(p => p.Change == DiffChange.Changed));
+        Add("removed ADMX policies", r.Policies.Count(p => p.Change == DiffChange.Removed));
+        Add("possibly obsolete tweaks", r.PossiblyObsolete.Count);
         foreach (var kind in InventoryKinds.All)
         {
             var items = r.Inventory.Where(i => i.Kind == kind).ToList();
             if (items.Count == 0) continue;
             var system = items.Where(i => i.Noise is null).ToList();
-            Add($"{kind}: +{system.Count(i => i.Change == DiffChange.Added)} -{system.Count(i => i.Change == DiffChange.Removed)} ~{system.Count(i => i.Change == DiffChange.Changed)} (do sistema)", system.Count);
-            Add($"{kind}: prováveis do ambiente", items.Count(i => i.Noise is not null));
+            Add($"{kind}: +{system.Count(i => i.Change == DiffChange.Added)} -{system.Count(i => i.Change == DiffChange.Removed)} ~{system.Count(i => i.Change == DiffChange.Changed)} (from the system)", system.Count);
+            Add($"{kind}: likely from the environment", items.Count(i => i.Noise is not null));
         }
-        Add("binários adicionados", r.Binaries.Count(b => b.Change == DiffChange.Added));
-        Add("binários removidos", r.Binaries.Count(b => b.Change == DiffChange.Removed));
-        Add("binários com versão alterada", r.Binaries.Count(b => b.Change == DiffChange.Changed));
+        Add("binaries added", r.Binaries.Count(b => b.Change == DiffChange.Added));
+        Add("binaries removed", r.Binaries.Count(b => b.Change == DiffChange.Removed));
+        Add("binaries with a changed version", r.Binaries.Count(b => b.Change == DiffChange.Changed));
     }
 }

@@ -5,8 +5,8 @@ using Debloater.Core.Model;
 namespace Debloater.Core.Actions;
 
 /// <summary>
-/// Ação "scheduledTask": habilita/desabilita uma tarefa do Agendador de Tarefas usando a API COM
-/// "Schedule.Service" (sem pacotes extras). Tarefa inexistente = NotApplicable.
+/// "scheduledTask" action: enables/disables a Task Scheduler task using the
+/// "Schedule.Service" COM API (no extra packages). Missing task = NotApplicable.
 /// </summary>
 public sealed class ScheduledTaskActionHandler : IActionHandler
 {
@@ -21,7 +21,7 @@ public sealed class ScheduledTaskActionHandler : IActionHandler
     {
         ActionHandlers.RequireField(spec.Path, "path", Type, errors);
         if (spec.Path is { Length: > 0 } p && (!p.StartsWith('\\') || p.EndsWith('\\')))
-            errors.Add($"ação 'scheduledTask': path deve ser o caminho completo da tarefa, ex.: \\Microsoft\\Windows\\...\\Nome (recebido '{p}').");
+            errors.Add($"action 'scheduledTask': path must be the full task path, e.g. \\Microsoft\\Windows\\...\\Name (got '{p}').");
         ActionHandlers.RequireOneOf(spec.State, "state", Type, errors, "enabled", "disabled");
     }
 
@@ -29,13 +29,13 @@ public sealed class ScheduledTaskActionHandler : IActionHandler
         ctx.GetOrAddAsync<object>(CacheKey, () => Task.Run(() =>
         {
             var type = System.Type.GetTypeFromProgID("Schedule.Service")
-                ?? throw new InvalidOperationException("Agendador de Tarefas (Schedule.Service) indisponível.");
+                ?? throw new InvalidOperationException("Task Scheduler (Schedule.Service) unavailable.");
             dynamic service = Activator.CreateInstance(type)!;
             service.Connect();
             return (object)service;
         }));
 
-    /// <summary>Retorna a tarefa registrada (IRegisteredTask) ou null se não existir.</summary>
+    /// <summary>Returns the registered task (IRegisteredTask), or null if it does not exist.</summary>
     private static async Task<dynamic?> FindTaskAsync(string path, ScanContext ctx)
     {
         dynamic service = await GetServiceAsync(ctx).ConfigureAwait(false);
@@ -49,7 +49,7 @@ public sealed class ScheduledTaskActionHandler : IActionHandler
         }
         catch (Exception ex) when (ex.HResult is HResultFileNotFound or HResultPathNotFound)
         {
-            // Via 'dynamic', o HRESULT pode chegar como COMException ou FileNotFoundException/DirectoryNotFoundException.
+            // Through 'dynamic', the HRESULT may arrive as COMException or FileNotFoundException/DirectoryNotFoundException.
             return null;
         }
     }
@@ -61,14 +61,14 @@ public sealed class ScheduledTaskActionHandler : IActionHandler
         try
         {
             var task = await FindTaskAsync(spec.Path!, ctx).ConfigureAwait(false);
-            if (task is null) return Detection.NotApplicable("tarefa não existe");
+            if (task is null) return Detection.NotApplicable("task does not exist");
             bool enabled = (bool)task.Enabled;
-            var detail = $"atual: {(enabled ? "enabled" : "disabled")}";
+            var detail = $"current: {(enabled ? "enabled" : "disabled")}";
             return enabled == WantEnabled(spec) ? Detection.Desired(detail) : Detection.NotDesired(detail);
         }
         catch (Exception ex) when (ex is COMException or UnauthorizedAccessException or InvalidOperationException or IOException)
         {
-            return Detection.Error($"Agendador de Tarefas: {ex.Message}");
+            return Detection.Error($"Task Scheduler: {ex.Message}");
         }
     }
 
@@ -93,7 +93,7 @@ public sealed class ScheduledTaskActionHandler : IActionHandler
 
     public async Task RestoreAsync(ActionSpec spec, ActionBackup? backup, ScanContext ctx, CancellationToken ct = default)
     {
-        if (backup is null) throw new InvalidOperationException($"Sem backup para {spec}.");
+        if (backup is null) throw new InvalidOperationException($"No backup for {spec}.");
         if (!backup.Existed || backup.Data is null) return;
         var task = await FindTaskAsync(spec.Path!, ctx).ConfigureAwait(false);
         if (task is null) return;

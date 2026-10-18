@@ -4,13 +4,13 @@ using Debloater.Core.Policies;
 
 namespace Debloater.Core.Planning;
 
-/// <summary>Uma mudança de política pedida pelo usuário: configurar (Setting) ou reverter ao backup (Setting null).</summary>
+/// <summary>A policy change requested by the user: configure (Setting) or revert to the backup (Setting null).</summary>
 public sealed record PolicyRequest(AdmxPolicy Policy, PolicySetting? Setting)
 {
     public bool IsRevert => Setting is null;
 }
 
-/// <summary>Mudança de política pendente, com o plano de gravação (prévia exata do registro), risco e avisos.</summary>
+/// <summary>Pending policy change, with the write plan (exact registry preview), risk and warnings.</summary>
 public sealed record PlannedPolicyChange(
     PolicyRequest Request,
     PolicyWritePlan? Plan,
@@ -22,18 +22,18 @@ public sealed record PlannedPolicyChange(
     public bool IsRevert => Request.IsRevert;
     public bool IsBlocked => BlockedReason is not null;
 
-    public string Title => (IsRevert ? "Reverter política: " : $"Política → {PolicySetting.StateText(Request.Setting!.State)}: ")
+    public string Title => (IsRevert ? "Revert policy: " : $"Policy → {PolicySetting.StateText(Request.Setting!.State)}: ")
         + (string.IsNullOrWhiteSpace(Policy.DisplayName) ? Policy.Name : Policy.DisplayName);
 
-    /// <summary>Linhas da prévia do registro (ou o que o backup restaura).</summary>
+    /// <summary>Registry preview lines (or what the backup restores).</summary>
     public IReadOnlyList<string> Preview { get; init; } = [];
 }
 
 /// <summary>
-/// Calcula as mudanças de política pendentes. Regras:
-///   configurar → plano do <see cref="PolicyWriter"/>; inválido = bloqueado (com os erros); sem efeito = omitido;
-///   reverter   → exige backup; a prévia lista os valores originais que serão restaurados.
-/// Risco: <see cref="PolicyAdvisor.Risk"/> (Médio por padrão; Alto para segurança/Update/Defender).
+/// Computes the pending policy changes. Rules:
+///   configure → plan from <see cref="PolicyWriter"/>; invalid = blocked (with the errors); no effect = omitted;
+///   revert    → requires a backup; the preview lists the original values that will be restored.
+/// Risk: <see cref="PolicyAdvisor.Risk"/> (Medium by default; High for security/Update/Defender).
 /// </summary>
 public static class PolicyChangePlanner
 {
@@ -52,13 +52,13 @@ public static class PolicyChangePlanner
                 if (backup is null)
                 {
                     result.Add(new PlannedPolicyChange(req, null, risk, [],
-                        "Sem backup: a política não foi alterada por este programa, então não há valor original para restaurar."));
+                        "No backup: the policy was not changed by this program, so there is no original value to restore."));
                     continue;
                 }
                 var preview = backup.Values.Select(v => v.Existed
                         ? $@"+ {v.Root}\{v.Key}\{v.Name} = {PolicyValues.Describe(PolicyValues.FromBackup(v.Kind ?? "string", v.Data, v.MultiData))} (original)"
-                        : $@"- {v.Root}\{v.Key}\{v.Name} (não existia)")
-                    .Concat(backup.DeletedKeys.Select(k => $@"+ {k.Root}\{k.Key}\ (chave recriada)"))
+                        : $@"- {v.Root}\{v.Key}\{v.Name} (did not exist)")
+                    .Concat(backup.DeletedKeys.Select(k => $@"+ {k.Root}\{k.Key}\ (key recreated)"))
                     .ToList();
                 result.Add(new PlannedPolicyChange(req, null, risk, []) { Preview = preview });
                 continue;
@@ -69,7 +69,7 @@ public static class PolicyChangePlanner
             var warn = warnings?.Invoke(req.Policy, setting.State, scope) ?? [];
             if (!plan.IsValid)
             {
-                result.Add(new PlannedPolicyChange(req, plan, risk, warn, "Configuração inválida: " + string.Join(" ", plan.Errors)));
+                result.Add(new PlannedPolicyChange(req, plan, risk, warn, "Invalid setting: " + string.Join(" ", plan.Errors)));
                 continue;
             }
             if (!plan.HasEffect) continue;

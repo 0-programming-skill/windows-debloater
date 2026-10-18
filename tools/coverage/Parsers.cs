@@ -4,7 +4,7 @@ using YamlDotNet.RepresentationModel;
 
 namespace Debloater.Coverage;
 
-/// <summary>Um parser por formato de ferramenta. Todos devolvem só alvos (nomes e caminhos).</summary>
+/// <summary>One parser per tool format. All of them return only targets (names and paths).</summary>
 public static partial class Parsers
 {
     public static List<Target> Parse(string parser, IReadOnlyList<(string Path, string Text)> files) => parser switch
@@ -15,15 +15,15 @@ public static partial class Parsers
         "sophia" => Scripts(files),
         "csharp" => CSharp(files),
         "playbook" => Playbook(files),
-        _ => throw new InvalidOperationException($"parser desconhecido '{parser}'."),
+        _ => throw new InvalidOperationException($"unknown parser '{parser}'."),
     };
 
     private static List<Target> Dedup(IEnumerable<Target> targets) =>
         targets.GroupBy(t => (t.Kind, t.Key)).Select(g => g.First()).ToList();
 
-    // ------------------------------------------------------------ genéricos
+    // ------------------------------------------------------------ generic
 
-    /// <summary>Arquivos .reg, .ps1/.psm1/.cmd/.bat e .yml com comandos: extratores de texto.</summary>
+    /// <summary>.reg, .ps1/.psm1/.cmd/.bat and .yml files with commands: text extractors.</summary>
     public static List<Target> Scripts(IEnumerable<(string Path, string Text)> files)
     {
         var list = new List<Target>();
@@ -59,7 +59,7 @@ public static partial class Parsers
         foreach (var (path, text) in files)
         {
             if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) { list.AddRange(Scripts([(path, text)])); continue; }
-            // O tweaks.json do WinUtil tem quebras de linha cruas dentro das cadeias dos scripts.
+            // WinUtil's tweaks.json has raw line breaks inside the script strings.
             var fixedText = Regex.Replace(text, "\"(?:[^\"\\\\]|\\\\.)*\"", m => m.Value.Replace("\r", "").Replace("\n", "\\n").Replace("\t", "\\t"), RegexOptions.Singleline);
             using var doc = JsonDocument.Parse(fixedText, docOptions);
             foreach (var entry in doc.RootElement.EnumerateObject())
@@ -85,8 +85,8 @@ public static partial class Parsers
     // ------------------------------------------------------------ privacy.sexy (windows.yaml)
 
     /// <summary>
-    /// Percorre a coleção e lê só as chamadas de função com parâmetros (alvos). Nomes, documentação e
-    /// scripts da coleção (AGPL-3.0) não são guardados.
+    /// Walks the collection and reads only the function calls with parameters (targets). Names, documentation and
+    /// scripts of the collection (AGPL-3.0) are not kept.
     /// </summary>
     public static List<Target> PrivacySexy(IEnumerable<(string Path, string Text)> files)
     {
@@ -174,7 +174,7 @@ public static partial class Parsers
         return Dedup(list);
     }
 
-    // ------------------------------------------------------------ playbooks AME (AtlasOS, ReviOS)
+    // ------------------------------------------------------------ AME playbooks (AtlasOS, ReviOS)
 
     [GeneratedRegex(@"!(registryValue|registryKey|service|scheduledTask|appx|taskKill)\s*:\s*(\{[^}]*\}|(?:\r?\n(?![ \t]*-[ \t])[ \t]+[^\r\n]*)+)")]
     private static partial Regex PlaybookAction();
@@ -214,7 +214,7 @@ public static partial class Parsers
                 };
                 if (t is not null) list.Add(t);
             }
-            // Comandos embutidos (!powerShell / !cmd): extrator de scripts no próprio YAML.
+            // Embedded commands (!powerShell / !cmd): script extractor on the YAML itself.
             list.AddRange(Extractors.FromScript(text));
         }
         return Dedup(list);

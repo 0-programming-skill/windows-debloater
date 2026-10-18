@@ -5,15 +5,16 @@ using System.Xml.Linq;
 namespace Debloater.Core.Admx;
 
 /// <summary>
-/// Lê uma pasta PolicyDefinitions (*.admx + &lt;idioma&gt;\*.adml) e produz o modelo de cada política.
-/// Resolve $(string.X) e $(presentation.X) pelo ADML (preferindo pt-BR, depois en-US), categorias
-/// com parentCategory entre arquivos (prefixos de namespace) e definições de supportedOn.
+/// Reads a PolicyDefinitions folder (*.admx + &lt;language&gt;\*.adml) and builds the model of each policy.
+/// Resolves $(string.X) and $(presentation.X) through the ADML (preferring the UI language, then en-US),
+/// categories with parentCategory across files (namespace prefixes) and supportedOn definitions.
 /// </summary>
 public static class AdmxParser
 {
     public const string PolicyDefinitionsNs = "http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions";
 
-    public static IReadOnlyList<string> DefaultLanguages { get; } = ["pt-BR", "en-US"];
+    /// <summary>ADML languages to try: the current UI language, then en-US.</summary>
+    public static IReadOnlyList<string> DefaultLanguages => Localization.UiLanguage.AdmlLanguages;
 
     public static string DefaultDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "PolicyDefinitions");
@@ -32,7 +33,7 @@ public static class AdmxParser
 
     private sealed record CategoryDef(string DisplayName, (string Ns, string Name)? Parent);
 
-    /// <summary>Lê todos os *.admx de <paramref name="directory"/>.</summary>
+    /// <summary>Reads all *.admx files in <paramref name="directory"/>.</summary>
     public static AdmxCatalog ParseDirectory(string directory, IEnumerable<string>? languages = null)
     {
         var langs = (languages ?? DefaultLanguages).ToList();
@@ -40,7 +41,7 @@ public static class AdmxParser
         var catalog = new AdmxCatalog { Directory = directory };
         if (!Directory.Exists(directory))
         {
-            catalog.Errors.Add($"pasta não encontrada: {directory}");
+            catalog.Errors.Add($"folder not found: {directory}");
             return catalog;
         }
 
@@ -75,7 +76,7 @@ public static class AdmxParser
         return null;
     }
 
-    /// <summary>Lê a partir de pares (nome do .admx, conteúdo ADMX, conteúdo ADML ou null). Útil para testes.</summary>
+    /// <summary>Reads from tuples (.admx name, ADMX content, ADML content or null). Useful for tests.</summary>
     public static AdmxCatalog Parse(IEnumerable<(string FileName, Func<string> Admx, Func<string?> Adml)> sources)
     {
         var catalog = new AdmxCatalog();
@@ -83,7 +84,7 @@ public static class AdmxParser
         var categories = new Dictionary<(string, string), CategoryDef>();
         var supported = new Dictionary<(string, string), string>();
 
-        // 1ª passada: namespaces, textos, categorias e definições de supportedOn de todos os arquivos.
+        // 1st pass: namespaces, texts, categories and supportedOn definitions of all files.
         foreach (var (fileName, readAdmx, readAdml) in sources)
         {
             catalog.FileCount++;
@@ -94,7 +95,7 @@ public static class AdmxParser
                 var target = nsEl?.Element(Ns + "target");
                 if (target is null)
                 {
-                    catalog.Errors.Add($"{fileName}: sem <policyNamespaces><target>.");
+                    catalog.Errors.Add($"{fileName}: no <policyNamespaces><target>.");
                     continue;
                 }
                 var targetNs = (string?)target.Attribute("namespace") ?? "";
@@ -133,11 +134,11 @@ public static class AdmxParser
             }
             catch (XmlException ex)
             {
-                catalog.Errors.Add($"{fileName}: XML inválido: {ex.Message}");
+                catalog.Errors.Add($"{fileName}: invalid XML: {ex.Message}");
             }
         }
 
-        // 2ª passada: políticas.
+        // 2nd pass: policies.
         foreach (var file in files)
         {
             foreach (var p in file.Root.Element(Ns + "policies")?.Elements(Ns + "policy") ?? [])
@@ -148,7 +149,7 @@ public static class AdmxParser
                 }
                 catch (Exception ex) when (ex is FormatException or XmlException or ArgumentException)
                 {
-                    catalog.Errors.Add($"{file.FileName}: política '{(string?)p.Attribute("name")}': {ex.Message}");
+                    catalog.Errors.Add($"{file.FileName}: policy '{(string?)p.Attribute("name")}': {ex.Message}");
                 }
             }
         }
@@ -157,9 +158,9 @@ public static class AdmxParser
     }
 
     /// <summary>
-    /// Marca, em cada list, os nomes de valores da sua chave que alguma política grava como valor fixo.
-    /// Sem isso, uma lista explicitValue (ou sem valuePrefix) "possuiria" valores de outras políticas:
-    /// Não configurada os apagaria e a leitura os mostraria como itens.
+    /// Marks, on each list, the value names in its key that some policy writes as a fixed value.
+    /// Without this, an explicitValue list (or one without valuePrefix) would "own" other policies' values:
+    /// Not Configured would delete them and reading would show them as items.
     /// </summary>
     public static void AssignReservedListNames(IEnumerable<AdmxPolicy> policies)
     {
@@ -183,9 +184,9 @@ public static class AdmxParser
     {
         var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore, XmlResolver = null };
         using var reader = XmlReader.Create(new StringReader(text), settings);
-        var root = XDocument.Load(reader).Root ?? throw new XmlException("documento vazio");
-        // Alguns ADMX (ex.: Camera.admx) não declaram o namespace padrão; normalizamos para o do esquema.
-        // Outros usam um namespace diferente (GameDVR.admx: http://www.microsoft.com/GroupPolicy/PolicyDefinitions).
+        var root = XDocument.Load(reader).Root ?? throw new XmlException("empty document");
+        // Some ADMX files (e.g. Camera.admx) do not declare the default namespace; we normalize to the schema's.
+        // Others use a different namespace (GameDVR.admx: http://www.microsoft.com/GroupPolicy/PolicyDefinitions).
         var rootNs = root.Name.Namespace;
         if (rootNs != Ns)
             foreach (var el in root.DescendantsAndSelf().Where(e => e.Name.Namespace == rootNs))
@@ -199,17 +200,17 @@ public static class AdmxParser
         var presentations = new Dictionary<string, List<PresControl>>(StringComparer.Ordinal);
         if (text is null)
         {
-            errors.Add($"{fileName}: ADML não encontrado; textos ficarão como referências.");
+            errors.Add($"{fileName}: ADML not found; texts will remain as references.");
             return (strings, presentations);
         }
         XElement root;
         try { root = LoadXml(text); }
         catch (XmlException ex)
         {
-            errors.Add($"{fileName}: ADML inválido: {ex.Message}");
+            errors.Add($"{fileName}: invalid ADML: {ex.Message}");
             return (strings, presentations);
         }
-        // O ADML usa o mesmo namespace; ignoramos o namespace por robustez.
+        // The ADML uses the same namespace; we ignore the namespace for robustness.
         var resources = root.Elements().FirstOrDefault(e => e.Name.LocalName == "resources");
         foreach (var s in resources?.Elements().FirstOrDefault(e => e.Name.LocalName == "stringTable")?.Elements() ?? [])
         {
@@ -367,7 +368,7 @@ public static class AdmxParser
         {
             case "decimal":
             case "longDecimal":
-                // Sem minValue/maxValue o padrão do esquema é 0..9999 para decimal.
+                // Without minValue/maxValue the schema default for decimal is 0..9999.
                 if (el.Type == "decimal")
                 {
                     el.MinValue ??= 0;
@@ -396,7 +397,7 @@ public static class AdmxParser
         return el;
     }
 
-    /// <summary>Lê o filho de &lt;value&gt;, &lt;enabledValue&gt;, &lt;trueValue&gt;...</summary>
+    /// <summary>Reads the child of &lt;value&gt;, &lt;enabledValue&gt;, &lt;trueValue&gt;...</summary>
     private static AdmxValue? ParseValueContainer(XElement? container)
     {
         var child = container?.Elements().FirstOrDefault();
@@ -407,7 +408,7 @@ public static class AdmxParser
             "longDecimal" => new AdmxValue(AdmxValueKind.LongDecimal, (string?)child.Attribute("value") ?? "0"),
             "string" => new AdmxValue(AdmxValueKind.String, child.Value),
             "delete" => new AdmxValue(AdmxValueKind.Delete, null),
-            var other => throw new FormatException($"tipo de valor desconhecido <{other}>"),
+            var other => throw new FormatException($"unknown value type <{other}>"),
         };
     }
 
@@ -426,7 +427,7 @@ public static class AdmxParser
         return items;
     }
 
-    /// <summary>Nomes exibidos em uma linha (alguns ADML têm quebras e espaços extras).</summary>
+    /// <summary>Display names on one line (some ADML files have extra line breaks and spaces).</summary>
     private static string Clean(string? text) =>
         text is null ? "" : string.Join(' ', text.Split(s_whitespace, StringSplitOptions.RemoveEmptyEntries));
 

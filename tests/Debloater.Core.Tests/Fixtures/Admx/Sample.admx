@@ -12,7 +12,7 @@
     </category>
   </categories>
   <policies>
-    <!-- enum com valores numéricos, classe Both -->
+    <!-- enum with numeric values, class Both -->
     <policy name="Telemetry" class="Both" displayName="$(string.Telemetry)" explainText="$(string.Telemetry_Explain)"
             presentation="$(presentation.Telemetry)" key="Software\Policies\Test\Data">
       <parentCategory ref="SampleCat" />
@@ -29,7 +29,7 @@
       </elements>
     </policy>
 
-    <!-- valueName com enabledValue/disabledValue explícitos -->
+    <!-- valueName with explicit enabledValue/disabledValue -->
     <policy name="DisableThing" class="Machine" displayName="$(string.DisableThing)" explainText="$(string.DisableThing_Explain)"
             key="Software\Policies\Test\Thing" valueName="DisableThing">
       <parentCategory ref="SampleCat" />
@@ -38,7 +38,7 @@
       <disabledValue><decimal value="0" /></disabledValue>
     </policy>
 
-    <!-- somente enabledList/disabledList -->
+    <!-- enabledList/disabledList only -->
     <policy name="ListOnly" class="User" displayName="$(string.ListOnly)" explainText="$(string.ListOnly_Explain)"
             key="Software\Policies\Test\Lists">
       <parentCategory ref="SampleCat" />
@@ -52,7 +52,7 @@
       </disabledList>
     </policy>
 
-    <!-- elementos variados -->
+    <!-- assorted elements -->
     <policy name="Elements" class="Machine" displayName="$(string.Elements)" explainText="$(string.Elements_Explain)"
             presentation="$(presentation.Elements)" key="Software\Policies\Test\Elements">
       <parentCategory ref="SampleCat" />
