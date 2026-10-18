@@ -10,6 +10,7 @@ using Debloater.Core.Planning;
 using Debloater.Core.Platform;
 using Debloater.Core.Policies;
 using Debloater.Core.Profiles;
+using Debloater.Core.Updates;
 
 namespace Debloater.App.ViewModels;
 
@@ -67,6 +68,16 @@ public sealed partial class AppState : ObservableObject
 
     [ObservableProperty]
     public partial string? CatalogMessage { get; set; }
+
+    /// <summary>Catalog in use (built-in, a verified update or a custom folder); set by <see cref="LoadCatalogAsync"/>.</summary>
+    [ObservableProperty]
+    public partial ActiveCatalog? ActiveCatalog { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsCheckingCatalog { get; set; }
+
+    /// <summary>Raised after a catalog update check (automatic or manual).</summary>
+    public event EventHandler<CatalogUpdateEventArgs>? CatalogUpdateFinished;
 
     /// <summary>Raised when the scan finishes (new states).</summary>
     public event EventHandler? ScanCompleted;
@@ -129,7 +140,9 @@ public sealed partial class AppState : ObservableObject
     /// <summary>Loads the catalog and profiles (fast) and starts the state scan (slow).</summary>
     public async Task LoadCatalogAsync()
     {
-        var dir = Settings.EffectiveCatalogDirectory;
+        var active = await Task.Run(ResolveCatalog);
+        ActiveCatalog = active;
+        var dir = active.CatalogDirectory;
         var result = await Task.Run(() => CatalogLoader.LoadDirectory(dir));
 
         _scanCts?.Cancel();
@@ -155,6 +168,65 @@ public sealed partial class AppState : ObservableObject
         CatalogReloaded?.Invoke(this, EventArgs.Empty);
         UpdatePending();
         await ScanAsync();
+    }
+
+    // ---------------- catalog updates ----------------
+
+    /// <summary>A folder chosen in the settings wins; otherwise the newest verified update, else the built-in catalog.</summary>
+    private ActiveCatalog ResolveCatalog() =>
+        string.IsNullOrWhiteSpace(Settings.CatalogDirectory)
+            ? new CatalogStore().Resolve()
+            : ActiveCatalog.Custom(Settings.CatalogDirectory!);
+
+    /// <summary>Startup check: only when enabled, with the default catalog, and at most once every 24 h.</summary>
+    public async Task AutoCheckCatalogAsync()
+    {
+        if (!Settings.AutoCatalogUpdates || !string.IsNullOrWhiteSpace(Settings.CatalogDirectory)) return;
+        bool due;
+        try
+        {
+            due = await Task.Run(() => CatalogUpdater.IsAutoCheckDue(new CatalogStore().ReadState(), DateTimeOffset.UtcNow));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return;
+        }
+        if (due) await CheckCatalogUpdateAsync(automatic: true);
+    }
+
+    /// <summary>
+    /// Checks for, downloads, verifies and activates a newer catalog; on success reloads the catalog and
+    /// re-reads the states (an automatic check with pending changes defers the reload to the next start).
+    /// Failures keep the current catalog. Returns null when a check is already running.
+    /// </summary>
+    public async Task<CatalogUpdateResult?> CheckCatalogUpdateAsync(bool automatic)
+    {
+        if (IsCheckingCatalog || !string.IsNullOrWhiteSpace(Settings.CatalogDirectory)) return null;
+        IsCheckingCatalog = true;
+        CatalogUpdateResult result;
+        bool reloaded = false;
+        try
+        {
+            result = await Task.Run(() => new CatalogUpdater(new CatalogStore()).UpdateAsync(automatic));
+        }
+        finally
+        {
+            IsCheckingCatalog = false;
+        }
+        if (result.Outcome == CatalogUpdateOutcome.Installed && (!automatic || PendingCount == 0))
+        {
+            await LoadCatalogAsync();
+            reloaded = true;
+        }
+        CatalogUpdateFinished?.Invoke(this, new CatalogUpdateEventArgs(result, automatic, reloaded));
+        return result;
+    }
+
+    /// <summary>Back to the built-in catalog (downloaded versions stay on disk), then reload and rescan.</summary>
+    public async Task RollbackCatalogToBuiltInAsync()
+    {
+        await Task.Run(() => new CatalogStore().RollbackToBuiltIn());
+        await LoadCatalogAsync();
     }
 
     /// <summary>Reads the current state of every tweak (in parallel, off the UI thread).</summary>
@@ -245,7 +317,7 @@ public sealed partial class AppState : ObservableObject
 
     // ---------------- profiles ----------------
 
-    public string BuiltInProfilesDirectory => Path.Combine(Settings.EffectiveCatalogDirectory, CatalogLoader.ProfilesFolder);
+    public string BuiltInProfilesDirectory => Path.Combine(ActiveCatalog?.CatalogDirectory ?? Settings.EffectiveCatalogDirectory, CatalogLoader.ProfilesFolder);
 
     public void LoadProfiles()
     {
@@ -319,4 +391,12 @@ public sealed partial class AppState : ObservableObject
         }
         return result;
     }
+}
+
+/// <summary>Result of a catalog update check; <see cref="Reloaded"/> = the new catalog is already loaded.</summary>
+public sealed class CatalogUpdateEventArgs(CatalogUpdateResult result, bool automatic, bool reloaded) : EventArgs
+{
+    public CatalogUpdateResult Result { get; } = result;
+    public bool Automatic { get; } = automatic;
+    public bool Reloaded { get; } = reloaded;
 }

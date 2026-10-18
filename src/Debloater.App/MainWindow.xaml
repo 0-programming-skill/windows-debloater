@@ -76,6 +76,7 @@
                     </InfoBar>
                     <InfoBar x:Name="ErrorBar" Severity="Error" IsOpen="False" />
                     <InfoBar x:Name="CatalogBar" x:Uid="MainWindow_CatalogBar" Severity="Warning" IsOpen="False" />
+                    <InfoBar x:Name="CatalogUpdateBar" x:Uid="MainWindow_CatalogUpdateBar" IsOpen="False" />
                 </StackPanel>
                 <Frame x:Name="ContentFrame" Grid.Row="1" />
             </Grid>

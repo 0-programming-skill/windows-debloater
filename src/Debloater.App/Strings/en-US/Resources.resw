@@ -257,6 +257,48 @@
   <data name="Catalog_ErrorsMessage" xml:space="preserve">
     <value>The catalog in '{0}' has {1} error(s); the tweaks with errors were skipped. First: {2}</value>
   </data>
+  <data name="CatalogOutcome_Failed" xml:space="preserve">
+    <value>failed</value>
+  </data>
+  <data name="CatalogOutcome_Incompatible" xml:space="preserve">
+    <value>needs a newer program</value>
+  </data>
+  <data name="CatalogOutcome_Installed" xml:space="preserve">
+    <value>updated</value>
+  </data>
+  <data name="CatalogOutcome_Skipped" xml:space="preserve">
+    <value>skipped</value>
+  </data>
+  <data name="CatalogOutcome_UpdateAvailable" xml:space="preserve">
+    <value>update available</value>
+  </data>
+  <data name="CatalogOutcome_UpToDate" xml:space="preserve">
+    <value>up to date</value>
+  </data>
+  <data name="CatalogUpdate_Failed" xml:space="preserve">
+    <value>Could not check for catalog updates; the current catalog stays in use. {0}</value>
+  </data>
+  <data name="CatalogUpdate_Incompatible" xml:space="preserve">
+    <value>A newer catalog ({0}) needs a newer version of the program.</value>
+  </data>
+  <data name="CatalogUpdate_Installed" xml:space="preserve">
+    <value>Catalog {0} installed and verified; the states were read again.</value>
+  </data>
+  <data name="CatalogUpdate_InstalledPending" xml:space="preserve">
+    <value>Catalog {0} installed and verified. It will be loaded the next time the program starts, because there are pending changes.</value>
+  </data>
+  <data name="CatalogUpdate_RollbackFailed" xml:space="preserve">
+    <value>Could not roll back: {0}</value>
+  </data>
+  <data name="CatalogUpdate_RolledBack" xml:space="preserve">
+    <value>Back to the built-in catalog ({0}). Automatic checks will not reinstall the version you rolled back from.</value>
+  </data>
+  <data name="CatalogUpdate_Skipped" xml:space="preserve">
+    <value>Catalog {0} was skipped because you rolled it back.</value>
+  </data>
+  <data name="CatalogUpdate_UpToDate" xml:space="preserve">
+    <value>The catalog is up to date ({0}).</value>
+  </data>
   <data name="Common_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
@@ -361,6 +403,9 @@
   </data>
   <data name="MainWindow_CatalogBar.Title" xml:space="preserve">
     <value>Catalog has errors</value>
+  </data>
+  <data name="MainWindow_CatalogUpdateBar.Title" xml:space="preserve">
+    <value>Catalog updates</value>
   </data>
   <data name="MainWindow_ElevateText.Text" xml:space="preserve">
     <value>Restart as administrator</value>
@@ -773,6 +818,9 @@ Supported on: {3}</value>
   <data name="SettingsPage_AppearanceHeader.Text" xml:space="preserve">
     <value>Appearance and language</value>
   </data>
+  <data name="SettingsPage_AutoUpdateToggle.Header" xml:space="preserve">
+    <value>Check for catalog updates automatically (at most once a day)</value>
+  </data>
   <data name="SettingsPage_BackupChanged" xml:space="preserve">
     <value>Backup folder changed. Reverting only works for tweaks with a backup in this folder.</value>
   </data>
@@ -785,8 +833,20 @@ Supported on: {3}</value>
   <data name="SettingsPage_Browse.Content" xml:space="preserve">
     <value>Browse...</value>
   </data>
+  <data name="SettingsPage_CatalogActive" xml:space="preserve">
+    <value>Active catalog: {0} ({1})</value>
+  </data>
+  <data name="SettingsPage_CatalogBuiltInVersion" xml:space="preserve">
+    <value>Built-in catalog: {0}</value>
+  </data>
   <data name="SettingsPage_CatalogHeader.Text" xml:space="preserve">
     <value>Catalog folder</value>
+  </data>
+  <data name="SettingsPage_CatalogLastCheck" xml:space="preserve">
+    <value>Last check: {0} ({1})</value>
+  </data>
+  <data name="SettingsPage_CatalogLastCheckNever" xml:space="preserve">
+    <value>Last check: never</value>
   </data>
   <data name="SettingsPage_CatalogReloaded" xml:space="preserve">
     <value>Catalog reloaded: {0} tweak(s).</value>
@@ -794,8 +854,23 @@ Supported on: {3}</value>
   <data name="SettingsPage_CatalogReloadedErrors" xml:space="preserve">
     <value>Catalog reloaded: {0} tweak(s), {1} error(s).</value>
   </data>
+  <data name="SettingsPage_CatalogSourceBuiltIn" xml:space="preserve">
+    <value>built-in</value>
+  </data>
+  <data name="SettingsPage_CatalogSourceCustom" xml:space="preserve">
+    <value>custom folder; updates are not used</value>
+  </data>
+  <data name="SettingsPage_CatalogSourceUpdated" xml:space="preserve">
+    <value>updated, signed and verified</value>
+  </data>
   <data name="SettingsPage_CatalogText.Text" xml:space="preserve">
     <value>Folder with the tweak YAML files (and the profiles subfolder with the built-in profiles).</value>
+  </data>
+  <data name="SettingsPage_CatalogWarning" xml:space="preserve">
+    <value>Warning: {0}</value>
+  </data>
+  <data name="SettingsPage_CheckNow.Content" xml:space="preserve">
+    <value>Check now</value>
   </data>
   <data name="SettingsPage_Default.Content" xml:space="preserve">
     <value>Default</value>
@@ -830,6 +905,9 @@ Supported on: {3}</value>
   <data name="SettingsPage_RestartFailed" xml:space="preserve">
     <value>Could not restart the app.</value>
   </data>
+  <data name="SettingsPage_RollbackBuiltIn.Content" xml:space="preserve">
+    <value>Roll back to built-in</value>
+  </data>
   <data name="SettingsPage_ThemeDark" xml:space="preserve">
     <value>Dark</value>
   </data>
@@ -844,6 +922,12 @@ Supported on: {3}</value>
   </data>
   <data name="SettingsPage_Title.Text" xml:space="preserve">
     <value>Settings</value>
+  </data>
+  <data name="SettingsPage_UpdatesHeader.Text" xml:space="preserve">
+    <value>Catalog updates</value>
+  </data>
+  <data name="SettingsPage_UpdatesText.Text" xml:space="preserve">
+    <value>New tweaks and fixes are published as catalog updates, without a new version of the program. Each download is checked against the project's signing key and validated before it is used; if anything fails, the catalog in use stays.</value>
   </data>
   <data name="Source_Admx" xml:space="preserve">
     <value>ADMX policy: {0}</value>

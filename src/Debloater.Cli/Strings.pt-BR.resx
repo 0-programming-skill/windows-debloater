@@ -38,6 +38,10 @@ Uso:
 
   Debloater.Cli reference annotate [--write] [--force] [--admx-dir DIR] [--csp FILE]
 
+  Debloater.Cli catalog info | update [--check-only] | rollback [--previous]
+  Debloater.Cli catalog verify &lt;catalog-V.zip&gt; &lt;catalog-V.zip.sig&gt;
+  Debloater.Cli catalog pack --out DIR [--bundle-version V] [--key-env NAME]
+
   Debloater.Cli fingerprint create &lt;saida.json.gz&gt; [--root C:\] [--binaries default|all|none]
   Debloater.Cli fingerprint diff &lt;antigo.json.gz&gt; &lt;novo.json.gz&gt; [--md R.md] [--json R.json] [--top 100] [--no-privacy]
 
@@ -51,7 +55,8 @@ Uso:
 --category X     filtra pelo início da categoria, como identificador ou como exibida (ex.: privacy,
                  "Sistema/Tarefas agendadas").
 --max-risk       risco máximo aceito por 'apply' (padrão: medium). High/Critical exigem opt-in explícito.
---catalog DIR    pasta do catálogo (padrão: 'catalog' ao lado do executável).
+--catalog DIR    pasta do catálogo (padrão: o catálogo ativo: a atualização verificada mais nova em
+                 %LocalAppData%\Debloater\catalog, ou 'catalog' ao lado do executável).
 --kind K         services, drivers, tasks, appx, features, capabilities, autoruns.
 --admx-dir DIR   pasta PolicyDefinitions (padrão: C:\Windows\PolicyDefinitions). Aceita o pacote
                  de Modelos Administrativos mais recente baixado da Microsoft.
@@ -145,6 +150,125 @@ selftest         SÓ PARA VM DESCARTÁVEL: para cada tweak, lê o estado, aplica
   </data>
   <data name="Apply_UseMaxRisk" xml:space="preserve">
     <value>Use --max-risk {0} para confirmar.</value>
+  </data>
+  <data name="CatalogUsage" xml:space="preserve">
+    <value>Uso:
+  catalog info                     catálogo ativo (embutido ou atualizado), versões, última verificação
+  catalog update [--check-only]    baixa, verifica e ativa um catálogo assinado mais novo
+  catalog rollback [--previous]    volta ao catálogo embutido (ou à atualização anterior)
+  catalog verify &lt;zip&gt; &lt;sig&gt;       confere assinatura, manifesto e compatibilidade de um pacote
+  catalog pack --out DIR [--catalog DIR] [--reference-dir DIR] [--bundle-version V]
+               [--git-commit SHA] [--min-app-version V] [--key-env NOME | --key ARQUIVO.pem]
+                                   gera catalog-V.zip, manifest.json e latest*.json; com uma chave
+                                   (PEM em variável de ambiente ou arquivo) também assina (.sig)</value>
+  </data>
+  <data name="CatalogCmd_Source_BuiltIn" xml:space="preserve">
+    <value>embutido</value>
+  </data>
+  <data name="CatalogCmd_Source_Updated" xml:space="preserve">
+    <value>atualizado (assinado, verificado)</value>
+  </data>
+  <data name="CatalogCmd_Source_Custom" xml:space="preserve">
+    <value>pasta personalizada</value>
+  </data>
+  <data name="CatalogCmd_InfoActive" xml:space="preserve">
+    <value>Catálogo ativo: {0} ({1})</value>
+  </data>
+  <data name="CatalogCmd_InfoFolder" xml:space="preserve">
+    <value>Pasta:          {0}</value>
+  </data>
+  <data name="CatalogCmd_InfoCommit" xml:space="preserve">
+    <value>Commit:         {0}</value>
+  </data>
+  <data name="CatalogCmd_InfoCreated" xml:space="preserve">
+    <value>Publicado:      {0:u}</value>
+  </data>
+  <data name="CatalogCmd_InfoKey" xml:space="preserve">
+    <value>Chave:          {0}</value>
+  </data>
+  <data name="CatalogCmd_InfoBuiltIn" xml:space="preserve">
+    <value>Embutido:       {0}</value>
+  </data>
+  <data name="CatalogCmd_InfoStore" xml:space="preserve">
+    <value>Atualizações:   {0}</value>
+  </data>
+  <data name="CatalogCmd_InfoInstalled" xml:space="preserve">
+    <value>Instalados:     {0}</value>
+  </data>
+  <data name="CatalogCmd_InfoSchema" xml:space="preserve">
+    <value>Esquema:        {0} (suportados {1}..{2}), motor {3}</value>
+  </data>
+  <data name="CatalogCmd_InfoLastCheck" xml:space="preserve">
+    <value>Última verif.:  {0:u} - {1}</value>
+  </data>
+  <data name="CatalogCmd_InfoNeverChecked" xml:space="preserve">
+    <value>Última verif.:  nunca</value>
+  </data>
+  <data name="CatalogCmd_InfoRolledBack" xml:space="preserve">
+    <value>Revertido de:   {0} (verificações automáticas o ignoram)</value>
+  </data>
+  <data name="CatalogCmd_Warning" xml:space="preserve">
+    <value>Aviso: {0}</value>
+  </data>
+  <data name="CatalogCmd_None" xml:space="preserve">
+    <value>(nenhum)</value>
+  </data>
+  <data name="CatalogCmd_Checking" xml:space="preserve">
+    <value>Procurando atualizações do catálogo (em uso: {0})...</value>
+  </data>
+  <data name="CatalogCmd_UpToDate" xml:space="preserve">
+    <value>O catálogo está atualizado ({0}; mais novo publicado: {1}).</value>
+  </data>
+  <data name="CatalogCmd_Available" xml:space="preserve">
+    <value>Há um catálogo mais novo: {0} (em uso: {1}). Rode 'catalog update' para instalar.</value>
+  </data>
+  <data name="CatalogCmd_Installed" xml:space="preserve">
+    <value>Catálogo {0} instalado, verificado e ativado (antes: {1}).</value>
+  </data>
+  <data name="CatalogCmd_Incompatible" xml:space="preserve">
+    <value>O catálogo {0} não pode ser usado por esta versão: {1}</value>
+  </data>
+  <data name="CatalogCmd_Skipped" xml:space="preserve">
+    <value>Catálogo {0} ignorado: {1}</value>
+  </data>
+  <data name="CatalogCmd_Failed" xml:space="preserve">
+    <value>Falha ao atualizar o catálogo; o catálogo atual continua em uso. {0}</value>
+  </data>
+  <data name="CatalogCmd_RolledBackBuiltIn" xml:space="preserve">
+    <value>De volta ao catálogo embutido ({0}). As versões baixadas continuam instaladas.</value>
+  </data>
+  <data name="CatalogCmd_RolledBackPrevious" xml:space="preserve">
+    <value>O catálogo {0} está ativo de novo.</value>
+  </data>
+  <data name="CatalogCmd_VerifyOk" xml:space="preserve">
+    <value>Pacote válido: catálogo {0}, esquema {1}, {2} arquivos, assinado pela chave {3} ({4}).</value>
+  </data>
+  <data name="CatalogCmd_VerifyCompatible" xml:space="preserve">
+    <value>Compatível com este programa.</value>
+  </data>
+  <data name="CatalogCmd_VerifyIncompatible" xml:space="preserve">
+    <value>Não utilizável por este programa: {0}</value>
+  </data>
+  <data name="CatalogCmd_VerifyFailed" xml:space="preserve">
+    <value>Pacote INVÁLIDO: {0}</value>
+  </data>
+  <data name="CatalogCmd_PackNoVersion" xml:space="preserve">
+    <value>A versão do catálogo é desconhecida (compilado sem histórico git); informe --bundle-version.</value>
+  </data>
+  <data name="CatalogCmd_PackNoKey" xml:space="preserve">
+    <value>A variável de ambiente {0} está vazia ou não existe.</value>
+  </data>
+  <data name="CatalogCmd_PackKeyNotTrusted" xml:space="preserve">
+    <value>A chave de assinatura não é uma das chaves confiáveis desta compilação (id {0}); o pacote seria rejeitado.</value>
+  </data>
+  <data name="CatalogCmd_PackDone" xml:space="preserve">
+    <value>Catálogo {0}: {1} arquivos, {2:N0} bytes -&gt; {3}</value>
+  </data>
+  <data name="CatalogCmd_PackSigned" xml:space="preserve">
+    <value>Assinado com a chave {0}; assinatura conferida com as chaves confiáveis embutidas.</value>
+  </data>
+  <data name="CatalogCmd_PackUnsigned" xml:space="preserve">
+    <value>Sem assinatura (sem --key-env/--key).</value>
   </data>
   <data name="Catalog_HasErrors" xml:space="preserve">
     <value>Catálogo com {0} erro(s); rode 'validate'. Primeiro erro: {1}</value>

@@ -41,12 +41,17 @@ public sealed partial class MainWindow : Window
         state.CatalogReloaded += (_, _) => { BuildCategoryItems(); UpdateCatalogBar(); };
         state.DesiredChanged += (_, _) => UpdatePendingBadge();
         state.ScanCompleted += OnScanCompleted;
+        state.CatalogUpdateFinished += OnCatalogUpdateFinished;
 
         Root.ActualThemeChanged += (_, _) => UpdateCaptionButtons();
         ApplyTheme(state.Settings.Theme);
 
         Navigate(App.StartPage);
-        Root.Loaded += async (_, _) => await state.LoadCatalogAsync();
+        Root.Loaded += async (_, _) =>
+        {
+            await state.LoadCatalogAsync();
+            if (App.ScreenshotPath is null) await state.AutoCheckCatalogAsync();
+        };
     }
 
     [DllImport("user32.dll")]
@@ -132,6 +137,35 @@ public sealed partial class MainWindow : Window
     {
         CatalogBar.Message = App.State.CatalogMessage ?? "";
         CatalogBar.IsOpen = App.State.CatalogMessage is not null;
+        if (App.State.ActiveCatalog?.Warning is { } warning)
+        {
+            CatalogUpdateBar.Severity = InfoBarSeverity.Warning;
+            CatalogUpdateBar.Message = Loc.Format("SettingsPage_CatalogWarning", warning);
+            CatalogUpdateBar.IsOpen = true;
+        }
+    }
+
+    /// <summary>
+    /// Non-blocking notice for automatic catalog checks (manual ones report on the Settings page) and for an
+    /// installed catalog that failed verification at load time.
+    /// </summary>
+    private void OnCatalogUpdateFinished(object? sender, ViewModels.CatalogUpdateEventArgs e)
+    {
+        if (!e.Automatic) return;
+        var r = e.Result;
+        var latest = r.Latest?.Text ?? "";
+        (InfoBarSeverity severity, string? message) = r.Outcome switch
+        {
+            Core.Updates.CatalogUpdateOutcome.Installed => (InfoBarSeverity.Success,
+                Loc.Format(e.Reloaded ? "CatalogUpdate_Installed" : "CatalogUpdate_InstalledPending", latest)),
+            Core.Updates.CatalogUpdateOutcome.Incompatible => (InfoBarSeverity.Informational, Loc.Format("CatalogUpdate_Incompatible", latest)),
+            Core.Updates.CatalogUpdateOutcome.Failed => (InfoBarSeverity.Informational, Loc.Format("CatalogUpdate_Failed", r.Message)),
+            _ => (InfoBarSeverity.Informational, null),
+        };
+        if (message is null) return;
+        CatalogUpdateBar.Severity = severity;
+        CatalogUpdateBar.Message = message;
+        CatalogUpdateBar.IsOpen = true;
     }
 
     public void ShowError(string message)

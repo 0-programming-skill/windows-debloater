@@ -39,6 +39,9 @@ public sealed class AppSettings
 
     public bool CreateRestorePoint { get; set; } = true;
 
+    /// <summary>Check for signed catalog updates at startup (at most once every 24 h).</summary>
+    public bool AutoCatalogUpdates { get; set; } = true;
+
     /// <summary>
     /// Interface language: "auto" (follow the Windows display language), "en-US" or "pt-BR". Applied at
     /// startup, so a change takes effect after a restart. (The old "Language" property is ignored.)

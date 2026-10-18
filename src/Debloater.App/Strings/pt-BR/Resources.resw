@@ -257,6 +257,48 @@
   <data name="Catalog_ErrorsMessage" xml:space="preserve">
     <value>O catálogo em '{0}' tem {1} erro(s); os ajustes com erro foram ignorados. Primeiro: {2}</value>
   </data>
+  <data name="CatalogOutcome_Failed" xml:space="preserve">
+    <value>falhou</value>
+  </data>
+  <data name="CatalogOutcome_Incompatible" xml:space="preserve">
+    <value>precisa de um programa mais novo</value>
+  </data>
+  <data name="CatalogOutcome_Installed" xml:space="preserve">
+    <value>atualizado agora</value>
+  </data>
+  <data name="CatalogOutcome_Skipped" xml:space="preserve">
+    <value>ignorado</value>
+  </data>
+  <data name="CatalogOutcome_UpdateAvailable" xml:space="preserve">
+    <value>atualização disponível</value>
+  </data>
+  <data name="CatalogOutcome_UpToDate" xml:space="preserve">
+    <value>atualizado</value>
+  </data>
+  <data name="CatalogUpdate_Failed" xml:space="preserve">
+    <value>Não foi possível procurar atualizações do catálogo; o catálogo atual continua em uso. {0}</value>
+  </data>
+  <data name="CatalogUpdate_Incompatible" xml:space="preserve">
+    <value>Um catálogo mais novo ({0}) precisa de uma versão mais nova do programa.</value>
+  </data>
+  <data name="CatalogUpdate_Installed" xml:space="preserve">
+    <value>Catálogo {0} instalado e verificado; os estados foram lidos de novo.</value>
+  </data>
+  <data name="CatalogUpdate_InstalledPending" xml:space="preserve">
+    <value>Catálogo {0} instalado e verificado. Ele será carregado na próxima vez que o programa iniciar, porque há alterações pendentes.</value>
+  </data>
+  <data name="CatalogUpdate_RollbackFailed" xml:space="preserve">
+    <value>Não foi possível reverter: {0}</value>
+  </data>
+  <data name="CatalogUpdate_RolledBack" xml:space="preserve">
+    <value>De volta ao catálogo embutido ({0}). As verificações automáticas não reinstalarão a versão revertida.</value>
+  </data>
+  <data name="CatalogUpdate_Skipped" xml:space="preserve">
+    <value>O catálogo {0} foi ignorado porque você o reverteu.</value>
+  </data>
+  <data name="CatalogUpdate_UpToDate" xml:space="preserve">
+    <value>O catálogo está atualizado ({0}).</value>
+  </data>
   <data name="Common_Cancel" xml:space="preserve">
     <value>Cancelar</value>
   </data>
@@ -361,6 +403,9 @@
   </data>
   <data name="MainWindow_CatalogBar.Title" xml:space="preserve">
     <value>Catálogo com erros</value>
+  </data>
+  <data name="MainWindow_CatalogUpdateBar.Title" xml:space="preserve">
+    <value>Atualizações do catálogo</value>
   </data>
   <data name="MainWindow_ElevateText.Text" xml:space="preserve">
     <value>Reiniciar como administrador</value>
@@ -773,6 +818,9 @@ Com suporte em: {3}</value>
   <data name="SettingsPage_AppearanceHeader.Text" xml:space="preserve">
     <value>Aparência e idioma</value>
   </data>
+  <data name="SettingsPage_AutoUpdateToggle.Header" xml:space="preserve">
+    <value>Procurar atualizações do catálogo automaticamente (no máximo uma vez por dia)</value>
+  </data>
   <data name="SettingsPage_BackupChanged" xml:space="preserve">
     <value>Pasta de backups alterada. Reverter só funciona para ajustes com backup nesta pasta.</value>
   </data>
@@ -785,8 +833,20 @@ Com suporte em: {3}</value>
   <data name="SettingsPage_Browse.Content" xml:space="preserve">
     <value>Procurar...</value>
   </data>
+  <data name="SettingsPage_CatalogActive" xml:space="preserve">
+    <value>Catálogo ativo: {0} ({1})</value>
+  </data>
+  <data name="SettingsPage_CatalogBuiltInVersion" xml:space="preserve">
+    <value>Catálogo embutido: {0}</value>
+  </data>
   <data name="SettingsPage_CatalogHeader.Text" xml:space="preserve">
     <value>Pasta do catálogo</value>
+  </data>
+  <data name="SettingsPage_CatalogLastCheck" xml:space="preserve">
+    <value>Última verificação: {0} ({1})</value>
+  </data>
+  <data name="SettingsPage_CatalogLastCheckNever" xml:space="preserve">
+    <value>Última verificação: nunca</value>
   </data>
   <data name="SettingsPage_CatalogReloaded" xml:space="preserve">
     <value>Catálogo recarregado: {0} ajuste(s).</value>
@@ -794,8 +854,23 @@ Com suporte em: {3}</value>
   <data name="SettingsPage_CatalogReloadedErrors" xml:space="preserve">
     <value>Catálogo recarregado: {0} ajuste(s), {1} erro(s).</value>
   </data>
+  <data name="SettingsPage_CatalogSourceBuiltIn" xml:space="preserve">
+    <value>embutido</value>
+  </data>
+  <data name="SettingsPage_CatalogSourceCustom" xml:space="preserve">
+    <value>pasta personalizada; atualizações não são usadas</value>
+  </data>
+  <data name="SettingsPage_CatalogSourceUpdated" xml:space="preserve">
+    <value>atualizado, assinado e verificado</value>
+  </data>
   <data name="SettingsPage_CatalogText.Text" xml:space="preserve">
     <value>Pasta com os arquivos YAML dos ajustes (e a subpasta profiles com os perfis embutidos).</value>
+  </data>
+  <data name="SettingsPage_CatalogWarning" xml:space="preserve">
+    <value>Aviso: {0}</value>
+  </data>
+  <data name="SettingsPage_CheckNow.Content" xml:space="preserve">
+    <value>Verificar agora</value>
   </data>
   <data name="SettingsPage_Default.Content" xml:space="preserve">
     <value>Padrão</value>
@@ -830,6 +905,9 @@ Com suporte em: {3}</value>
   <data name="SettingsPage_RestartFailed" xml:space="preserve">
     <value>Não foi possível reiniciar o app.</value>
   </data>
+  <data name="SettingsPage_RollbackBuiltIn.Content" xml:space="preserve">
+    <value>Voltar ao embutido</value>
+  </data>
   <data name="SettingsPage_ThemeDark" xml:space="preserve">
     <value>Escuro</value>
   </data>
@@ -844,6 +922,12 @@ Com suporte em: {3}</value>
   </data>
   <data name="SettingsPage_Title.Text" xml:space="preserve">
     <value>Configurações</value>
+  </data>
+  <data name="SettingsPage_UpdatesHeader.Text" xml:space="preserve">
+    <value>Atualizações do catálogo</value>
+  </data>
+  <data name="SettingsPage_UpdatesText.Text" xml:space="preserve">
+    <value>Novos tweaks e correções são publicados como atualizações do catálogo, sem uma nova versão do programa. Cada download é conferido com a chave de assinatura do projeto e validado antes de ser usado; se algo falhar, o catálogo em uso continua.</value>
   </data>
   <data name="Source_Admx" xml:space="preserve">
     <value>Política ADMX: {0}</value>

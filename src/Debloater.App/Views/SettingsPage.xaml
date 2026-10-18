@@ -28,6 +28,21 @@
 
             <Border Style="{StaticResource Card}">
                 <StackPanel Spacing="8">
+                    <TextBlock x:Uid="SettingsPage_UpdatesHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Uid="SettingsPage_UpdatesText" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="CatalogVersionText" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                    <TextBlock x:Name="CatalogDetailsText" Style="{StaticResource Caption}" IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                    <ToggleSwitch x:Name="AutoUpdateToggle" x:Uid="SettingsPage_AutoUpdateToggle" Toggled="AutoUpdate_Toggled" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="CheckNowButton" x:Uid="SettingsPage_CheckNow" Click="CheckNow_Click" />
+                        <Button x:Name="RollbackButton" x:Uid="SettingsPage_RollbackBuiltIn" Click="RollbackBuiltIn_Click" />
+                        <ProgressRing x:Name="CheckProgress" IsActive="False" Width="20" Height="20" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel Spacing="8">
                     <TextBlock x:Uid="SettingsPage_BackupHeader" Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock x:Uid="SettingsPage_BackupText" Style="{StaticResource Caption}" />
                     <Grid ColumnSpacing="8">

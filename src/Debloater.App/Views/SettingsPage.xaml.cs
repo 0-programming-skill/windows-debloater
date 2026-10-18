@@ -3,6 +3,7 @@ using Debloater.App.Services;
 using Debloater.App.ViewModels;
 using Debloater.Core.Engine;
 using Debloater.Core.Localization;
+using Debloater.Core.Updates;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.Storage.Pickers;
@@ -17,7 +18,18 @@ public sealed partial class SettingsPage : Page
     public SettingsPage()
     {
         InitializeComponent();
-        CatalogBox.Text = _app.Settings.EffectiveCatalogDirectory;
+        CatalogBox.Text = _app.ActiveCatalog?.CatalogDirectory ?? _app.Settings.EffectiveCatalogDirectory;
+        AutoUpdateToggle.IsOn = _app.Settings.AutoCatalogUpdates;
+        UpdateCatalogInfo();
+        _app.CatalogReloaded += OnCatalogReloaded;
+        _app.CatalogUpdateFinished += OnCatalogUpdateFinished;
+        _app.PropertyChanged += OnAppPropertyChanged;
+        Unloaded += (_, _) =>
+        {
+            _app.CatalogReloaded -= OnCatalogReloaded;
+            _app.CatalogUpdateFinished -= OnCatalogUpdateFinished;
+            _app.PropertyChanged -= OnAppPropertyChanged;
+        };
         BackupBox.Text = _app.Settings.EffectiveBackupDirectory;
 
         ThemeRadios.Items.Add(Loc.Get("SettingsPage_ThemeSystem"));
@@ -75,12 +87,120 @@ public sealed partial class SettingsPage : Page
     {
         _app.Settings.CatalogDirectory = dir;
         _app.Settings.Save();
-        CatalogBox.Text = _app.Settings.EffectiveCatalogDirectory;
         await _app.LoadCatalogAsync();
         Show(_app.CatalogErrors.Count == 0 ? InfoBarSeverity.Success : InfoBarSeverity.Warning,
             _app.CatalogErrors.Count > 0
                 ? Loc.Format("SettingsPage_CatalogReloadedErrors", _app.Tweaks.Count, _app.CatalogErrors.Count)
                 : Loc.Format("SettingsPage_CatalogReloaded", _app.Tweaks.Count));
+    }
+
+    private void OnCatalogReloaded(object? sender, EventArgs e)
+    {
+        CatalogBox.Text = _app.ActiveCatalog?.CatalogDirectory ?? _app.Settings.EffectiveCatalogDirectory;
+        UpdateCatalogInfo();
+    }
+
+    private void OnCatalogUpdateFinished(object? sender, CatalogUpdateEventArgs e) => UpdateCatalogInfo();
+
+    private void OnAppPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AppState.IsCheckingCatalog)) UpdateCatalogInfo();
+    }
+
+    // ---------------- catalog updates ----------------
+
+    private static string OutcomeText(string? outcome) => outcome switch
+    {
+        nameof(CatalogUpdateOutcome.UpToDate) => Loc.Get("CatalogOutcome_UpToDate"),
+        nameof(CatalogUpdateOutcome.UpdateAvailable) => Loc.Get("CatalogOutcome_UpdateAvailable"),
+        nameof(CatalogUpdateOutcome.Installed) => Loc.Get("CatalogOutcome_Installed"),
+        nameof(CatalogUpdateOutcome.Incompatible) => Loc.Get("CatalogOutcome_Incompatible"),
+        nameof(CatalogUpdateOutcome.Skipped) => Loc.Get("CatalogOutcome_Skipped"),
+        _ => Loc.Get("CatalogOutcome_Failed"),
+    };
+
+    /// <summary>Active catalog (version and source), built-in version, last check; buttons follow the state.</summary>
+    private void UpdateCatalogInfo()
+    {
+        var active = _app.ActiveCatalog;
+        var source = active?.Source switch
+        {
+            CatalogSource.Updated => Loc.Get("SettingsPage_CatalogSourceUpdated"),
+            CatalogSource.Custom => Loc.Get("SettingsPage_CatalogSourceCustom"),
+            _ => Loc.Get("SettingsPage_CatalogSourceBuiltIn"),
+        };
+        CatalogVersionText.Text = Loc.Format("SettingsPage_CatalogActive", active?.Version?.Text ?? "-", source);
+
+        var lines = new List<string> { Loc.Format("SettingsPage_CatalogBuiltInVersion", CatalogVersion.BuiltIn) };
+        CatalogUpdateState state;
+        try
+        {
+            state = new CatalogStore().ReadState();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            state = new CatalogUpdateState();
+        }
+        lines.Add(state.LastCheckUtc is { } last
+            ? Loc.Format("SettingsPage_CatalogLastCheck", last.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture), OutcomeText(state.LastOutcome))
+            : Loc.Get("SettingsPage_CatalogLastCheckNever"));
+        if (active?.Warning is { } warning) lines.Add(Loc.Format("SettingsPage_CatalogWarning", warning));
+        CatalogDetailsText.Text = string.Join(Environment.NewLine, lines);
+
+        bool custom = active?.Source == CatalogSource.Custom;
+        CheckNowButton.IsEnabled = !custom && !_app.IsCheckingCatalog;
+        RollbackButton.IsEnabled = active?.Source == CatalogSource.Updated && !_app.IsCheckingCatalog;
+        CheckProgress.IsActive = _app.IsCheckingCatalog;
+    }
+
+    private void AutoUpdate_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        _app.Settings.AutoCatalogUpdates = AutoUpdateToggle.IsOn;
+        _app.Settings.Save();
+    }
+
+    private async void CheckNow_Click(object sender, RoutedEventArgs e)
+    {
+        CheckNowButton.IsEnabled = RollbackButton.IsEnabled = false;
+        CheckProgress.IsActive = true;
+        var result = await _app.CheckCatalogUpdateAsync(automatic: false);
+        UpdateCatalogInfo();
+        if (result is null) return;
+        var latest = result.Latest?.Text ?? "";
+        switch (result.Outcome)
+        {
+            case CatalogUpdateOutcome.UpToDate:
+                Show(InfoBarSeverity.Success, Loc.Format("CatalogUpdate_UpToDate", result.Current));
+                break;
+            case CatalogUpdateOutcome.Installed:
+                Show(InfoBarSeverity.Success, Loc.Format("CatalogUpdate_Installed", latest));
+                break;
+            case CatalogUpdateOutcome.Incompatible:
+                Show(InfoBarSeverity.Warning, Loc.Format("CatalogUpdate_Incompatible", latest));
+                break;
+            case CatalogUpdateOutcome.Skipped:
+                Show(InfoBarSeverity.Informational, Loc.Format("CatalogUpdate_Skipped", latest));
+                break;
+            default:
+                Show(InfoBarSeverity.Warning, Loc.Format("CatalogUpdate_Failed", result.Message));
+                break;
+        }
+    }
+
+    private async void RollbackBuiltIn_Click(object sender, RoutedEventArgs e)
+    {
+        CheckNowButton.IsEnabled = RollbackButton.IsEnabled = false;
+        try
+        {
+            await _app.RollbackCatalogToBuiltInAsync();
+            Show(InfoBarSeverity.Success, Loc.Format("CatalogUpdate_RolledBack", CatalogVersion.BuiltIn));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Show(InfoBarSeverity.Error, Loc.Format("CatalogUpdate_RollbackFailed", ex.Message));
+        }
+        UpdateCatalogInfo();
     }
 
     private async void BrowseCatalog_Click(object sender, RoutedEventArgs e)

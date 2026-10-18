@@ -15,4 +15,32 @@
     <InternalsVisibleTo Include="Debloater.Core.Tests" />
   </ItemGroup>
 
+  <!--
+    Version of the built-in catalog (CatalogVersion.BuiltIn): commit time and hash of the last commit that
+    touched catalog/ or reference/. Needs full git history (CI: fetch-depth 0); without git it is 0 and any
+    published catalog counts as newer. Override with -p:CatalogCommitTime=<unix seconds> -p:CatalogCommit=<sha>.
+  -->
+  <Target Name="AddCatalogVersionMetadata" BeforeTargets="GetAssemblyAttributes">
+    <Exec Command="git log -1 --format=%%ct -- catalog reference" WorkingDirectory="$(MSBuildThisFileDirectory)..\.."
+          ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low"
+          Condition="'$(CatalogCommitTime)' == ''">
+      <Output TaskParameter="ConsoleOutput" PropertyName="CatalogCommitTime" />
+    </Exec>
+    <Exec Command="git log -1 --format=%%H -- catalog reference" WorkingDirectory="$(MSBuildThisFileDirectory)..\.."
+          ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low"
+          Condition="'$(CatalogCommit)' == ''">
+      <Output TaskParameter="ConsoleOutput" PropertyName="CatalogCommit" />
+    </Exec>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>CatalogCommitTime</_Parameter1>
+        <_Parameter2>$(CatalogCommitTime)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>CatalogCommit</_Parameter1>
+        <_Parameter2>$(CatalogCommit)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
 </Project>

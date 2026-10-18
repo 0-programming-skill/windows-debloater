@@ -34,6 +34,10 @@ internal static partial class Program
 
         try
         {
+            // 'catalog' has its own options (pack/verify/update...).
+            if (args.Length > 0 && args[0].Equals("catalog", StringComparison.OrdinalIgnoreCase))
+                return await CatalogCommandAsync(args[1..]);
+
             var parsed = Args.Parse(args);
             if (parsed.Command is null or "help" or "-h" or "--help")
             {
@@ -278,7 +282,10 @@ internal static partial class Program
         public string? Command { get; private set; }
         public List<string> Positional { get; } = [];
         public string? Category { get; private set; }
-        public string CatalogDir { get; private set; } = Path.Combine(AppContext.BaseDirectory, "catalog");
+        private string? _catalogDir;
+
+        /// <summary>--catalog, or the active catalog (newest verified update, else the built-in one), resolved on first use.</summary>
+        public string CatalogDir { get => _catalogDir ??= ActiveCatalogDirectory(); private set => _catalogDir = value; }
         public RiskLevel MaxRisk { get; private set; } = RiskLevel.Medium;
         public bool Verbose { get; private set; }
         public List<string> Kinds { get; } = [];

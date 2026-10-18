@@ -130,7 +130,11 @@ public sealed class PolicyCatalog
 
         var cspByAdmx = new Dictionary<string, CspPolicy>(StringComparer.OrdinalIgnoreCase);
         bool cspLoaded = false;
-        var cspFile = Path.Combine(AppContext.BaseDirectory, "reference", "msdocs-policy-csp.json");
+        // The active catalog's reference (it is updated with the catalog), else the one shipped with the program.
+        const string cspName = "msdocs-policy-csp.json";
+        var cspFile = App.State?.ActiveCatalog?.ReferenceDirectory is { } refDir && File.Exists(Path.Combine(refDir, cspName))
+            ? Path.Combine(refDir, cspName)
+            : Path.Combine(AppContext.BaseDirectory, "reference", cspName);
         if (File.Exists(cspFile))
         {
             try

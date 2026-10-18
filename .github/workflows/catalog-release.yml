@@ -1,0 +1,139 @@
+name: Catalog release
+
+# Publishes the catalog (catalog/** and reference/**) as a signed bundle, so the app can update it
+# without a new program release:
+#   - release "catalog-v<version>": catalog-<version>.zip, catalog-<version>.zip.sig, manifest.json
+#   - release "catalog-latest": latest.json and latest-schema<N>.json (fixed-URL pointer, assets replaced)
+# The version is the UTC commit time of the last change under catalog/ or reference/
+# (yyyy.MM.dd.HHmmss), the same value the program embeds for its built-in catalog. A version that is
+# already published is skipped, so re-runs and manual runs without catalog changes do nothing.
+# Neither release is marked "latest": program releases keep that slot.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "catalog/**"
+      - "reference/**"
+      - ".github/workflows/catalog-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLI: src/Debloater.Cli
+      OUT: ${{ github.workspace }}/../catalog-bundle
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: the catalog version comes from git log
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build Debloater.slnx -c Release
+
+      - name: Test
+        run: dotnet test Debloater.slnx -c Release --no-build
+
+      - name: Validate the catalog
+        run: dotnet run --project ${{ env.CLI }} -c Release --no-build -- validate --catalog catalog
+
+      - name: Catalog version
+        id: version
+        shell: pwsh
+        run: |
+          $ts = git log -1 --format=%ct -- catalog reference
+          $commit = git log -1 --format=%H -- catalog reference
+          if (-not $ts) { throw "no commit touches catalog/ or reference/" }
+          $version = [DateTimeOffset]::FromUnixTimeSeconds([long]$ts).UtcDateTime.ToString('yyyy.MM.dd.HHmmss', [Globalization.CultureInfo]::InvariantCulture)
+          gh release view "catalog-v$version" --repo $env:GITHUB_REPOSITORY --json tagName 2>$null | Out-Null
+          $exists = $LASTEXITCODE -eq 0
+          $global:LASTEXITCODE = 0
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+          "exists=$($exists.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          "Catalog version $version (commit $commit); already published: $exists"
+
+      - name: Pack and sign
+        if: steps.version.outputs.exists != 'true'
+        shell: pwsh
+        env:
+          CATALOG_SIGNING_KEY: ${{ secrets.CATALOG_SIGNING_KEY }}
+        run: |
+          if (-not $env:CATALOG_SIGNING_KEY) { throw "the CATALOG_SIGNING_KEY secret is not set" }
+          dotnet run --project $env:CLI -c Release --no-build -- catalog pack --out $env:OUT `
+            --catalog catalog --reference-dir reference `
+            --bundle-version "${{ steps.version.outputs.version }}" --git-commit "${{ steps.version.outputs.commit }}" `
+            --key-env CATALOG_SIGNING_KEY
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem $env:OUT | Format-Table Name, Length
+
+      - name: Verify the signed bundle
+        if: steps.version.outputs.exists != 'true'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          dotnet run --project $env:CLI -c Release --no-build -- catalog verify "$env:OUT/catalog-$v.zip" "$env:OUT/catalog-$v.zip.sig"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Publish the versioned release
+        if: steps.version.outputs.exists != 'true'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $c = "${{ steps.version.outputs.commit }}"
+          $notes = @"
+          Signed catalog bundle $v, built from commit $c.
+
+          - ``catalog-$v.zip``: catalog/ and reference/ plus manifest.json (version, schema, SHA-256 of every file)
+          - ``catalog-$v.zip.sig``: ECDSA P-256 / SHA-256 signature (DER) over the zip bytes
+          - ``manifest.json``: copy of the manifest inside the zip
+
+          The program downloads and verifies this automatically. Manual check: ``Debloater.Cli catalog verify catalog-$v.zip catalog-$v.zip.sig``.
+          "@
+          gh release create "catalog-v$v" --repo $env:GITHUB_REPOSITORY --target $c --title "Catalog $v" --notes $notes --latest=false `
+            "$env:OUT/catalog-$v.zip" "$env:OUT/catalog-$v.zip.sig" "$env:OUT/manifest.json"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Update the catalog-latest pointer
+        if: steps.version.outputs.exists != 'true'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $pointers = Get-ChildItem $env:OUT -Filter 'latest*.json' | ForEach-Object FullName
+          gh release view catalog-latest --repo $env:GITHUB_REPOSITORY --json tagName 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            $global:LASTEXITCODE = 0
+            $notes = "Fixed-URL pointer to the newest signed catalog bundle (latest.json, latest-schema<N>.json). Its assets are replaced on every catalog release; the bundles themselves live in the catalog-v<version> releases."
+            gh release create catalog-latest --repo $env:GITHUB_REPOSITORY --target "${{ github.sha }}" --title "Catalog (latest pointer)" --notes $notes --latest=false @pointers
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            return
+          }
+          # Never move the pointer backwards (e.g. a re-run of an older commit).
+          $dir = Join-Path $env:RUNNER_TEMP 'current-pointer'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          gh release download catalog-latest --repo $env:GITHUB_REPOSITORY --pattern latest.json --dir $dir --clobber 2>$null
+          $global:LASTEXITCODE = 0
+          $currentFile = Join-Path $dir 'latest.json'
+          if (Test-Path $currentFile) {
+            $current = (Get-Content $currentFile -Raw | ConvertFrom-Json).version
+            if ($current -and [version]$current -ge [version]$v) {
+              "The pointer already names $current (>= $v); left unchanged."
+              return
+            }
+          }
+          gh release upload catalog-latest --repo $env:GITHUB_REPOSITORY --clobber @pointers
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "Pointer updated to $v."
