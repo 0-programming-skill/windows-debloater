@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Debloater.App.Services;
+using Debloater.Core.Admx;
 using Debloater.Core.Catalog;
 using Debloater.Core.Engine;
 using Debloater.Core.Model;
 using Debloater.Core.Planning;
 using Debloater.Core.Platform;
+using Debloater.Core.Policies;
 using Debloater.Core.Profiles;
 
 namespace Debloater.App.ViewModels;
@@ -26,6 +28,7 @@ public sealed partial class AppState : ObservableObject
         Settings = settings;
         System = SystemInfo.Current;
         Engine = CreateEngine();
+        PolicyEngine = CreatePolicyEngine();
     }
 
     public AppSettings Settings { get; }
@@ -69,7 +72,50 @@ public sealed partial class AppState : ObservableObject
 
     private TweakEngine CreateEngine() => new(new TweakEngineOptions { BackupDirectory = Settings.EffectiveBackupDirectory, System = System });
 
-    public void ReloadEngine() => Engine = CreateEngine();
+    private PolicyEngine CreatePolicyEngine() => new(new PolicyEngineOptions { BackupDirectory = Settings.EffectiveBackupDirectory, System = System });
+
+    public void ReloadEngine()
+    {
+        Engine = CreateEngine();
+        PolicyEngine = CreatePolicyEngine();
+    }
+
+    /// <summary>Gravação de políticas ADMX (registro real, backups em backups\policies).</summary>
+    public PolicyEngine PolicyEngine { get; private set; } = null!;
+
+    // ---------------- políticas pendentes ----------------
+
+    private readonly Dictionary<string, PolicyRequest> _policyRequests = new(StringComparer.OrdinalIgnoreCase);
+    private PolicyEnvironment? _policyEnvironment;
+
+    /// <summary>Contexto para os avisos de política (edição, domínio, GPO local), lido uma vez.</summary>
+    public PolicyEnvironment PolicyEnvironment => _policyEnvironment ??= PolicyEnvironment.Current(System);
+
+    /// <summary>Mudanças de política escolhidas (configurar ou reverter), por "Arquivo.admx:Nome".</summary>
+    public IReadOnlyCollection<PolicyRequest> PolicyRequests => _policyRequests.Values;
+
+    public PolicyRequest? GetPolicyRequest(string qualifiedName) => _policyRequests.GetValueOrDefault(qualifiedName);
+
+    /// <summary>Adiciona/substitui (request) ou remove (null) a mudança pendente de uma política.</summary>
+    public void SetPolicyRequest(string qualifiedName, PolicyRequest? request)
+    {
+        if (request is null) _policyRequests.Remove(qualifiedName);
+        else _policyRequests[qualifiedName] = request;
+        UpdatePending();
+    }
+
+    public void ClearPolicyRequests()
+    {
+        _policyRequests.Clear();
+        UpdatePending();
+    }
+
+    /// <summary>Mudanças de política pendentes com prévia do registro, risco e avisos.</summary>
+    public IReadOnlyList<PlannedPolicyChange> PlanPolicyChanges() =>
+        PolicyChangePlanner.Plan(_policyRequests.Values, PolicyEngine, PolicyWarnings);
+
+    public IReadOnlyList<PolicyWarning> PolicyWarnings(AdmxPolicy policy, PolicyTargetState target, PolicyScope scope) =>
+        PolicyAdvisor.Warnings(policy, PolicyCatalog.CspFor(policy), PolicyEnvironment, target, scope);
 
     // ---------------- catálogo e varredura ----------------
 
@@ -184,7 +230,7 @@ public sealed partial class AppState : ObservableObject
 
     private void UpdatePending()
     {
-        PendingCount = Tweaks.Count(t => t.IsPending);
+        PendingCount = Tweaks.Count(t => t.IsPending) + _policyRequests.Count;
         DesiredChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -200,15 +246,57 @@ public sealed partial class AppState : ObservableObject
         foreach (var p in ProfileStore.LoadDirectory(AppSettings.UserProfilesDirectory, builtIn: false, ProfileErrors)) Profiles.Add(p);
     }
 
-    /// <summary>Carrega um perfil na seleção (substitui a seleção atual). Devolve um resumo.</summary>
-    public string ApplyProfileToSelection(Profile profile)
+    /// <summary>Carrega um perfil na seleção (substitui a seleção atual, inclusive políticas pendentes). Devolve um resumo.</summary>
+    public async Task<string> ApplyProfileToSelectionAsync(Profile profile)
     {
         var resolution = ProfileStore.Resolve(profile, Tweaks.Select(t => t.Tweak));
+        List<PolicyRequest> policyRequests = [];
+        List<string> unknownPolicies = [];
+        if (profile.Policies is { Count: > 0 })
+        {
+            var catalog = await PolicyCatalog.GetAsync();
+            (policyRequests, unknownPolicies) = ProfileStore.ResolvePolicies(profile, catalog.Items.Select(i => i.Policy));
+        }
+        _policyRequests.Clear();
+        foreach (var r in policyRequests) _policyRequests[r.Policy.QualifiedName] = r;
         ReplaceDesired(resolution.Desired);
-        var msg = $"Perfil \"{profile.Name}\" carregado: {resolution.Desired.Count} ajuste(s) com estado desejado, {PendingCount} mudança(s) pendente(s).";
+
+        var msg = $"Perfil \"{profile.Name}\" carregado: {resolution.Desired.Count} ajuste(s) com estado desejado";
+        if (policyRequests.Count > 0) msg += $", {policyRequests.Count} política(s)";
+        msg += $", {PendingCount} mudança(s) pendente(s).";
         if (resolution.UnknownIds.Count > 0)
             msg += $" Ignorados (não existem no catálogo): {string.Join(", ", resolution.UnknownIds)}.";
+        if (unknownPolicies.Count > 0)
+            msg += $" Políticas que não existem neste PC (ADMX): {string.Join(", ", unknownPolicies)}.";
         return msg;
+    }
+
+    /// <summary>
+    /// Políticas para salvar num perfil: as que este programa configurou (têm backup), com os valores
+    /// atuais do registro, sobrepostas pelas mudanças pendentes (reverter pendente = fica de fora).
+    /// </summary>
+    public async Task<List<PolicySetting>> EffectivePolicySettingsAsync()
+    {
+        var result = new Dictionary<string, PolicySetting>(StringComparer.OrdinalIgnoreCase);
+        var names = PolicyEngine.Backups.List();
+        if (names.Count > 0 || _policyRequests.Count > 0)
+        {
+            var catalog = await PolicyCatalog.GetAsync();
+            foreach (var name in names)
+            {
+                if (catalog.Find(name) is not { } item) continue;
+                var backup = PolicyEngine.Backups.Load(name);
+                var scope = backup?.Values.FirstOrDefault() is { } v && v.Root.Equals("HKCU", StringComparison.OrdinalIgnoreCase)
+                    ? PolicyScope.User : PolicySetting.DefaultScope(item.Policy.Class);
+                result[name] = PolicyEngine.ReadCurrent(item.Policy, scope).Setting;
+            }
+        }
+        foreach (var r in _policyRequests.Values)
+        {
+            if (r.Setting is { } s) result[r.Policy.QualifiedName] = s;
+            else result.Remove(r.Policy.QualifiedName);
+        }
+        return [.. result.Values];
     }
 
     /// <summary>Seleção efetiva para salvar num perfil: escolhas explícitas + o que já está aplicado.</summary>

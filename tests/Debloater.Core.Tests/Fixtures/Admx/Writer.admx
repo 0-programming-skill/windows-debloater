@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fixture para o gravador de políticas: cobre cada regra do esquema ADMX que gera escrita no registro. -->
+<policyDefinitions revision="1.0" schemaVersion="1.0"
+  xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <policyNamespaces>
+    <target prefix="writer" namespace="Test.Policies.Writer" />
+    <using prefix="b" namespace="Test.Policies.Base" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <categories>
+    <category name="WriterCat" displayName="$(string.WriterCat)">
+      <parentCategory ref="b:Privacy" />
+    </category>
+  </categories>
+  <policies>
+    <!-- valueName sem enabledValue/disabledValue: habilitada = DWORD 1, desabilitada = apaga. -->
+    <policy name="Implicit" class="Machine" displayName="$(string.Implicit)" explainText="$(string.Implicit)"
+            key="Software\Policies\Test\W\Implicit" valueName="Flag">
+      <parentCategory ref="WriterCat" />
+      <supportedOn ref="b:SUPPORTED_Win11" />
+    </policy>
+
+    <!-- enabledValue string, disabledValue decimal, enabledList/disabledList em outra chave. -->
+    <policy name="Mixed" class="User" displayName="$(string.Mixed)" explainText="$(string.Mixed)"
+            key="Software\Policies\Test\W\Mixed" valueName="Mode">
+      <parentCategory ref="WriterCat" />
+      <enabledValue><string>on</string></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+      <enabledList>
+        <item valueName="A"><value><decimal value="1" /></value></item>
+        <item key="Software\Policies\Test\W\Mixed\Sub" valueName="B"><value><longDecimal value="5000000000" /></value></item>
+      </enabledList>
+      <disabledList defaultKey="Software\Policies\Test\W\Mixed\Sub">
+        <item valueName="B"><value><delete /></value></item>
+        <item key="Software\Policies\Test\W\Mixed" valueName="A"><value><decimal value="0" /></value></item>
+      </disabledList>
+    </policy>
+
+    <!-- Um elemento de cada tipo, com chaves sobrepostas por elemento. -->
+    <policy name="AllElements" class="Both" displayName="$(string.AllElements)" explainText="$(string.AllElements)"
+            presentation="$(presentation.AllElements)" key="Software\Policies\Test\W\All" valueName="Enabled">
+      <parentCategory ref="WriterCat" />
+      <supportedOn ref="b:SUPPORTED_Win11" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+      <elements>
+        <decimal id="Count" valueName="Count" minValue="1" maxValue="50" required="true" />
+        <decimal id="AsText" valueName="AsText" storeAsText="true" />
+        <longDecimal id="Big" valueName="Big" />
+        <boolean id="Check" valueName="Check" />
+        <boolean id="CheckLists">
+          <trueList><item key="Software\Policies\Test\W\All\Bool" valueName="T"><value><decimal value="1" /></value></item></trueList>
+          <falseList><item key="Software\Policies\Test\W\All\Bool" valueName="T"><value><delete /></value></item></falseList>
+        </boolean>
+        <enum id="Choice" valueName="Choice" required="true">
+          <item displayName="$(string.Low)"><value><decimal value="0" /></value></item>
+          <item displayName="$(string.High)">
+            <value><decimal value="2" /></value>
+            <valueList><item key="Software\Policies\Test\W\All\Extra" valueName="Boost"><value><string>yes</string></value></item></valueList>
+          </item>
+        </enum>
+        <enum id="Named" valueName="Named">
+          <item displayName="$(string.Low)"><value><string>low</string></value></item>
+          <item displayName="$(string.High)"><value><string>high</string></value></item>
+        </enum>
+        <text id="Server" key="Software\Policies\Test\W\All\Net" valueName="Server" maxLength="10" required="true" />
+        <text id="Path" valueName="Path" expandable="true" />
+        <multiText id="Lines" valueName="Lines" maxLength="8" maxStrings="3" />
+        <list id="Plain" key="Software\Policies\Test\W\All\Plain" />
+        <list id="Numbered" key="Software\Policies\Test\W\All\Numbered" valuePrefix="" expandable="true" />
+        <list id="Prefixed" key="Software\Policies\Test\W\All\Prefixed" valuePrefix="Item" additive="true" />
+        <list id="Pairs" key="Software\Policies\Test\W\All\Pairs" explicitValue="true" additive="true" />
+      </elements>
+    </policy>
+
+    <!-- Política sem valueName, só elementos: desabilitada = nada gravado. -->
+    <policy name="ElementsOnly" class="Machine" displayName="$(string.ElementsOnly)" explainText="$(string.ElementsOnly)"
+            presentation="$(presentation.ElementsOnly)" key="Software\Policies\Test\W\Only">
+      <parentCategory ref="WriterCat" />
+      <elements>
+        <decimal id="Level" valueName="Level" maxValue="3" />
+        <enum id="Mode" valueName="Mode">
+          <item displayName="$(string.Low)"><value><decimal value="1" /></value></item>
+          <item displayName="$(string.High)"><value><delete /></value></item>
+        </enum>
+      </elements>
+    </policy>
+  </policies>
+</policyDefinitions>

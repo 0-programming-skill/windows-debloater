@@ -27,7 +27,7 @@ public static class AdmxParser
         public required string TargetNamespace { get; init; }
         public required Dictionary<string, string> Prefixes { get; init; }
         public required Dictionary<string, string> Strings { get; init; }
-        public required Dictionary<string, Dictionary<string, string>> Presentations { get; init; }
+        public required Dictionary<string, List<PresControl>> Presentations { get; init; }
     }
 
     private sealed record CategoryDef(string DisplayName, (string Ns, string Name)? Parent);
@@ -169,10 +169,10 @@ public static class AdmxParser
         return root;
     }
 
-    private static (Dictionary<string, string>, Dictionary<string, Dictionary<string, string>>) ParseAdml(string? text, string fileName, List<string> errors)
+    private static (Dictionary<string, string>, Dictionary<string, List<PresControl>>) ParseAdml(string? text, string fileName, List<string> errors)
     {
         var strings = new Dictionary<string, string>(StringComparer.Ordinal);
-        var presentations = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+        var presentations = new Dictionary<string, List<PresControl>>(StringComparer.Ordinal);
         if (text is null)
         {
             errors.Add($"{fileName}: ADML não encontrado; textos ficarão como referências.");
@@ -194,18 +194,40 @@ public static class AdmxParser
         foreach (var pres in resources?.Elements().FirstOrDefault(e => e.Name.LocalName == "presentationTable")?.Elements() ?? [])
         {
             if ((string?)pres.Attribute("id") is not { } id) continue;
-            var labels = new Dictionary<string, string>(StringComparer.Ordinal);
+            var controls = new List<PresControl>();
             foreach (var control in pres.Elements())
             {
-                if ((string?)control.Attribute("refId") is not { } refId) continue;
-                var label = control.Elements().FirstOrDefault(e => e.Name.LocalName == "label")?.Value
-                    ?? (control.HasElements ? null : control.Value);
-                if (!string.IsNullOrWhiteSpace(label)) labels[refId] = label.Trim();
+                var type = control.Name.LocalName;
+                var refId = (string?)control.Attribute("refId");
+                var label = Child(control, "label")?.Value ?? (control.HasElements ? null : control.Value);
+                label = string.IsNullOrWhiteSpace(label) ? null : label.Trim();
+                if (refId is null)
+                {
+                    if (type == "text" && label is not null) controls.Add(new PresControl(type, null, label, null, null));
+                    continue;
+                }
+                string? def = type switch
+                {
+                    "decimalTextBox" or "longDecimalTextBox" => (string?)control.Attribute("defaultValue"),
+                    "textBox" => Child(control, "defaultValue")?.Value,
+                    "comboBox" => Child(control, "default")?.Value,
+                    "checkBox" => Bool(control.Attribute("defaultChecked")) is { } b ? (b ? "true" : "false") : null,
+                    "dropdownList" => (string?)control.Attribute("defaultItem") is { } item ? "#" + item.Trim() : null,
+                    _ => null,
+                };
+                List<string>? suggestions = type == "comboBox"
+                    ? control.Elements().Where(e => e.Name.LocalName == "suggestion").Select(e => e.Value).ToList()
+                    : null;
+                controls.Add(new PresControl(type, refId, label, def, suggestions is { Count: > 0 } ? suggestions : null));
             }
-            presentations[id] = labels;
+            presentations[id] = controls;
         }
         return (strings, presentations);
     }
+
+    private static XElement? Child(XElement e, string localName) => e.Elements().FirstOrDefault(c => c.Name.LocalName == localName);
+
+    private sealed record PresControl(string Type, string? RefId, string? Label, string? Default, List<string>? Suggestions);
 
     private static string? ResolveString(FileData file, string? reference)
     {
@@ -276,18 +298,20 @@ public static class AdmxParser
         policy.EnabledList = ParseList(p.Element(Ns + "enabledList"), key);
         policy.DisabledList = ParseList(p.Element(Ns + "disabledList"), key);
 
-        Dictionary<string, string>? labels = null;
+        List<PresControl>? controls = null;
         var presRef = (string?)p.Attribute("presentation");
-        if (presRef is not null && presRef.StartsWith("$(presentation.", StringComparison.Ordinal))
-            file.Presentations.TryGetValue(presRef["$(presentation.".Length..^1], out labels);
+        if (presRef is not null && presRef.StartsWith("$(presentation.", StringComparison.Ordinal) && presRef.EndsWith(')'))
+            file.Presentations.TryGetValue(presRef["$(presentation.".Length..^1], out controls);
+        if (controls is { Count: > 0 })
+            policy.Presentation = controls.Select(c => new AdmxPresentationControl(c.Type, c.RefId, c.Label)).ToList();
 
         foreach (var e in p.Element(Ns + "elements")?.Elements() ?? [])
-            policy.Elements.Add(ParseElement(file, e, key, labels));
+            policy.Elements.Add(ParseElement(file, e, key, controls));
 
         return policy;
     }
 
-    private static AdmxElement ParseElement(FileData file, XElement e, string policyKey, Dictionary<string, string>? labels)
+    private static AdmxElement ParseElement(FileData file, XElement e, string policyKey, List<PresControl>? controls)
     {
         var id = (string?)e.Attribute("id") ?? "";
         var el = new AdmxElement
@@ -305,8 +329,15 @@ public static class AdmxParser
             ValuePrefix = (string?)e.Attribute("valuePrefix"),
             Additive = Bool(e.Attribute("additive")) ?? false,
             ExplicitValue = Bool(e.Attribute("explicitValue")) ?? false,
+            MaxStrings = (int?)ULong(e.Attribute("maxStrings")),
         };
-        if (labels is not null && labels.TryGetValue(id, out var label)) el.Label = label;
+        if (controls?.FirstOrDefault(c => c.RefId == id) is { } control)
+        {
+            el.Label = control.Label;
+            el.PresentationType = control.Type;
+            el.DefaultValue = control.Default;
+            el.Suggestions = control.Suggestions;
+        }
 
         switch (el.Type)
         {

@@ -107,7 +107,35 @@ public sealed class AdmxElement
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ExplicitValue { get; set; }
+
+    /// <summary>multiText: número máximo de linhas (0 ou null = sem limite).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? MaxStrings { get; set; }
+
+    /// <summary>
+    /// Controle da apresentação (ADML) que edita o elemento: decimalTextBox, longDecimalTextBox, textBox,
+    /// comboBox, checkBox, dropdownList, listBox, multiTextBox. Null quando a política não tem apresentação.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PresentationType { get; set; }
+
+    /// <summary>
+    /// Valor padrão da apresentação, em texto: número (decimalTextBox), texto (textBox/comboBox),
+    /// "true"/"false" (checkBox) ou "#índice" (dropdownList defaultItem).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DefaultValue { get; set; }
+
+    /// <summary>comboBox: sugestões da apresentação.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? Suggestions { get; set; }
 }
+
+/// <summary>Um controle da apresentação (ADML), na ordem em que o gpedit o mostra.</summary>
+/// <param name="Type">Nome do controle (decimalTextBox, checkBox, text...).</param>
+/// <param name="RefId">Elemento editado (null para &lt;text&gt;, que é só um texto).</param>
+/// <param name="Text">Rótulo ou texto.</param>
+public sealed record AdmxPresentationControl(string Type, string? RefId, string? Text);
 
 /// <summary>Uma política de Grupo definida num arquivo ADMX, com os textos do ADML resolvidos.</summary>
 public sealed class AdmxPolicy
@@ -144,6 +172,10 @@ public sealed class AdmxPolicy
     public List<AdmxListItem>? DisabledList { get; set; }
 
     public List<AdmxElement> Elements { get; set; } = [];
+
+    /// <summary>Controles da apresentação na ordem do ADML (inclui os &lt;text&gt; descritivos).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<AdmxPresentationControl>? Presentation { get; set; }
 
     /// <summary>Texto "Com suporte em" resolvido (ex.: "At least Windows 10").</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

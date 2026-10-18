@@ -1,6 +1,8 @@
 using Debloater.App.Helpers;
 using Debloater.Core.Admx;
+using Debloater.Core.Model;
 using Debloater.Core.Planning;
+using Debloater.Core.Policies;
 using Debloater.Core.Reference;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -18,12 +20,25 @@ public sealed class PolicyItem
         State = AdmxPolicyStateReader.Combined(scopes);
         CategoryText = string.Join(" › ", policy.CategoryPath);
         SearchText = $"{policy.DisplayName} {policy.Name} {policy.File} {policy.Key} {policy.ValueName} {CategoryText}";
+        Risk = PolicyAdvisor.Risk(policy);
     }
 
     public AdmxPolicy Policy { get; }
-    public IReadOnlyList<AdmxScopeState> Scopes { get; }
+    public IReadOnlyList<AdmxScopeState> Scopes { get; private set; }
     public CspPolicy? Csp { get; }
-    public AdmxPolicyState State { get; }
+    public AdmxPolicyState State { get; private set; }
+    public RiskLevel Risk { get; }
+
+    /// <summary>Relê o estado no registro (depois de aplicar/reverter).</summary>
+    public void Refresh()
+    {
+        Scopes = AdmxPolicyStateReader.Read(Policy);
+        State = AdmxPolicyStateReader.Combined(Scopes);
+    }
+
+    /// <summary>Texto curto da mudança pendente ("→ Habilitada", "→ reverter"), preenchido pela página antes de exibir.</summary>
+    public string PendingText { get; set; } = "";
+    public Visibility PendingVisibility => PendingText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
     public string DisplayName => string.IsNullOrWhiteSpace(Policy.DisplayName) ? Policy.Name : Policy.DisplayName;
     public string CategoryText { get; }
@@ -79,12 +94,31 @@ public sealed class PolicyCatalog
     public bool CspLoaded { get; init; }
 
     private static Task<PolicyCatalog>? _cached;
+    private static PolicyCatalog? _loaded;
+    private Dictionary<string, PolicyItem>? _byName;
 
     public static Task<PolicyCatalog> GetAsync(bool refresh = false)
     {
-        if (refresh || _cached is null || _cached.IsFaulted) _cached = Task.Run(Load);
+        if (refresh || _cached is null || _cached.IsFaulted)
+        {
+            _cached = Task.Run(Load);
+            _cached.ContinueWith(t => { if (t.IsCompletedSuccessfully) _loaded = t.Result; }, TaskScheduler.Default);
+        }
         return _cached;
     }
+
+    /// <summary>Item pelo nome "Arquivo.admx:Nome".</summary>
+    public PolicyItem? Find(string qualifiedName)
+    {
+        _byName ??= Items.GroupBy(i => i.QualifiedName, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        return _byName.GetValueOrDefault(qualifiedName);
+    }
+
+    /// <summary>Política da CSP correspondente (se o catálogo já foi carregado).</summary>
+    public static CspPolicy? CspFor(AdmxPolicy policy) => _loaded?.Find(policy.QualifiedName)?.Csp;
+
+    /// <summary>Catálogo já carregado (ou null).</summary>
+    public static PolicyCatalog? Loaded => _loaded;
 
     /// <summary>Separador de níveis na árvore; nomes de categoria que contêm "/" são preservados.</summary>
     public static string PathOf(AdmxPolicy p) => string.Join("/", p.CategoryPath.Select(c => c.Replace('/', '∕')));
@@ -103,10 +137,7 @@ public sealed class PolicyCatalog
             {
                 var csp = CspMarkdownParser.Load(cspFile);
                 cspLoaded = true;
-                foreach (var p in csp.Policies)
-                    foreach (var m in p.GpMappings ?? [])
-                        if (m.AdmxFile is not null && m.Name is not null)
-                            cspByAdmx.TryAdd(m.AdmxFile + ":" + m.Name, p);
+                cspByAdmx = PolicyAdvisor.IndexCspByAdmx(csp.Policies);
             }
             catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException)
             {

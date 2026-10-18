@@ -16,9 +16,10 @@ public class AdmxParserTests
     public void ParsesAllFilesWithoutErrors()
     {
         var c = Parse();
-        Assert.Equal(3, c.FileCount);
+        Assert.Equal(4, c.FileCount);
         Assert.Empty(c.Errors);
-        Assert.Equal(5, c.Policies.Count);
+        Assert.Equal(5, c.Policies.Count(p => p.File != "Writer.admx"));
+        Assert.Equal(4, c.Policies.Count(p => p.File == "Writer.admx"));
     }
 
     [Fact]

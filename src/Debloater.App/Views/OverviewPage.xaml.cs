@@ -71,9 +71,9 @@ public sealed partial class OverviewPage : Page
         {
             var b = new Button { Content = p.Name };
             ToolTipService.SetToolTip(b, p.Description?.Trim());
-            b.Click += (_, _) =>
+            b.Click += async (_, _) =>
             {
-                var msg = _app.ApplyProfileToSelection(p);
+                var msg = await _app.ApplyProfileToSelectionAsync(p);
                 if (_app.PendingCount > 0)
                 {
                     App.Window.Navigate("apply");

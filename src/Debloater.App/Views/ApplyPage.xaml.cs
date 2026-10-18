@@ -5,6 +5,7 @@ using Debloater.Core.Engine;
 using Debloater.Core.Model;
 using Debloater.Core.Planning;
 using Debloater.Core.Platform;
+using Debloater.Core.Policies;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -18,6 +19,7 @@ public sealed partial class ApplyPage : Page
 
     private readonly AppState _app = App.State;
     private IReadOnlyList<PlannedChange> _plan = [];
+    private IReadOnlyList<PlannedPolicyChange> _policyPlan = [];
     private bool _running;
     private CancellationTokenSource? _cts;
 
@@ -46,38 +48,102 @@ public sealed partial class ApplyPage : Page
     }
 
     private IEnumerable<PlannedChange> Executable => _plan.Where(c => !c.IsBlocked);
+    private IEnumerable<PlannedPolicyChange> ExecutablePolicies => _policyPlan.Where(c => !c.IsBlocked);
+    private int ExecutableCount => Executable.Count() + ExecutablePolicies.Count();
+    private bool HasHigh => Executable.Any(c => c.Tweak.Risk == RiskLevel.High) || ExecutablePolicies.Any(c => c.Risk == RiskLevel.High);
 
     private void Rebuild()
     {
         _plan = _app.PlanChanges();
+        _policyPlan = _app.PlanPolicyChanges();
         int apply = _plan.Count(c => c.Kind == ChangeKind.Apply);
         int revert = _plan.Count(c => c.Kind == ChangeKind.Revert && !c.IsBlocked);
-        int blocked = _plan.Count(c => c.IsBlocked);
+        int blocked = _plan.Count(c => c.IsBlocked) + _policyPlan.Count(c => c.IsBlocked);
+        int policies = ExecutablePolicies.Count();
+        bool empty = _plan.Count == 0 && _policyPlan.Count == 0;
 
         SummaryText.Text = _app.IsScanning && _app.LastScan is null
             ? "Aguardando a leitura do estado atual..."
-            : $"{apply} para aplicar, {revert} para reverter" + (blocked > 0 ? $", {blocked} que não podem ser revertidos (veja o motivo)." : ".");
-        EmptyPanel.Visibility = _plan.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        OptionsPanel.Visibility = _plan.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            : $"{apply} para aplicar, {revert} para reverter"
+              + (policies > 0 ? $", {policies} política(s) ADMX" : "")
+              + (blocked > 0 ? $", {blocked} que não podem ser executadas (veja o motivo)." : ".");
+        EmptyPanel.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        OptionsPanel.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
 
         Groups.Children.Clear();
         foreach (var group in _plan.GroupBy(c => c.Tweak.Risk).OrderByDescending(g => g.Key))
             Groups.Children.Add(BuildGroup(group.Key, group.ToList()));
+        if (_policyPlan.Count > 0) Groups.Children.Add(BuildPolicyGroup(_policyPlan));
 
-        bool hasHigh = Executable.Any(c => c.Tweak.Risk == RiskLevel.High);
+        bool hasHigh = HasHigh;
         bool hasCritical = Executable.Any(c => c.Tweak.Risk == RiskLevel.Critical);
         HighConfirm.Visibility = hasHigh ? Visibility.Visible : Visibility.Collapsed;
         if (!hasHigh) HighConfirm.IsChecked = false;
         CriticalNote.Visibility = hasCritical ? Visibility.Visible : Visibility.Collapsed;
         ElevationBar.IsOpen = !_app.IsElevated;
-        ApplyText.Text = $"Aplicar {Executable.Count()} mudança(s)";
+        ApplyText.Text = $"Aplicar {ExecutableCount} mudança(s)";
         UpdateApplyEnabled();
     }
 
     private void UpdateApplyEnabled()
     {
-        bool highOk = !Executable.Any(c => c.Tweak.Risk == RiskLevel.High) || HighConfirm.IsChecked == true;
-        ApplyButton.IsEnabled = _app.IsElevated && !_running && !_app.IsScanning && Executable.Any() && highOk;
+        bool highOk = !HasHigh || HighConfirm.IsChecked == true;
+        ApplyButton.IsEnabled = _app.IsElevated && !_running && !_app.IsScanning && ExecutableCount > 0 && highOk;
+    }
+
+    /// <summary>Grupo "Políticas (ADMX)": cada mudança com risco, avisos e a prévia exata do registro.</summary>
+    private static UIElement BuildPolicyGroup(IReadOnlyList<PlannedPolicyChange> changes)
+    {
+        var res = Application.Current.Resources;
+        var panel = new StackPanel { Spacing = 10 };
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        header.Children.Add(new TextBlock { Text = "Políticas (ADMX)", Style = (Style)res["BodyStrongTextBlockStyle"], VerticalAlignment = VerticalAlignment.Center });
+        header.Children.Add(new TextBlock { Text = $"{changes.Count} mudança(s) · gravação direta no registro (não aparece no gpedit.msc)", Style = (Style)res["Caption"], VerticalAlignment = VerticalAlignment.Center });
+        panel.Children.Add(header);
+
+        foreach (var c in changes)
+        {
+            var row = new Grid { ColumnSpacing = 12 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.Children.Add(new FontIcon
+            {
+                Glyph = c.IsBlocked ? "" : c.IsRevert ? "" : "",
+                FontSize = 16,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 2, 0, 0),
+            });
+            var text = new StackPanel { Spacing = 2 };
+            var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            var color = Labels.RiskColor(c.Risk);
+            title.Children.Add(new Border
+            {
+                Style = (Style)res["BadgeBorder"],
+                Background = Labels.Brush(color),
+                Child = new TextBlock { Text = Labels.RiskShort(c.Risk), Style = (Style)res["BadgeText"], Foreground = Labels.ForegroundOn(color) },
+            });
+            title.Children.Add(new TextBlock { Text = c.Title, Style = (Style)res["BodyStrongTextBlockStyle"], TextWrapping = TextWrapping.Wrap, Opacity = c.IsBlocked ? 0.6 : 1 });
+            text.Children.Add(title);
+            text.Children.Add(new TextBlock { Text = $"{c.Policy.QualifiedName} · {string.Join(" › ", c.Policy.CategoryPath)}", Style = (Style)res["Caption"] });
+            if (c.BlockedReason is not null)
+                text.Children.Add(new TextBlock { Text = "Não será executado: " + c.BlockedReason, Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
+            foreach (var w in c.Warnings.Where(w => w.Level == PolicyWarningLevel.Warning))
+                text.Children.Add(new TextBlock { Text = "Atenção: " + w.Text, Style = (Style)res["Caption"], Foreground = (Microsoft.UI.Xaml.Media.Brush)res["SystemFillColorCautionBrush"] });
+            if (c.Preview.Count > 0)
+                text.Children.Add(new TextBlock
+                {
+                    Text = string.Join(Environment.NewLine, c.Preview),
+                    FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)res["MonoFont"],
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true,
+                    Margin = new Thickness(0, 4, 0, 0),
+                });
+            Grid.SetColumn(text, 1);
+            row.Children.Add(text);
+            panel.Children.Add(row);
+        }
+        return new Border { Style = (Style)res["Card"], Child = panel };
     }
 
     private static UIElement BuildGroup(RiskLevel risk, List<PlannedChange> changes)
@@ -193,7 +259,9 @@ public sealed partial class ApplyPage : Page
     private async void Apply_Click(object sender, RoutedEventArgs e)
     {
         var changes = Executable.ToList();
-        if (changes.Count == 0 || !_app.IsElevated) return;
+        var policyChanges = ExecutablePolicies.ToList();
+        int total = changes.Count + policyChanges.Count;
+        if (total == 0 || !_app.IsElevated) return;
 
         var critical = changes.Where(c => c.Tweak.Risk == RiskLevel.Critical).ToList();
         if (critical.Count > 0 && !await ConfirmCriticalAsync(critical)) return;
@@ -206,13 +274,13 @@ public sealed partial class ApplyPage : Page
         RunPanel.Visibility = Visibility.Visible;
         Results.Children.Clear();
         LogBox.Text = "";
-        RunProgress.Maximum = changes.Count;
+        RunProgress.Maximum = total;
         RunProgress.Value = 0;
 
         using var log = new OperationLog();
         void Log(string line) => DispatcherQueue.TryEnqueue(() => LogBox.Text += line + Environment.NewLine);
         log.LineWritten += Log;
-        log.Write($"Sessão iniciada: {changes.Count} mudança(s). {_app.System}");
+        log.Write($"Sessão iniciada: {changes.Count} ajuste(s) e {policyChanges.Count} política(s). {_app.System}");
         if (log.Error is not null) LogBox.Text += $"(não foi possível gravar o arquivo de log: {log.Error}){Environment.NewLine}";
 
         try
@@ -236,7 +304,7 @@ public sealed partial class ApplyPage : Page
                     break;
                 }
                 var verb = change.Kind == ChangeKind.Apply ? "Aplicando" : "Revertendo";
-                RunText.Text = $"{verb} {done + 1} de {changes.Count}: {change.Tweak.Name}";
+                RunText.Text = $"{verb} {done + 1} de {total}: {change.Tweak.Name}";
                 log.Write($"{verb} {change.Tweak.Id} (risco {change.Tweak.Risk})...");
 
                 OperationResult result;
@@ -262,7 +330,49 @@ public sealed partial class ApplyPage : Page
                     + (result.Notes.Count > 0 ? " Aviso: " + string.Join(" ", result.Notes) : ""));
                 RunProgress.Value = ++done;
             }
-            log.Write($"Concluído: {ok} com sucesso, {failed} com falha, {changes.Count - done} não executado(s).");
+
+            // Políticas ADMX: gravação direta no registro, com backup do original (backups\policies).
+            var policyEngine = _app.PolicyEngine;
+            foreach (var change in policyChanges)
+            {
+                if (_cts.IsCancellationRequested)
+                {
+                    log.Write("Interrompido pelo usuário.");
+                    break;
+                }
+                var name = change.Policy.QualifiedName;
+                var verb = change.IsRevert ? "Revertendo política" : "Configurando política";
+                RunText.Text = $"{verb} {done + 1} de {total}: {change.Policy.DisplayName}";
+                log.Write(change.IsRevert ? $"{verb} {name}..." : $"{verb} {change.Request.Setting} (risco {change.Risk})...");
+
+                PolicyOperationResult result;
+                try
+                {
+                    var policy = change.Policy;
+                    var setting = change.Request.Setting;
+                    result = setting is null
+                        ? await Task.Run(() => policyEngine.Revert(name, policy, log))
+                        : await Task.Run(() => policyEngine.Apply(policy, setting, log));
+                }
+                catch (Exception ex)
+                {
+                    result = new PolicyOperationResult(name, false, ex.Message, [ex.Message]);
+                }
+
+                foreach (var err in result.Errors) log.Write("  erro: " + err);
+                log.Write($"  {(result.Success ? "OK" : "FALHA")}: {result.Message}");
+                if (result.Success)
+                {
+                    ok++;
+                    _app.SetPolicyRequest(name, null);
+                }
+                else failed++;
+                PolicyCatalog.Loaded?.Find(name)?.Refresh();
+                AddResult(result.Success ? "" : "", change.Policy.DisplayName,
+                    result.Message + (result.Errors.Count > 0 ? " " + string.Join(" ", result.Errors) : ""));
+                RunProgress.Value = ++done;
+            }
+            log.Write($"Concluído: {ok} com sucesso, {failed} com falha, {total - done} não executado(s).");
             RunText.Text = $"Concluído: {ok} com sucesso, {failed} com falha. Log: {log.FilePath}";
         }
         finally
