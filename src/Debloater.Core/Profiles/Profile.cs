@@ -1,5 +1,6 @@
 using YamlDotNet.Serialization;
 using Debloater.Core.Model;
+using Debloater.Core.Policies;
 
 namespace Debloater.Core.Profiles;
 
@@ -39,6 +40,62 @@ public sealed class ProfileRules
 }
 
 /// <summary>
+/// Uma política ADMX configurada pelo perfil. Formato YAML:
+/// <code>
+/// - { policy: "DataCollection.admx:AllowTelemetry", state: enabled, values: { AllowTelemetry: "0" } }
+/// - { policy: "Explorer.admx:NoX", state: disabled }
+/// - policy: Sample.admx:Hosts
+///   state: enabled
+///   scope: machine             # opcional (políticas de Computador e Usuário)
+///   values: { Hosts: [a, b] }  # listas e multiText: sequência; list com explicitValue: mapa nome→valor
+/// </code>
+/// </summary>
+public sealed class ProfilePolicyEntry
+{
+    /// <summary>"Arquivo.admx:Nome".</summary>
+    public string Policy { get; set; } = "";
+
+    public PolicyTargetState State { get; set; } = PolicyTargetState.Enabled;
+
+    public PolicyScope? Scope { get; set; }
+
+    /// <summary>Id do elemento → texto, sequência de textos ou mapa nome→valor.</summary>
+    public Dictionary<string, object?>? Values { get; set; }
+
+    /// <summary>Converte para <see cref="PolicySetting"/> (mapas viram itens "nome=valor").</summary>
+    public PolicySetting ToSetting()
+    {
+        var setting = new PolicySetting { Policy = Policy.Trim(), State = State, Scope = Scope };
+        foreach (var (id, raw) in Values ?? [])
+        {
+            setting.Values[id] = raw switch
+            {
+                null => [],
+                string s => [s],
+                IDictionary<object, object?> map => map.Select(kv => $"{kv.Key}={kv.Value}").ToList(),
+                IDictionary<string, object?> smap => smap.Select(kv => $"{kv.Key}={kv.Value}").ToList(),
+                IEnumerable<object?> seq => seq.Select(o => Convert.ToString(o, System.Globalization.CultureInfo.InvariantCulture) ?? "").ToList(),
+                _ => [Convert.ToString(raw, System.Globalization.CultureInfo.InvariantCulture) ?? ""],
+            };
+        }
+        return setting;
+    }
+
+    /// <summary>Converte de <see cref="PolicySetting"/>: um valor vira texto; vários, sequência.</summary>
+    public static ProfilePolicyEntry FromSetting(PolicySetting s) => new()
+    {
+        Policy = s.Policy,
+        State = s.State,
+        Scope = s.Scope,
+        Values = s.State != PolicyTargetState.Enabled || s.Values.Count == 0
+            ? null
+            : s.Values.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(
+                kv => kv.Key,
+                kv => kv.Value.Count == 1 ? (object?)kv.Value[0] : kv.Value.ToList()),
+    };
+}
+
+/// <summary>
 /// Perfil: uma seleção de estados desejados. Formato YAML:
 /// <code>
 /// name: Seguro
@@ -47,6 +104,8 @@ public sealed class ProfileRules
 /// tweaks:                                               # opcional; prevalece sobre as regras
 ///   - { id: privacy.telemetry.feedback-requests, desired: applied }
 ///   - { id: ui.explorer.hide-file-extensions, desired: notApplied }
+/// policies:                                             # opcional; políticas ADMX (ver ProfilePolicyEntry)
+///   - { policy: "DataCollection.admx:AllowTelemetry", state: enabled, values: { AllowTelemetry: "0" } }
 /// </code>
 /// </summary>
 public sealed class Profile
@@ -55,6 +114,9 @@ public sealed class Profile
     public string? Description { get; set; }
     public ProfileRules? Rules { get; set; }
     public List<ProfileEntry> Tweaks { get; set; } = [];
+
+    /// <summary>Políticas ADMX configuradas pelo perfil (opcional; null não é gravado no YAML).</summary>
+    public List<ProfilePolicyEntry>? Policies { get; set; }
 
     /// <summary>Arquivo de origem (preenchido pelo carregador).</summary>
     [YamlIgnore]
@@ -68,4 +130,8 @@ public sealed class Profile
 }
 
 /// <summary>Resultado de resolver um perfil contra o catálogo.</summary>
-public sealed record ProfileResolution(IReadOnlyDictionary<string, DesiredState> Desired, IReadOnlyList<string> UnknownIds);
+public sealed record ProfileResolution(IReadOnlyDictionary<string, DesiredState> Desired, IReadOnlyList<string> UnknownIds)
+{
+    /// <summary>Configurações de políticas do perfil (sem conferir contra o ADMX; ver <see cref="ProfileStore.ResolvePolicies"/>).</summary>
+    public IReadOnlyList<PolicySetting> Policies { get; init; } = [];
+}

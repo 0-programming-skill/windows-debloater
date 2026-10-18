@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName /><description />
+  <resources>
+    <stringTable>
+      <string id="WriterCat">Writer</string>
+      <string id="Implicit">Implicit values</string>
+      <string id="Mixed">Mixed values and lists</string>
+      <string id="AllElements">All element types</string>
+      <string id="ElementsOnly">Elements only</string>
+      <string id="Low">Low</string>
+      <string id="High">High</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="AllElements">
+        <text>Configure everything below.</text>
+        <decimalTextBox refId="Count" defaultValue="7" spinStep="1">Count:</decimalTextBox>
+        <textBox refId="Server"><label>Server:</label><defaultValue>srv</defaultValue></textBox>
+        <comboBox refId="Path"><label>Path:</label><default>%SystemRoot%</default><suggestion>%TEMP%</suggestion><suggestion>C:\x</suggestion></comboBox>
+        <checkBox refId="Check" defaultChecked="true">Check me</checkBox>
+        <checkBox refId="CheckLists">Lists</checkBox>
+        <dropdownList refId="Choice" defaultItem="1">Choice:</dropdownList>
+        <dropdownList refId="Named">Named:</dropdownList>
+        <multiTextBox refId="Lines">Lines:</multiTextBox>
+        <listBox refId="Plain">Plain</listBox>
+        <listBox refId="Numbered">Numbered</listBox>
+        <listBox refId="Prefixed">Prefixed</listBox>
+        <listBox refId="Pairs">Pairs</listBox>
+        <decimalTextBox refId="AsText">As text</decimalTextBox>
+        <longDecimalTextBox refId="Big" defaultValue="10">Big</longDecimalTextBox>
+      </presentation>
+      <presentation id="ElementsOnly">
+        <decimalTextBox refId="Level">Level</decimalTextBox>
+        <dropdownList refId="Mode">Mode</dropdownList>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

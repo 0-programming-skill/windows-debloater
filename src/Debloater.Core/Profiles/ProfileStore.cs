@@ -1,5 +1,8 @@
+using Debloater.Core.Admx;
 using Debloater.Core.Catalog;
 using Debloater.Core.Model;
+using Debloater.Core.Planning;
+using Debloater.Core.Policies;
 using YamlDotNet.Core;
 
 namespace Debloater.Core.Profiles;
@@ -33,12 +36,52 @@ public static class ProfileStore
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(profile.Name)) errors.Add("campo 'name' é obrigatório.");
-        if (profile.Rules is null && profile.Tweaks.Count == 0) errors.Add("o perfil precisa de 'rules' ou de 'tweaks'.");
+        if (profile.Rules is null && profile.Tweaks.Count == 0 && profile.Policies is not { Count: > 0 })
+            errors.Add("o perfil precisa de 'rules', 'tweaks' ou 'policies'.");
         if (profile.Tweaks.Any(e => string.IsNullOrWhiteSpace(e.Id))) errors.Add("item de 'tweaks' sem 'id'.");
         var dup = profile.Tweaks.Where(e => !string.IsNullOrWhiteSpace(e.Id))
             .GroupBy(e => e.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
         if (dup is not null) errors.Add($"id repetido em 'tweaks': {dup.Key}.");
+        foreach (var p in profile.Policies ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(p.Policy) || !p.Policy.Contains(':'))
+                errors.Add($"item de 'policies' com 'policy' inválido ('{p.Policy}'; use \"Arquivo.admx:Nome\").");
+        }
+        var dupPolicy = (profile.Policies ?? []).Where(p => !string.IsNullOrWhiteSpace(p.Policy))
+            .GroupBy(p => (p.Policy.Trim(), p.Scope), PolicyKeyComparer.Instance).FirstOrDefault(g => g.Count() > 1);
+        if (dupPolicy is not null) errors.Add($"política repetida em 'policies': {dupPolicy.Key.Item1}.");
         return errors;
+    }
+
+    private sealed class PolicyKeyComparer : IEqualityComparer<(string, PolicyScope?)>
+    {
+        public static readonly PolicyKeyComparer Instance = new();
+        public bool Equals((string, PolicyScope?) x, (string, PolicyScope?) y) =>
+            StringComparer.OrdinalIgnoreCase.Equals(x.Item1, y.Item1) && x.Item2 == y.Item2;
+        public int GetHashCode((string, PolicyScope?) obj) => HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item1), obj.Item2);
+    }
+
+    /// <summary>
+    /// Casa as políticas do perfil com as definições ADMX deste PC ("Arquivo.admx:Nome", sem diferenciar
+    /// maiúsculas). Políticas que não existem aqui são devolvidas à parte.
+    /// </summary>
+    public static (List<PolicyRequest> Requests, List<string> Unknown) ResolvePolicies(Profile profile, IEnumerable<AdmxPolicy> admx)
+    {
+        var byName = new Dictionary<string, AdmxPolicy>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in admx) byName.TryAdd(p.QualifiedName, p);
+        var requests = new List<PolicyRequest>();
+        var unknown = new List<string>();
+        foreach (var entry in profile.Policies ?? [])
+        {
+            var setting = entry.ToSetting();
+            if (byName.TryGetValue(setting.Policy, out var policy))
+            {
+                setting.Policy = policy.QualifiedName;
+                requests.Add(new PolicyRequest(policy, setting));
+            }
+            else unknown.Add(setting.Policy);
+        }
+        return (requests, unknown);
     }
 
     // Serializador próprio: enums em camelCase ("notApplied", "medium"), como se escreve à mão.
@@ -116,7 +159,10 @@ public static class ProfileStore
             }
             desired[t.Id] = e.Desired;
         }
-        return new ProfileResolution(desired, unknown);
+        return new ProfileResolution(desired, unknown)
+        {
+            Policies = (profile.Policies ?? []).Select(p => p.ToSetting()).ToList(),
+        };
     }
 
     /// <summary>"Privacidade" casa com "Privacidade" e "Privacidade/Telemetria", mas não com "PrivacidadeX".</summary>
@@ -128,15 +174,24 @@ public static class ProfileStore
     }
 
     /// <summary>Cria um perfil com lista explícita a partir de uma seleção (id → estado desejado).</summary>
-    public static Profile FromSelection(string name, string? description, IEnumerable<KeyValuePair<string, DesiredState>> selection) => new()
+    public static Profile FromSelection(string name, string? description, IEnumerable<KeyValuePair<string, DesiredState>> selection,
+        IEnumerable<PolicySetting>? policies = null)
     {
-        Name = name,
-        Description = description,
-        Tweaks = selection
-            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
-            .Select(kv => new ProfileEntry { Id = kv.Key, Desired = kv.Value })
-            .ToList(),
-    };
+        var policyList = (policies ?? [])
+            .OrderBy(p => p.Policy, StringComparer.OrdinalIgnoreCase)
+            .Select(ProfilePolicyEntry.FromSetting)
+            .ToList();
+        return new Profile
+        {
+            Name = name,
+            Description = description,
+            Tweaks = selection
+                .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => new ProfileEntry { Id = kv.Key, Desired = kv.Value })
+                .ToList(),
+            Policies = policyList.Count > 0 ? policyList : null,
+        };
+    }
 
     /// <summary>Nome de arquivo seguro a partir do nome do perfil ("Meu perfil!" → "meu-perfil.yaml").</summary>
     public static string FileNameFor(string name)
