@@ -7,7 +7,8 @@ name: Catalog release
 # The version is the UTC commit time of the last change under catalog/ or reference/
 # (yyyy.MM.dd.HHmmss), the same value the program embeds for its built-in catalog. A version that is
 # already published is skipped, so re-runs and manual runs without catalog changes do nothing.
-# Neither release is marked "latest": program releases keep that slot.
+# Both releases are prereleases created with --latest=false: GitHub falls back to the newest
+# non-prerelease as "latest" when none is marked, so prerelease keeps that slot for program releases.
 
 on:
   push:
@@ -103,7 +104,7 @@ jobs:
 
           The program downloads and verifies this automatically. Manual check: ``Debloater.Cli catalog verify catalog-$v.zip catalog-$v.zip.sig``.
           "@
-          gh release create "catalog-v$v" --repo $env:GITHUB_REPOSITORY --target $c --title "Catalog $v" --notes $notes --latest=false `
+          gh release create "catalog-v$v" --repo $env:GITHUB_REPOSITORY --target $c --title "Catalog $v" --notes $notes --prerelease --latest=false `
             "$env:OUT/catalog-$v.zip" "$env:OUT/catalog-$v.zip.sig" "$env:OUT/manifest.json"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -117,7 +118,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             $global:LASTEXITCODE = 0
             $notes = "Fixed-URL pointer to the newest signed catalog bundle (latest.json, latest-schema<N>.json). Its assets are replaced on every catalog release; the bundles themselves live in the catalog-v<version> releases."
-            gh release create catalog-latest --repo $env:GITHUB_REPOSITORY --target "${{ github.sha }}" --title "Catalog (latest pointer)" --notes $notes --latest=false @pointers
+            gh release create catalog-latest --repo $env:GITHUB_REPOSITORY --target "${{ github.sha }}" --title "Catalog (latest pointer)" --notes $notes --prerelease --latest=false @pointers
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             return
           }
