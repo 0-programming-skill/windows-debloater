@@ -32,14 +32,20 @@ tweaks:
 
   - id: ai.copilot.hide-taskbar-button
     name: Hide the Copilot button on the taskbar
-    description: Removes the Copilot button from the taskbar.
+    description: >
+      Removes the Copilot button from the taskbar (ShowCopilotButton = 0). The button only exists on builds
+      and installs that have it; a clean 26300.9711 has none (tested), so there is nothing to hide. The
+      "Microsoft 365 Copilot" icon on that taskbar is an ordinary pinned app: unpin it with a right-click.
     risk: low
     confidence: community
     tags: [copilot, ai, taskbar]
     i18n:
       pt-BR:
         name: Ocultar o botão do Copilot na barra de tarefas
-        description: Remove o botão do Copilot da barra de tarefas.
+        description: >
+          Remove o botão do Copilot da barra de tarefas (ShowCopilotButton = 0). O botão só existe nos builds e
+          instalações que o têm; um 26300.9711 limpo não tem (testado), então não há o que ocultar. O ícone
+          "Microsoft 365 Copilot" dessa barra de tarefas é um app fixado comum: desafixe-o com o botão direito.
     actions:
       - type: registry
         path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced

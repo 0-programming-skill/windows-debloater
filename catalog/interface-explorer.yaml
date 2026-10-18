@@ -146,16 +146,19 @@ tweaks:
   - id: ui.taskbar.disable-widgets
     name: Disable the Widgets board
     description: >
-      Policy "Disable Widgets Board": the Widgets board (Win+W) does not open and the button disappears
-      from the taskbar. Replaces the old "Allow widgets" policy (AllowNewsAndInterests), whose value
-      Windows protects starting with build 26300: writing it is denied even for administrators (UCPD
-      driver), as is the user's TaskbarDa key. Microsoft documents this policy as Insider-only in the
-      Policy CSP, but the system ADMX and PolicyManager have included it since 24H2.
+      Hides the Widgets button and keeps the board (Win+W, ms-widgets:) from opening. Sets the default
+      value of the "Allow widgets" setting in PolicyManager (NewsAndInterests/AllowNewsAndInterests = 0),
+      which is what hides the button on 26300, and the "Disable Widgets Board" policy. Takes effect when
+      File Explorer restarts (sign out and back in). Tested on 26300.9711 Pro: the policy alone has no
+      visible effect (button and board keep working), and the "Allow widgets" policy value
+      (Policies\Microsoft\Dsh\AllowNewsAndInterests) and the user's TaskbarDa value are protected by
+      Windows (UCPD driver): writing them is denied even for administrators.
     risk: low
     confidence: official
     sources:
       - { kind: msdocs, ref: "Policy CSP - NewsAndInterests/DisableWidgetsBoard" }
       - { kind: admx, ref: "NewsAndInterests.admx:DisableWidgetsBoard" }
+      - { kind: tool, ref: "sophia:TaskbarWidgets" }
     minBuild: 26100
     tags: [taskbar, widgets, policy, ads]
     breaks: The Widgets board (Win+W) stops working.
@@ -163,13 +166,20 @@ tweaks:
       pt-BR:
         name: Desativar o painel de Widgets
         description: >
-          Política "Desabilitar o Quadro de Widgets": o painel de Widgets (Win+W) não abre e o botão some
-          da barra de tarefas. Substitui a política antiga "Permitir widgets" (AllowNewsAndInterests), cujo
-          valor o Windows protege a partir do build 26300: a gravação é negada até para administrador (driver
-          UCPD), assim como a chave TaskbarDa do usuário. A Microsoft documenta esta política como Insider na
-          Policy CSP, mas o ADMX do sistema e o PolicyManager já a trazem desde o 24H2.
+          Oculta o botão de Widgets e impede que o painel (Win+W, ms-widgets:) abra. Define o valor padrão da
+          configuração "Permitir widgets" no PolicyManager (NewsAndInterests/AllowNewsAndInterests = 0), que é o
+          que oculta o botão no 26300, e a política "Desabilitar o Quadro de Widgets". Vale quando o Explorador
+          reinicia (sair e entrar de novo). Testado no 26300.9711 Pro: só a política não tem efeito visível
+          (botão e painel continuam funcionando), e o valor da política "Permitir widgets"
+          (Policies\Microsoft\Dsh\AllowNewsAndInterests) e o valor TaskbarDa do usuário são protegidos pelo
+          Windows (driver UCPD): a gravação é negada até para administrador.
         breaks: O painel de Widgets (Win+W) deixa de funcionar.
     actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\PolicyManager\default\NewsAndInterests\AllowNewsAndInterests
+        name: value
+        kind: dword
+        value: 0
       - type: registry
         path: HKLM\SOFTWARE\Policies\Microsoft\Dsh
         name: DisableWidgetsBoard
