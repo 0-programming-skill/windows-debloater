@@ -15,20 +15,22 @@
         <StackPanel>
             <TextBlock Text="Políticas (ADMX)" Style="{StaticResource TitleTextBlockStyle}" />
             <TextBlock x:Name="SubtitleText" Style="{StaticResource Caption}"
-                       Text="Todas as Políticas de Grupo dos modelos administrativos deste PC, com o estado atual. Somente leitura nesta versão." />
+                       Text="Todas as Políticas de Grupo dos modelos administrativos deste PC, com o estado atual." />
         </StackPanel>
 
         <Grid Grid.Row="1" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" MaxWidth="460" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <AutoSuggestBox x:Name="SearchBox" PlaceholderText="Buscar política, chave ou valor do registro" QueryIcon="Find" TextChanged="Search_TextChanged" />
             <ToggleButton x:Name="ConfiguredToggle" Grid.Column="1" Content="Só configuradas" Click="Filter_Changed" />
-            <TextBlock x:Name="CountText" Grid.Column="2" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="8,0" />
-            <Button Grid.Column="3" Click="Refresh_Click">
+            <ToggleButton x:Name="PendingToggle" Grid.Column="2" Content="Só com mudanças pendentes" Click="Filter_Changed" />
+            <TextBlock x:Name="CountText" Grid.Column="3" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="8,0" />
+            <Button Grid.Column="4" Click="Refresh_Click">
                 <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE72C;" FontSize="14" /><TextBlock Text="Atualizar" /></StackPanel>
             </Button>
         </Grid>
@@ -57,6 +59,8 @@
                                     <StackPanel>
                                         <TextBlock Text="{x:Bind DisplayName}" TextWrapping="Wrap" />
                                         <TextBlock Text="{x:Bind CategoryText}" Style="{StaticResource Caption}" MaxLines="1" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind PendingText}" Visibility="{x:Bind PendingVisibility}" Style="{StaticResource Caption}"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="SemiBold" />
                                     </StackPanel>
                                     <Border Grid.Column="1" Style="{StaticResource BadgeBorder}" Background="{x:Bind StateBrush}" MinWidth="110">
                                         <TextBlock Style="{StaticResource BadgeText}" Text="{x:Bind StateText}" Foreground="{x:Bind StateForeground}" />
@@ -76,12 +80,47 @@
                 <ScrollViewer>
                     <StackPanel x:Name="Details" Spacing="6" Visibility="Collapsed">
                         <TextBlock x:Name="DName" Style="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                        <Border x:Name="DStateBadge" Style="{StaticResource BadgeBorder}" HorizontalAlignment="Left">
-                            <TextBlock x:Name="DState" Style="{StaticResource BadgeText}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border x:Name="DStateBadge" Style="{StaticResource BadgeBorder}" HorizontalAlignment="Left">
+                                <TextBlock x:Name="DState" Style="{StaticResource BadgeText}" />
+                            </Border>
+                            <Border x:Name="DRiskBadge" Style="{StaticResource BadgeBorder}" HorizontalAlignment="Left">
+                                <TextBlock x:Name="DRisk" Style="{StaticResource BadgeText}" />
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Editor: estado desejado, valores dos elementos, prévia exata do registro e avisos. -->
+                        <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="6" Padding="12" Margin="0,8,0,0">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Configurar" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <RadioButtons x:Name="StateRadios" Header="Estado desejado" MaxColumns="1" SelectionChanged="State_Changed">
+                                    <x:String>Não configurada</x:String>
+                                    <x:String>Habilitada</x:String>
+                                    <x:String>Desabilitada</x:String>
+                                </RadioButtons>
+                                <ComboBox x:Name="ScopeBox" Header="Gravar em" SelectionChanged="Scope_Changed" Visibility="Collapsed" MinWidth="260">
+                                    <x:String>Computador (HKLM)</x:String>
+                                    <x:String>Usuário (HKCU)</x:String>
+                                </ComboBox>
+                                <ContentControl x:Name="ElementsHost" HorizontalContentAlignment="Stretch" />
+                                <TextBlock Text="Prévia do registro" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <TextBlock x:Name="PreviewText" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <TextBlock x:Name="ErrorsText" TextWrapping="Wrap" Foreground="{ThemeResource SystemFillColorCriticalBrush}" Visibility="Collapsed" />
+                                <StackPanel x:Name="WarningsHost" Spacing="4" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="AddPendingButton" Style="{StaticResource AccentButtonStyle}" Content="Adicionar às mudanças pendentes" Click="AddPending_Click" />
+                                    <Button x:Name="RemovePendingButton" Content="Descartar" Click="RemovePending_Click" />
+                                    <Button x:Name="RevertButton" Content="Reverter ao original" Click="Revert_Click" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock x:Name="PendingInfo" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                                    <HyperlinkButton x:Name="GoApplyLink" Content="Revisar e aplicar" Click="GoApply_Click" Padding="4,0" Visibility="Collapsed" />
+                                </StackPanel>
+                            </StackPanel>
                         </Border>
                         <TextBlock Text="Estado por escopo" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
                         <TextBlock x:Name="DScopes" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                        <TextBlock Text="Registro" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+                        <TextBlock Text="Definição no ADMX" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
                         <TextBlock x:Name="DRegistry" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                         <TextBlock Text="Detalhes" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
                         <TextBlock x:Name="DMeta" Style="{StaticResource Caption}" IsTextSelectionEnabled="True" />

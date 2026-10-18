@@ -12,7 +12,7 @@
             <StackPanel x:Name="EmptyPanel" Spacing="8" Visibility="Collapsed" Margin="0,16">
                 <TextBlock Text="Nenhuma mudança pendente." Style="{StaticResource SubtitleTextBlockStyle}" />
                 <TextBlock Style="{StaticResource Caption}"
-                           Text="Marque ou desmarque ajustes na página Ajustes, ou carregue um perfil, para escolher o estado desejado." />
+                           Text="Marque ou desmarque ajustes na página Ajustes, configure políticas em Políticas (ADMX), ou carregue um perfil, para escolher o estado desejado." />
                 <Button Content="Ir para Ajustes" Click="GoTweaks_Click" />
             </StackPanel>
 

@@ -62,7 +62,9 @@ public sealed partial class ProfilesPage : Page
             : "";
         info.Children.Add(new TextBlock
         {
-            Text = $"{rules}{resolution.Desired.Count} ajuste(s) no perfil · {p.SourceFile}",
+            Text = $"{rules}{resolution.Desired.Count} ajuste(s)"
+                + (p.Policies is { Count: > 0 } pol ? $" e {pol.Count} política(s) ADMX" : "")
+                + $" no perfil · {p.SourceFile}",
             TextWrapping = TextWrapping.Wrap,
             Style = (Style)Application.Current.Resources["Caption"],
         });
@@ -70,9 +72,9 @@ public sealed partial class ProfilesPage : Page
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         var load = new Button { Content = "Carregar", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
-        load.Click += (_, _) =>
+        load.Click += async (_, _) =>
         {
-            var msg = _app.ApplyProfileToSelection(p);
+            var msg = await _app.ApplyProfileToSelectionAsync(p);
             Show(InfoBarSeverity.Success, "Seleção atualizada", msg);
             if (_app.PendingCount > 0)
             {
@@ -91,7 +93,7 @@ public sealed partial class ProfilesPage : Page
         return new Border { Style = (Style)Application.Current.Resources["Card"], Child = grid };
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e)
+    private async void Save_Click(object sender, RoutedEventArgs e)
     {
         var name = NameBox.Text.Trim();
         if (name.Length == 0)
@@ -100,12 +102,13 @@ public sealed partial class ProfilesPage : Page
             return;
         }
         var selection = _app.EffectiveSelection();
-        if (selection.Count == 0)
+        var policies = await _app.EffectivePolicySettingsAsync();
+        if (selection.Count == 0 && policies.Count == 0)
         {
-            Show(InfoBarSeverity.Warning, "Seleção vazia", "Nenhum ajuste aplicado nem escolhido; não há o que salvar.");
+            Show(InfoBarSeverity.Warning, "Seleção vazia", "Nenhum ajuste nem política aplicado ou escolhido; não há o que salvar.");
             return;
         }
-        var profile = ProfileStore.FromSelection(name, string.IsNullOrWhiteSpace(DescriptionBox.Text) ? null : DescriptionBox.Text.Trim(), selection);
+        var profile = ProfileStore.FromSelection(name, string.IsNullOrWhiteSpace(DescriptionBox.Text) ? null : DescriptionBox.Text.Trim(), selection, policies);
         var file = Path.Combine(AppSettings.UserProfilesDirectory, ProfileStore.FileNameFor(name));
         try
         {
@@ -119,7 +122,7 @@ public sealed partial class ProfilesPage : Page
         _app.LoadProfiles();
         Rebuild();
         Info.ActionButton = null;
-        Show(InfoBarSeverity.Success, "Perfil salvo", $"{selection.Count} ajuste(s) gravados em {file}.");
+        Show(InfoBarSeverity.Success, "Perfil salvo", $"{selection.Count} ajuste(s) e {policies.Count} política(s) gravados em {file}.");
     }
 
     private async void Import_Click(object sender, RoutedEventArgs e)

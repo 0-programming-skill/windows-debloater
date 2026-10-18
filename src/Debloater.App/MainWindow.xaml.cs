@@ -188,6 +188,11 @@ public sealed partial class MainWindow : Window
             {
                 // Outra página (--page): espera ela terminar de carregar os próprios dados.
                 await Task.Delay(8000);
+                if (ContentFrame.Content is PoliciesPage policies)
+                {
+                    await policies.SelectForScreenshotAsync();
+                    await Task.Delay(1500);
+                }
             }
             await SaveScreenshotAsync(path);
         }
