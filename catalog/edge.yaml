@@ -97,3 +97,288 @@ tweaks:
         name: HubsSidebarEnabled
         kind: dword
         value: 0
+
+  - id: edge.disable-copilot-page-context
+    name: Não deixar o Copilot ler as páginas abertas no Edge
+    description: >
+      Políticas do Edge que impedem o Copilot (inclusive o do Microsoft 365/Entra) de usar o conteúdo da página
+      aberta como contexto.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: url, ref: "https://learn.microsoft.com/deployedge/microsoft-edge-policies#copilotpagecontext" }
+      - { kind: tool, ref: "win11debloat:Disable_Edge_AI_Features" }
+      - { kind: tool, ref: "winhance:edge-copilot" }
+    tags: [edge, ia, copilot, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: CopilotPageContext
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: CopilotCDPPageContext
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: EdgeEntraCopilotPageContext
+        kind: dword
+        value: 0
+
+  - id: edge.disable-ai-features
+    name: Desativar recursos de IA do Edge
+    description: >
+      Políticas do Edge que desligam a escrita assistida em caixas de texto (Compose), a pesquisa no histórico
+      com IA, o modelo de IA local e o chat do Bing/Copilot na página Nova guia.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: url, ref: "https://learn.microsoft.com/deployedge/microsoft-edge-policies#genailocalfoundationalmodelsettings" }
+      - { kind: tool, ref: "win11debloat:Disable_Edge_AI_Features" }
+    tags: [edge, ia, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: ComposeInlineEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: EdgeHistoryAISearchEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: GenAILocalFoundationalModelSettings
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: NewTabPageBingChatEnabled
+        kind: dword
+        value: 0
+
+  - id: edge.disable-recommendations
+    name: Desativar recomendações e promoções no Edge
+    description: >
+      Políticas do Edge que desligam recomendações e notificações de recursos, campanhas para torná-lo o
+      navegador padrão, Microsoft Rewards, o botão de assinatura do Acrobat, doações da Carteira, promoções do
+      Edge Insider e as experiências do Spotlight.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: url, ref: "https://learn.microsoft.com/deployedge/microsoft-edge-policies#showrecommendationsenabled" }
+      - { kind: tool, ref: "win11debloat:Disable_Edge_Ads_And_Suggestions" }
+      - { kind: tool, ref: "winutil:WPFTweaksEdgeDebloat" }
+    tags: [edge, anuncios, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: ShowRecommendationsEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: SpotlightExperiencesAndRecommendationsEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: DefaultBrowserSettingsCampaignEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: ShowMicrosoftRewards
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: ShowAcrobatSubscriptionButton
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: WalletDonationEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: MicrosoftEdgeInsiderPromotionEnabled
+        kind: dword
+        value: 0
+
+  - id: edge.disable-feedback
+    name: Não pedir feedback no Edge
+    description: Política do Edge que desliga o botão e os pedidos de feedback ("Enviar comentários").
+    risk: low
+    confidence: community
+    sources:
+      - { kind: url, ref: "https://learn.microsoft.com/deployedge/microsoft-edge-policies#userfeedbackallowed" }
+      - { kind: tool, ref: "winutil:WPFTweaksEdgeDebloat" }
+    tags: [edge, telemetria, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: UserFeedbackAllowed
+        kind: dword
+        value: 0
+
+  - id: edge.new-tab-clean
+    name: Nova guia do Edge sem notícias e sem sites patrocinados
+    description: Políticas do Edge que removem o conteúdo da Microsoft (MSN) da Nova guia e os atalhos padrão patrocinados.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: url, ref: "https://learn.microsoft.com/deployedge/microsoft-edge-policies#newtabpagecontentenabled" }
+      - { kind: tool, ref: "win11debloat:Disable_Edge_Ads_And_Suggestions" }
+    tags: [edge, anuncios, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: NewTabPageContentEnabled
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: NewTabPageHideDefaultTopSites
+        kind: dword
+        value: 1
+
+  - id: edge.disable-alternate-error-pages
+    name: Não sugerir páginas parecidas quando um site não é encontrado
+    description: Política do Edge que desliga a consulta a um serviço da web para sugerir endereços quando a página não abre.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: url, ref: "https://learn.microsoft.com/deployedge/microsoft-edge-policies#alternateerrorpagesenabled" }
+      - { kind: tool, ref: "winutil:WPFTweaksEdgeDebloat" }
+    tags: [edge, privacidade, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: AlternateErrorPagesEnabled
+        kind: dword
+        value: 0
+
+  - id: edge.disable-search-widget
+    name: Desativar a barra de pesquisa do Edge na área de trabalho
+    description: Política do Edge que impede o widget de pesquisa (barra do Bing) na área de trabalho.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: url, ref: "https://learn.microsoft.com/deployedge/microsoft-edge-policies#webwidgetallowed" }
+      - { kind: tool, ref: "winutil:WPFTweaksEdgeDebloat" }
+    tags: [edge, bing, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Edge
+        name: WebWidgetAllowed
+        kind: dword
+        value: 0
+
+  - id: edge.remove
+    name: Remover o Microsoft Edge (mantém o WebView2)
+    description: >
+      Desinstala o navegador Microsoft Edge com o desinstalador do próprio Edge (setup.exe --uninstall
+      --system-level --force-uninstall), como fazem o WinUtil e o Win11Debloat. Fora do Espaço Econômico Europeu o
+      desinstalador costuma recusar a remoção; para liberá-lo (como fazem essas ferramentas), o script cria por alguns instantes o valor
+      HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdateDev\AllowUninstall e um arquivo vazio
+      %SystemRoot%\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\MicrosoftEdge.exe (que o instalador procura),
+      e apaga os dois no fim (o arquivo só se foi criado por ele). Não mexe no Microsoft Edge WebView2 Runtime nem
+      no Microsoft Edge Update, que o atualiza: o tweak só se aplica se o WebView2 estiver instalado e falha se
+      ele sumir. Os dados do perfil (favoritos, senhas) ficam em %LocalAppData%\Microsoft\Edge. Na região do EEE o
+      Windows já permite desinstalar o Edge em Configurações > Aplicativos. Para reinstalar: winget install
+      Microsoft.Edge. Defina outro navegador padrão antes. A remoção leva de alguns segundos a uns 2 minutos e
+      pode pedir uma reinicialização para apagar os últimos arquivos.
+    risk: critical
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksRemoveEdge" }
+      - { kind: tool, ref: "win11debloat:Invoke-ForceRemoveEdge" }
+    tags: [edge, navegador, remocao]
+    breaks: >
+      Links e arquivos .pdf/.html que abriam no Edge passam a pedir outro programa; atalhos "microsoft-edge:" do
+      Windows (alguns links das Configurações, Widgets, pesquisa na web) deixam de abrir; o Edge pode voltar numa
+      atualização de recurso do Windows (use edge.block-reinstall). Apps que usam o WebView2 continuam funcionando.
+    precondition:
+      powershell: |
+        $k = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+        $pv = (Get-ItemProperty -Path $k -Name pv -ErrorAction SilentlyContinue).pv
+        [bool]($pv -and $pv -ne '0.0.0.0')
+      reason: >
+        o Microsoft Edge WebView2 Runtime não está instalado separadamente; sem ele, remover o Edge pode quebrar
+        apps (Widgets, Teams, Outlook novo e muitos outros). Instale o WebView2 Runtime antes.
+    actions:
+      - type: powershell
+        detect: |
+          $exe = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
+          $uninst = Test-Path 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge'
+          -not ((Test-Path $exe) -or $uninst)
+        apply: |
+          $wvKey = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $u = (Get-ItemProperty -Path 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge' -ErrorAction SilentlyContinue).UninstallString
+          if (-not $u) { return }
+          if ($u -notmatch '^"([^"]+setup\.exe)"\s*(.*)$') { throw "UninstallString inesperado: $u" }
+          $setup = $Matches[1]
+          $args0 = $Matches[2]
+          if ($args0 -notmatch '--uninstall') { $args0 = "--uninstall --system-level $args0" }
+          $devKey = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdateDev'
+          $stubDir = Join-Path $env:SystemRoot 'SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe'
+          $stub = Join-Path $stubDir 'MicrosoftEdge.exe'
+          $createdDir = -not (Test-Path $stubDir)
+          $createdStub = -not (Test-Path $stub)
+          $devKeyExisted = Test-Path $devKey
+          try {
+            if (-not $devKeyExisted) { New-Item -Path $devKey -Force | Out-Null }
+            New-ItemProperty -Path $devKey -Name AllowUninstall -Value '' -PropertyType String -Force | Out-Null
+            if ($createdDir) { New-Item -Path $stubDir -ItemType Directory -Force | Out-Null }
+            if ($createdStub) { New-Item -Path $stub -ItemType File -Force | Out-Null }
+            Get-Process -Name msedge -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            $p = Start-Process -FilePath $setup -ArgumentList "$args0 --force-uninstall" -Wait -PassThru -WindowStyle Hidden
+            $code = $p.ExitCode
+            Write-Output "setup.exe terminou com código $code"
+            # O desinstalador pode terminar antes de apagar os arquivos (Edge ou WebView ainda abertos): espera até 5 min.
+            $exe = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
+            for ($i = 0; $i -lt 150 -and (Test-Path $exe); $i++) {
+              Get-Process -Name msedge -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+              Start-Sleep -Seconds 2
+            }
+          }
+          finally {
+            if ($createdStub) { Remove-Item -Path $stub -Force -ErrorAction SilentlyContinue }
+            if ($createdDir) { Remove-Item -Path $stubDir -Recurse -Force -ErrorAction SilentlyContinue }
+            Remove-ItemProperty -Path $devKey -Name AllowUninstall -ErrorAction SilentlyContinue
+            if (-not $devKeyExisted) { Remove-Item -Path $devKey -Force -ErrorAction SilentlyContinue }
+          }
+          foreach ($lnk in @("$env:PUBLIC\Desktop\Microsoft Edge.lnk", "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk", "$env:USERPROFILE\Desktop\Microsoft Edge.lnk")) {
+            if (Test-Path $lnk) { Remove-Item -Path $lnk -Force -ErrorAction SilentlyContinue }
+          }
+          if (Test-Path $exe) { throw "o desinstalador do Edge (código $code) terminou, mas $exe continua presente" }
+          $pv = (Get-ItemProperty -Path $wvKey -Name pv -ErrorAction SilentlyContinue).pv
+          if (-not $pv -or $pv -eq '0.0.0.0') { throw 'o WebView2 Runtime não está mais registrado depois da remoção do Edge' }
+          $wv = Join-Path ${env:ProgramFiles(x86)} "Microsoft\EdgeWebView\Application\$pv\msedgewebview2.exe"
+          if (-not (Test-Path $wv)) { throw "o WebView2 Runtime está registrado, mas $wv não existe" }
+
+  - id: edge.block-reinstall
+    name: Impedir que o Edge Update reinstale o Microsoft Edge
+    description: >
+      Política do Microsoft Edge Update "Permitir instalação" do Edge Stable = Desabilitada: o Edge Update não
+      instala o navegador de novo. O WebView2 Runtime tem uma política própria, que não é alterada, e continua
+      sendo instalado e atualizado. Atualizações de recurso do Windows podem trazer o Edge por outro caminho.
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: url, ref: "https://learn.microsoft.com/deployedge/microsoft-edge-update-policies#install" }
+      - { kind: tool, ref: "privacysexy:edge-update-install" }
+    tags: [edge, navegador, politica]
+    breaks: Instalar o Edge (inclusive pelo winget) falha enquanto a política estiver aplicada.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate
+        name: Install{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}
+        kind: dword
+        value: 0

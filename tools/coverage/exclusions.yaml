@@ -56,3 +56,11 @@ items:
     reason: >
       Desligar IPv6/Teredo não melhora desempenho e quebra recursos (Xbox Live, Grupo Doméstico, alguns VPNs); a
       Microsoft desaconselha desativar o IPv6.
+  - match: '^Appx:(Microsoft\.WindowsStore|Microsoft\.DesktopAppInstaller|Microsoft\.WindowsNotepad|Microsoft\.WindowsTerminal|Microsoft\.WindowsCalculator|Microsoft\.Windows\.Photos|Microsoft\.StorePurchaseApp|Microsoft\.SecHealthUI)$'
+    reason: >
+      Apps essenciais mantidos de propósito (Store, winget/Instalador de Aplicativos, Bloco de Notas, Terminal,
+      Calculadora, Fotos, Segurança do Windows): removê-los quebra a instalação/atualização de apps ou funções básicas.
+  - match: '\\Explorer\\Advanced\\TaskbarDa$|\\Policies\\Microsoft\\Dsh\\AllowNewsAndInterests$'
+    reason: >
+      No 26300 o Windows nega a gravação desses valores (proteção do driver UCPD). O catálogo usa a política
+      DisableWidgetsBoard (ui.taskbar.disable-widgets) e não contorna a proteção (ver docs/vm-test-results.md).

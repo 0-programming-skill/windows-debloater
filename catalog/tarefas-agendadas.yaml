@@ -98,3 +98,66 @@ tweaks:
       - type: scheduledTask
         path: \Microsoft\XblGameSave\XblGameSaveTask
         state: disabled
+
+  - id: tasks.wer-queue-reporting
+    name: Desativar o envio da fila de relatórios de erro
+    description: Desativa a tarefa que envia relatórios de erro pendentes (Windows Error Reporting\QueueReporting).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:ScheduledTasks" }
+      - { kind: tool, ref: "winhance:QueueReporting" }
+    tags: [tarefa, telemetria]
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Windows Error Reporting\QueueReporting
+        state: disabled
+
+  - id: tasks.application-experience-extra
+    name: Desativar tarefas de experiência de aplicativos (inventário)
+    description: >
+      Desativa MareBackup, StartupAppTask e PcaPatchDbTask (Application Experience), que coletam inventário de
+      programas e de inicialização.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:ScheduledTasks" }
+      - { kind: tool, ref: "privacysexy:Application Experience" }
+    tags: [tarefa, telemetria]
+    breaks: A coluna "Impacto na inicialização" do Gerenciador de Tarefas pode ficar sem dados.
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\MareBackup
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\StartupAppTask
+        state: disabled
+      - type: scheduledTask
+        path: \Microsoft\Windows\Application Experience\PcaPatchDbTask
+        state: disabled
+
+  - id: tasks.power-efficiency-diagnostics
+    name: Desativar o diagnóstico de eficiência de energia
+    description: Desativa a tarefa que analisa periodicamente o consumo de energia do sistema (AnalyzeSystem).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:AnalyzeSystem" }
+      - { kind: tool, ref: "atlas:disable-scheduled-tasks" }
+    tags: [tarefa, telemetria, energia]
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Power Efficiency Diagnostics\AnalyzeSystem
+        state: disabled
+
+  - id: tasks.sustainability-telemetry
+    name: Desativar a telemetria de sustentabilidade
+    description: Desativa a tarefa SustainabilityTelemetry (dados de consumo de energia para recursos de sustentabilidade).
+    risk: low
+    confidence: community
+    minBuild: 26100
+    tags: [tarefa, telemetria, energia]
+    actions:
+      - type: scheduledTask
+        path: \Microsoft\Windows\Sustainability\SustainabilityTelemetry
+        state: disabled

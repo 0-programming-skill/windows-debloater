@@ -167,3 +167,309 @@ tweaks:
         name: TaskbarEndTask
         kind: dword
         value: 1
+
+  - id: ui.explorer.hide-home
+    name: Ocultar "Início" no painel de navegação do Explorador
+    description: Remove o item "Início" (acesso rápido/recomendados) do painel de navegação do Explorador de Arquivos.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksRemoveHomeAndGallery" }
+      - { kind: tool, ref: "win11debloat:Hide_Home_from_Explorer" }
+    tags: [explorer, navegacao]
+    breaks: Combine com ui.explorer.open-this-pc, ou o Explorador abre num item que não aparece mais no painel.
+    actions:
+      - type: registry
+        path: HKCU\Software\Classes\CLSID\{f874310e-b6b7-47dc-bc84-b9e6b38f5903}
+        name: System.IsPinnedToNameSpaceTree
+        kind: dword
+        value: 0
+
+  - id: ui.explorer.hide-recent-frequent
+    name: Não mostrar arquivos recentes e pastas frequentes no Explorador
+    description: Desliga "Mostrar arquivos usados recentemente" e "Mostrar pastas usadas com frequência" no Início do Explorador.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:QuickAccessRecentFiles" }
+      - { kind: tool, ref: "winhance:recent-frequent" }
+    tags: [explorer, privacidade]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer
+        name: ShowRecent
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer
+        name: ShowFrequent
+        kind: dword
+        value: 0
+
+  - id: ui.explorer.detailed-file-operations
+    name: Mostrar detalhes ao copiar e mover arquivos
+    description: A janela de cópia/movimentação abre já no modo "Mais detalhes" (velocidade e gráfico).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:FileTransferDialog" }
+      - { kind: tool, ref: "sophiapp:FileTransferDialog" }
+    tags: [explorer, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\OperationStatusManager
+        name: EnthusiastMode
+        kind: dword
+        value: 1
+
+  - id: ui.explorer.no-shortcut-suffix
+    name: Não acrescentar " - Atalho" ao criar atalhos
+    description: Novos atalhos ficam com o mesmo nome do arquivo de origem, sem o sufixo " - Atalho".
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:ShortcutsSuffix" }
+    tags: [explorer, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\NamingTemplates
+        name: ShortcutNameTemplate
+        kind: string
+        value: "%s.lnk"
+
+  - id: ui.explorer.disable-autoplay
+    name: Desativar a Reprodução Automática
+    description: Desliga "Usar a Reprodução Automática para todas as mídias e dispositivos" para o usuário atual.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:Autoplay" }
+      - { kind: tool, ref: "winhance:autoplay" }
+    tags: [explorer, seguranca]
+    breaks: Ao conectar pendrives, câmeras e celulares não aparece mais o aviso de o que fazer.
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers
+        name: DisableAutoplay
+        kind: dword
+        value: 1
+
+  - id: ui.explorer.disable-autorun-policy
+    name: Desativar a Execução Automática em todas as unidades (política)
+    description: >
+      Política "Desativar a Reprodução Automática" para todos os tipos de unidade (valor 255): nenhuma mídia
+      executa nada sozinha ao ser conectada. Medida de segurança contra pendrives maliciosos.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Autoplay/TurnOffAutoPlay" }
+      - { kind: admx, ref: "AutoPlay.admx:Autorun" }
+    tags: [explorer, seguranca, politica]
+    breaks: Instaladores em CD/DVD não iniciam sozinhos; abra o setup manualmente.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
+        name: NoDriveTypeAutoRun
+        kind: dword
+        value: 255
+
+  - id: ui.desktop.show-this-pc
+    name: Mostrar "Este Computador" na área de trabalho
+    description: Mostra o ícone "Este Computador" na área de trabalho.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:ThisPC" }
+      - { kind: tool, ref: "winhance:desktop-icons" }
+    tags: [area-de-trabalho, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel
+        name: "{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
+        kind: dword
+        value: 0
+
+  - id: ui.taskbar.hide-chat
+    name: Ocultar o botão de Chat/Teams da barra de tarefas
+    description: Remove o botão "Chat" (Teams pessoal) da barra de tarefas, nos builds que ainda o têm.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_Chat_Taskbar" }
+      - { kind: tool, ref: "sophiapp:TaskbarChat" }
+    tags: [barra-de-tarefas, teams]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarMn
+        kind: dword
+        value: 0
+
+  - id: ui.taskbar.never-combine
+    name: Nunca agrupar botões da barra de tarefas
+    description: Mostra cada janela como um botão separado, com rótulo ("Agrupar botões da barra de tarefas e ocultar rótulos" = Nunca).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Combine_Taskbar_Never" }
+      - { kind: tool, ref: "sophia:TaskbarCombine" }
+    tags: [barra-de-tarefas, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarGlomLevel
+        kind: dword
+        value: 2
+
+  - id: ui.taskbar.show-seconds
+    name: Mostrar os segundos no relógio da barra de tarefas
+    description: Mostra os segundos no relógio da bandeja (usa um pouco mais de energia).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:SecondsInSystemClock" }
+    tags: [barra-de-tarefas, relogio, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ShowSecondsInSystemClock
+        kind: dword
+        value: 1
+
+  - id: ui.alt-tab.windows-only
+    name: Alt+Tab só com janelas (sem abas do Edge)
+    description: Faz o Alt+Tab mostrar só as janelas abertas, sem as abas do Microsoft Edge.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Hide_Tabs_In_Alt_Tab" }
+      - { kind: tool, ref: "winhance:alt-tab" }
+    tags: [multitarefa, edge, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: MultiTaskingAltTabFilter
+        kind: dword
+        value: 3
+
+  - id: ui.snap.disable-layouts-flyout
+    name: Não mostrar os layouts de ajuste ao passar o mouse em Maximizar
+    description: Desliga o menu de layouts de ajuste (Snap Layouts) que aparece sobre o botão Maximizar.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_Snap_Layouts" }
+      - { kind: tool, ref: "sophiapp:SnapLayouts" }
+    tags: [multitarefa, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: EnableSnapAssistFlyout
+        kind: dword
+        value: 0
+
+  - id: ui.snap.disable-snap-assist
+    name: Não sugerir janelas ao ajustar uma janela
+    description: Desliga "Ao ajustar uma janela, sugerir o que pode ser ajustado ao lado dela" (Assistência de Ajuste).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_Snap_Assist" }
+      - { kind: tool, ref: "sophia:SnapAssist" }
+    tags: [multitarefa, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: SnapAssist
+        kind: dword
+        value: 0
+
+  - id: ui.snap.disable-snapping
+    name: Desativar o ajuste de janelas (Snap)
+    description: Desliga "Ajustar janelas" por completo (arrastar para as bordas não redimensiona mais). Vale depois de sair e entrar.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFToggleWindowSnapping" }
+      - { kind: tool, ref: "win11debloat:Disable_Window_Snapping" }
+    tags: [multitarefa, preferencia]
+    breaks: Win+setas e arrastar a janela para a borda deixam de ajustar o tamanho.
+    actions:
+      - type: registry
+        path: HKCU\Control Panel\Desktop
+        name: WindowArrangementActive
+        kind: string
+        value: "0"
+
+  - id: ui.settings.hide-home
+    name: Ocultar a página "Início" das Configurações
+    description: >
+      Política "Visibilidade da Página de Configurações" = hide:home: o app Configurações abre direto em Sistema,
+      sem a página Início (que mostra promoções de Microsoft 365, OneDrive e Game Pass). Substitui qualquer lista
+      de páginas ocultas que já exista (a original é restaurada ao reverter).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Settings/PageVisibilityList" }
+      - { kind: admx, ref: "ControlPanel.admx:SettingsPageVisibility" }
+      - { kind: tool, ref: "win11debloat:Disable_Settings_Home" }
+    minBuild: 22621
+    tags: [configuracoes, anuncios, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
+        name: SettingsPageVisibility
+        kind: string
+        value: "hide:home"
+
+  - id: ui.lockscreen.disable
+    name: Pular a tela de bloqueio
+    description: Política "Não exibir a tela de bloqueio" (ao ligar ou bloquear, vai direto para a tela de entrada).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_ControlPanelDisplay/CPL_Personalization_NoLockScreen" }
+      - { kind: admx, ref: "ControlPanelDisplay.admx:CPL_Personalization_NoLockScreen" }
+      - { kind: tool, ref: "winutil:WPFToggleDisableLockscreen" }
+    tags: [tela-de-bloqueio, preferencia, politica]
+    breaks: Spotlight, notificações e widgets da tela de bloqueio deixam de aparecer.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\Personalization
+        name: NoLockScreen
+        kind: dword
+        value: 1
+
+  - id: ui.logon.no-acrylic-blur
+    name: Fundo nítido na tela de entrada (sem desfoque)
+    description: Política "Mostrar fundo limpo na tela de entrada", que desliga o efeito acrílico (desfoque) atrás da caixa de senha.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_Logon/DisableAcrylicBackgroundOnLogon" }
+      - { kind: admx, ref: "Logon.admx:DisableAcrylicBackgroundOnLogon" }
+      - { kind: tool, ref: "winutil:WPFToggleLoginBlur" }
+    tags: [tela-de-entrada, visual, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\System
+        name: DisableAcrylicBackgroundOnLogon
+        kind: dword
+        value: 1
+
+  - id: ui.logon.verbose-status
+    name: Mostrar mensagens detalhadas ao iniciar e desligar
+    description: Política "Exibir mensagens de status altamente detalhadas", que mostra o que o Windows está fazendo no boot, logon e desligamento.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_Logon/VerboseStatus" }
+      - { kind: admx, ref: "Logon.admx:VerboseStatus" }
+      - { kind: tool, ref: "winutil:WPFToggleVerboseLogon" }
+    tags: [diagnostico, preferencia, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+        name: VerboseStatus
+        kind: dword
+        value: 1

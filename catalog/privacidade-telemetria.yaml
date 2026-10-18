@@ -238,3 +238,102 @@ tweaks:
         name: DisableInventory
         kind: dword
         value: 1
+
+  - id: privacy.telemetry.limit-diagnostics
+    name: Limitar a coleta de logs e despejos de diagnóstico
+    description: >
+      Políticas "Limitar a coleta de logs de diagnóstico", "Limitar a coleta de despejos de memória" e
+      "Desativar downloads do OneSettings" (configuração de diagnóstico baixada da Microsoft).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - System/LimitDiagnosticLogCollection" }
+      - { kind: msdocs, ref: "Policy CSP - System/LimitDumpCollection" }
+      - { kind: msdocs, ref: "Policy CSP - System/DisableOneSettingsDownloads" }
+      - { kind: admx, ref: "DataCollection.admx:LimitDiagnosticLogCollection" }
+      - { kind: admx, ref: "DataCollection.admx:LimitDumpCollection" }
+      - { kind: admx, ref: "DataCollection.admx:DisableOneSettingsDownloads" }
+    tags: [telemetria, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: LimitDiagnosticLogCollection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: LimitDumpCollection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: DisableOneSettingsDownloads
+        kind: dword
+        value: 1
+
+  - id: privacy.telemetry.device-name
+    name: Não enviar o nome do PC nos dados de diagnóstico
+    description: Política "Permitir o envio do nome do dispositivo nos dados de diagnóstico" = Desabilitada.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - System/AllowDeviceNameInDiagnosticData" }
+      - { kind: admx, ref: "DataCollection.admx:AllowDeviceNameInDiagnosticData" }
+    tags: [telemetria, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+        name: AllowDeviceNameInTelemetry
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.diagnostic-data-setting
+    name: Dados de diagnóstico no mínimo (configuração do sistema)
+    description: >
+      Grava o nível de dados de diagnóstico no lugar que as Configurações usam (fora de Policies). Complementa a
+      política privacy.telemetry.allow-telemetry. Na edição Pro, 0 equivale a "necessários" (o nível "segurança"
+      só existe no Enterprise/Education).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFTweaksTelemetry" }
+      - { kind: tool, ref: "sophia:DiagTrackService" }
+    tags: [telemetria]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection
+        name: AllowTelemetry
+        kind: dword
+        value: 0
+
+  - id: privacy.telemetry.wer-service
+    name: Desativar o serviço de Relatório de Erros do Windows
+    description: Desativa o WerSvc, que envia relatórios de falhas de programas à Microsoft.
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:wer-service" }
+      - { kind: tool, ref: "sophia:ErrorReporting" }
+    tags: [telemetria, servico]
+    breaks: Relatórios de falha e soluções sugeridas pelo Windows; o Monitor de Confiabilidade fica com menos detalhes.
+    actions:
+      - type: service
+        name: WerSvc
+        startup: disabled
+
+  - id: privacy.telemetry.pca-service
+    name: Desativar o Assistente de Compatibilidade de Programas
+    description: >
+      Desativa o PcaSvc, que monitora programas antigos e sugere configurações de compatibilidade (e coleta
+      dados de compatibilidade).
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "privacysexy:PcaSvc" }
+      - { kind: tool, ref: "atlas:services" }
+    tags: [telemetria, servico, compatibilidade]
+    breaks: Avisos e correções automáticas de compatibilidade para programas antigos.
+    actions:
+      - type: service
+        name: PcaSvc
+        startup: disabled

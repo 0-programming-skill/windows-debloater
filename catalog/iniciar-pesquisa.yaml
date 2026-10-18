@@ -158,3 +158,45 @@ tweaks:
         name: ShowSuggestedFiles
         kind: dword
         value: 0
+
+  - id: ui.start.hide-recommended
+    name: Ocultar a seção "Recomendados" do Iniciar
+    description: >
+      Política "Remover a seção Recomendados do menu Iniciar" para o usuário atual e para o PC. A Policy CSP
+      documenta o efeito em todas as edições a partir do 24H2; em builds mais antigos só no SE/Education.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Start/HideRecommendedSection" }
+      - { kind: admx, ref: "StartMenu.admx:HideRecommendedSection" }
+      - { kind: tool, ref: "win11debloat:Disable_Start_Recommended" }
+    minBuild: 22621
+    tags: [iniciar, recomendados, politica]
+    actions:
+      - type: registry
+        path: HKCU\Software\Policies\Microsoft\Windows\Explorer
+        name: HideRecommendedSection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: HideRecommendedSection
+        kind: dword
+        value: 1
+
+  - id: ui.start.all-apps-list
+    name: 'Mostrar "Todos os aplicativos" do Iniciar em lista'
+    description: Mostra a seção "Todos" do novo menu Iniciar como lista alfabética, em vez de categorias.
+    risk: low
+    confidence: community
+    minBuild: 26100
+    sources:
+      - { kind: tool, ref: "win11debloat:Start_All_Apps_List" }
+      - { kind: tool, ref: "sophia:StartLayout" }
+    tags: [iniciar, preferencia]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Start
+        name: AllAppsViewMode
+        kind: dword
+        value: 2

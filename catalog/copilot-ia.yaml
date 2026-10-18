@@ -133,3 +133,113 @@ tweaks:
         name: ConfigureAgentConnectors
         kind: dword
         value: 2
+
+  - id: ai.recall.disallow
+    name: Não permitir ativar o Recall (remove o componente)
+    description: >
+      Política "Permitir que o Recall seja habilitado" = Desabilitada: o componente opcional do Recall fica
+      desativado e os arquivos dele são removidos do PC; instantâneos salvos são apagados. Exige reiniciar.
+      Só tem efeito em PCs Copilot+.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/AllowRecallEnablement" }
+      - { kind: admx, ref: "WindowsCopilot.admx:AllowRecallEnablement" }
+      - { kind: tool, ref: "win11debloat:Disable_AI_Recall" }
+    minBuild: 26100
+    tags: [recall, ia, politica, privacidade]
+    breaks: Recall (e instantâneos já salvos, que são apagados).
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI
+        name: AllowRecallEnablement
+        kind: dword
+        value: 0
+
+  - id: ai.paint.disable
+    name: Desativar os recursos de IA do Paint
+    description: Políticas que desligam o Cocriador, o Preenchimento generativo e o Criador de Imagens no Paint.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/DisableCocreator" }
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/DisableGenerativeFill" }
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/DisableImageCreator" }
+      - { kind: admx, ref: "WindowsCopilot.admx:DisableCocreator" }
+      - { kind: admx, ref: "WindowsCopilot.admx:DisableGenerativeFill" }
+      - { kind: admx, ref: "WindowsCopilot.admx:DisableImageCreator" }
+      - { kind: tool, ref: "win11debloat:Disable_Paint_AI_Features" }
+    minBuild: 26100
+    tags: [ia, paint, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint
+        name: DisableCocreator
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint
+        name: DisableGenerativeFill
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint
+        name: DisableImageCreator
+        kind: dword
+        value: 1
+
+  - id: ai.notepad.disable
+    name: Desativar os recursos de IA do Bloco de Notas
+    description: >
+      Política do Bloco de Notas (modelo administrativo distribuído pela Microsoft junto do app) que desliga
+      Reescrever, Resumir e as demais funções de IA.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_Notepad_AI_Features" }
+      - { kind: tool, ref: "winutil:WPFTweaksWindowsAI" }
+    tags: [ia, bloco-de-notas, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\WindowsNotepad
+        name: DisableAIFeatures
+        kind: dword
+        value: 1
+
+  - id: ai.settings-agent.disable
+    name: Desativar o agente de IA na pesquisa das Configurações
+    description: >
+      Política "Desativar a experiência de pesquisa agêntica das Configurações": a busca do app Configurações
+      volta a usar só o índice normal e a busca semântica, sem o agente que altera configurações por você. A
+      Policy CSP lista só Enterprise/Education; no Pro/Home o efeito não é garantido.
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - WindowsAI/DisableSettingsAgent" }
+      - { kind: admx, ref: "WindowsCopilot.admx:DisableSettingsAgent" }
+    minBuild: 26100
+    tags: [ia, agentes, configuracoes, politica]
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI
+        name: DisableSettingsAgent
+        kind: dword
+        value: 1
+
+  - id: ai.fabric-service.manual
+    name: Serviço de IA do Windows (WSAIFabricSvc) só sob demanda
+    description: >
+      Muda o serviço "Windows AI Fabric" de automático para manual: ele deixa de iniciar com o Windows e só roda
+      quando um recurso de IA o chama.
+    risk: low
+    confidence: community
+    minBuild: 26100
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_AI_Service_Auto_Start" }
+      - { kind: tool, ref: "winutil:WPFTweaksWindowsAI" }
+    tags: [ia, servico, desempenho]
+    breaks: Recursos de IA locais podem demorar um pouco mais na primeira vez.
+    actions:
+      - type: service
+        name: WSAIFabricSvc
+        startup: manual

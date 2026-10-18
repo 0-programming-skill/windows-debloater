@@ -1,0 +1,74 @@
+# Xbox Game Bar, captura e ajustes para jogos.
+category: Sistema/Jogos
+
+tweaks:
+  - id: gaming.capture.disable
+    name: Desativar a captura de jogos (Game Bar)
+    description: >
+      Desliga "Gravar o que aconteceu" e a captura de clipes do Xbox Game Bar nas Configurações do usuário
+      (complementa perf.game-dvr.disable, que aplica a política).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:game-capture" }
+      - { kind: tool, ref: "atlas:disable-game-bar" }
+    tags: [jogos, game-bar, desempenho]
+    breaks: Gravação de clipes e capturas de tela pela Game Bar (Win+Alt+G, Win+Alt+PrtScn).
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR
+        name: AppCaptureEnabled
+        kind: dword
+        value: 0
+
+  - id: gaming.game-bar.disable-controller-button
+    name: Não abrir a Game Bar pelo botão Xbox do controle
+    description: Desliga "Permitir que o controle abra a Game Bar" (botão Xbox/Guia).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "win11debloat:Disable_Game_Bar_Integration" }
+      - { kind: tool, ref: "winhance:game-bar-controller" }
+    tags: [jogos, game-bar, controle]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\GameBar
+        name: UseNexusForGameBarEnabled
+        kind: dword
+        value: 0
+
+  - id: gaming.game-bar.disable-startup-tips
+    name: Não mostrar dicas da Game Bar ao iniciar jogos
+    description: Desliga o painel de dicas da Game Bar que aparece ao abrir um jogo.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "atlas:disable-game-bar" }
+      - { kind: tool, ref: "winhance:game-bar-tips" }
+    tags: [jogos, game-bar]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\GameBar
+        name: ShowStartupPanel
+        kind: dword
+        value: 0
+
+  - id: gaming.hags.enable
+    name: Ativar o agendamento de GPU acelerado por hardware
+    description: >
+      Liga o "Agendamento de GPU acelerado por hardware" (HAGS): a própria GPU gerencia sua memória de vídeo.
+      Exige GPU e driver compatíveis (WDDM 2.7+) e reinicialização; sem suporte, o valor é ignorado. Pode
+      reduzir a latência em alguns jogos e é exigido pela Geração de Quadros de algumas GPUs.
+    risk: medium
+    confidence: community
+    sources:
+      - { kind: tool, ref: "sophia:GPUScheduling" }
+      - { kind: tool, ref: "winhance:hags" }
+    tags: [jogos, gpu, desempenho]
+    breaks: Raramente, instabilidade com drivers antigos ou com captura/streaming; desfaça se houver travamentos.
+    actions:
+      - type: registry
+        path: HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers
+        name: HwSchMode
+        kind: dword
+        value: 2

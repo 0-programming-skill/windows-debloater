@@ -186,3 +186,330 @@ tweaks:
         name: Microsoft.YourPhone
         state: removed
         storeId: 9NMPJ99VJBWV
+
+  - id: apps.remove.outlook-new
+    name: Remover o novo Outlook
+    description: Remove o app "Outlook (novo)" pré-instalado (Microsoft.OutlookForWindows). Não afeta o Outlook do Microsoft 365 clássico.
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "winhance:apps" }
+    tags: [appx, bloatware, email]
+    breaks: E-mail e calendário pelo app Outlook novo (o Outlook na web continua disponível).
+    actions:
+      - type: appx
+        name: Microsoft.OutlookForWindows
+        state: removed
+        storeId: 9NRX63209R7B
+
+  - id: apps.remove.dev-home
+    name: Remover o Dev Home
+    description: Remove o Dev Home (Microsoft.Windows.DevHome), painel para desenvolvedores descontinuado pela Microsoft.
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "atlas:appx" }
+    tags: [appx, bloatware]
+    actions:
+      - type: appx
+        name: Microsoft.Windows.DevHome
+        state: removed
+
+  - id: apps.remove.quick-assist
+    name: Remover a Assistência Rápida
+    description: Remove a Assistência Rápida (acesso remoto para suporte técnico).
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "revi:appx" }
+    tags: [appx, acesso-remoto, seguranca]
+    breaks: Receber ou dar suporte remoto pela Assistência Rápida (golpes de "suporte técnico" costumam usá-la).
+    actions:
+      - type: appx
+        name: MicrosoftCorporationII.QuickAssist
+        state: removed
+        storeId: 9P7BP5VNWKX5
+
+  - id: apps.remove.family
+    name: Remover o Microsoft Family Safety
+    description: Remove o app de controle dos pais Microsoft Family Safety.
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "atlas:appx" }
+    tags: [appx, bloatware]
+    breaks: Controle dos pais pelo app (as configurações da família na conta Microsoft continuam valendo).
+    actions:
+      - type: appx
+        name: MicrosoftCorporationII.MicrosoftFamily
+        state: removed
+
+  - id: apps.remove.sound-recorder
+    name: Remover o Gravador de Som
+    description: Remove o Gravador de Som (Microsoft.WindowsSoundRecorder).
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "revi:appx" }
+    tags: [appx]
+    actions:
+      - type: appx
+        name: Microsoft.WindowsSoundRecorder
+        state: removed
+        storeId: 9WZDNCRFHWKN
+
+  - id: apps.remove.clock
+    name: Remover o Relógio (Alarmes)
+    description: Remove o app Relógio (alarmes, temporizador, cronômetro e sessões de foco).
+    risk: medium
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "revi:appx" }
+    tags: [appx]
+    breaks: Alarmes, temporizador e as sessões de foco do Relógio.
+    actions:
+      - type: appx
+        name: Microsoft.WindowsAlarms
+        state: removed
+        storeId: 9WZDNCRFJ3PR
+
+  - id: apps.remove.camera
+    name: Remover o app Câmera
+    description: Remove o app Câmera do Windows. A câmera continua funcionando em outros programas.
+    risk: medium
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "revi:appx" }
+    tags: [appx, camera]
+    breaks: Tirar fotos e gravar vídeos pelo app Câmera e o leitor de QR code dele.
+    actions:
+      - type: appx
+        name: Microsoft.WindowsCamera
+        state: removed
+        storeId: 9WZDNCRFJBBG
+
+  - id: apps.remove.sticky-notes
+    name: Remover as Notas Autoadesivas
+    description: Remove o app Notas Autoadesivas (Microsoft.MicrosoftStickyNotes).
+    risk: medium
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "revi:appx" }
+    tags: [appx]
+    breaks: Notas guardadas só no PC (as sincronizadas continuam na conta Microsoft/OneNote).
+    actions:
+      - type: appx
+        name: Microsoft.MicrosoftStickyNotes
+        state: removed
+        storeId: 9NBLGGH4QGHW
+
+  - id: apps.remove.media-player
+    name: Remover o Media Player (novo)
+    description: Remove o Media Player moderno (pacote Microsoft.ZuneMusic), o reprodutor padrão de música e vídeo.
+    risk: medium
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "revi:appx" }
+    tags: [appx, midia]
+    breaks: Arquivos de música e vídeo precisam de outro reprodutor (por exemplo, o VLC); o Windows Media Player clássico continua se o recurso estiver ativo.
+    actions:
+      - type: appx
+        name: Microsoft.ZuneMusic
+        state: removed
+        storeId: 9WZDNCRFJ3PT
+
+  - id: apps.remove.snipping-tool
+    name: Remover a Ferramenta de Captura
+    description: Remove a Ferramenta de Captura (Microsoft.ScreenSketch); Win+Shift+S e a tecla Print Screen deixam de abri-la.
+    risk: medium
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "winhance:apps" }
+    tags: [appx, captura]
+    breaks: Captura de região e gravação de tela pelo atalho Win+Shift+S (o Print Screen clássico ainda copia a tela).
+    actions:
+      - type: appx
+        name: Microsoft.ScreenSketch
+        state: removed
+        storeId: 9MZ95KL8MR0L
+
+  - id: apps.remove.paint
+    name: Remover o Paint
+    description: Remove o Paint (Microsoft.Paint).
+    risk: medium
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "winhance:apps" }
+      - { kind: tool, ref: "win11debloat:Apps" }
+    tags: [appx]
+    breaks: Edição simples de imagens pelo Paint e "Editar com o Paint" no Explorador.
+    actions:
+      - type: appx
+        name: Microsoft.Paint
+        state: removed
+        storeId: 9PCFS5B6T72H
+
+  - id: apps.remove.cross-device
+    name: Remover a Experiência entre Dispositivos
+    description: Remove o pacote MicrosoftWindows.CrossDevice, que integra o celular ao Explorador e ao Iniciar.
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "sophia:CrossDevice" }
+    tags: [appx, celular]
+    breaks: O celular Android no Explorador de Arquivos e recursos de continuidade entre celular e PC.
+    actions:
+      - type: appx
+        name: MicrosoftWindows.CrossDevice
+        state: removed
+
+  - id: apps.remove.xbox-app
+    name: Remover o app Xbox
+    description: Remove o app Xbox (Microsoft.GamingApp). Os serviços de jogos e a Game Bar não são removidos.
+    risk: medium
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "winhance:apps" }
+    tags: [appx, xbox, jogos]
+    breaks: Game Pass para PC e instalação de jogos pelo app Xbox.
+    actions:
+      - type: appx
+        name: Microsoft.GamingApp
+        state: removed
+        storeId: 9MV0B5HZVK9Z
+
+  - id: apps.remove.game-bar
+    name: Remover a Xbox Game Bar
+    description: Remove a Xbox Game Bar (Microsoft.XboxGamingOverlay).
+    risk: medium
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "winhance:apps" }
+    tags: [appx, xbox, jogos]
+    breaks: Win+G, captura de jogos e widgets de desempenho; alguns jogos mostram um aviso pedindo o app "ms-gamebar".
+    actions:
+      - type: appx
+        name: Microsoft.XboxGamingOverlay
+        state: removed
+        storeId: 9NZKPSTSNW4P
+
+  - id: apps.remove.xbox-speech-overlay
+    name: Remover a sobreposição de fala do Xbox
+    description: Remove Microsoft.XboxSpeechToTextOverlay (legendas de chat de voz em jogos) e Microsoft.Xbox.TCUI.
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "privacysexy:xbox-tcui" }
+    tags: [appx, xbox, jogos]
+    breaks: Convites, perfis e chat de voz do Xbox dentro de alguns jogos.
+    actions:
+      - type: appx
+        name: Microsoft.XboxSpeechToTextOverlay
+        state: removed
+      - type: appx
+        name: Microsoft.Xbox.TCUI
+        state: removed
+
+  - id: apps.remove.legacy-inbox
+    name: Remover apps antigos descontinuados (Cortana, Pessoas, Email e Calendário, Skype)
+    description: >
+      Remove apps que vinham em versões anteriores e foram descontinuados pela Microsoft: Cortana, Pessoas, Email e
+      Calendário e Skype. Em instalações novas do Windows 11 eles já não existem (o tweak fica aplicado).
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "privacysexy:legacy-apps" }
+    tags: [appx, bloatware]
+    actions:
+      - type: appx
+        name: Microsoft.549981C3F5F10
+        state: removed
+      - type: appx
+        name: Microsoft.People
+        state: removed
+      - type: appx
+        name: microsoft.windowscommunicationsapps
+        state: removed
+      - type: appx
+        name: Microsoft.SkypeApp
+        state: removed
+
+  - id: apps.remove.legacy-3d
+    name: Remover apps 3D e de realidade misturada
+    description: Remove o Visualizador 3D, o Paint 3D e o Portal de Realidade Misturada, de versões anteriores do Windows.
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "winhance:apps" }
+    tags: [appx, bloatware]
+    actions:
+      - type: appx
+        name: Microsoft.Microsoft3DViewer
+        state: removed
+      - type: appx
+        name: Microsoft.MSPaint
+        state: removed
+      - type: appx
+        name: Microsoft.MixedReality.Portal
+        state: removed
+
+  - id: apps.remove.promoted-third-party
+    name: Remover apps de terceiros promovidos (Spotify e similares)
+    description: Remove apps de terceiros que o Windows instala como promoção (Spotify, Disney+, Instagram, TikTok, LinkedIn).
+    risk: low
+    confidence: community
+    reversible: false
+    sources:
+      - { kind: tool, ref: "win11debloat:Apps" }
+      - { kind: tool, ref: "privacysexy:third-party-apps" }
+    tags: [appx, bloatware, anuncios]
+    actions:
+      - type: appx
+        name: SpotifyAB.SpotifyMusic
+        state: removed
+        storeId: 9NCBCSZSJRSB
+      - type: appx
+        name: Disney.37853FC22B2CE
+        state: removed
+      - type: appx
+        name: Facebook.Instagram*
+        state: removed
+      - type: appx
+        name: BytedancePte.Ltd.TikTok
+        state: removed
+      - type: appx
+        name: 7EE7776C.LinkedInforWindows
+        state: removed

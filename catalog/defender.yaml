@@ -1,0 +1,108 @@
+# Microsoft Defender. O programa NÃO contorna a Proteção contra Adulteração (Tamper Protection): com ela ligada,
+# o Windows ignora estas políticas, então os tweaks ficam "não se aplica" até o usuário desligá-la à mão.
+category: Segurança/Microsoft Defender
+
+tweaks:
+  - id: security.defender.disable-realtime
+    name: Desativar a proteção em tempo real do Microsoft Defender
+    description: >
+      Aplica as políticas oficiais do Defender que desligam a proteção em tempo real, o monitoramento de
+      comportamento, o monitoramento de arquivos e programas, a verificação de downloads e anexos e a verificação
+      de processos ao ligar a proteção. O antivírus continua instalado: verificações manuais e as atualizações de
+      definições seguem funcionando, e o Windows não ativa outro antivírus no lugar. ANTES: desligue você mesmo a
+      Proteção contra Adulteração em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar
+      configurações; com ela ligada, o Windows ignora estas políticas e o tweak fica "não se aplica". O programa
+      não desliga nem contorna a Proteção contra Adulteração. Use só se tiver outro antivírus ou souber o que está
+      fazendo.
+    risk: critical
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Defender/AllowRealtimeMonitoring" }
+      - { kind: msdocs, ref: "Policy CSP - Defender/AllowBehaviorMonitoring" }
+      - { kind: msdocs, ref: "Policy CSP - Defender/AllowOnAccessProtection" }
+      - { kind: msdocs, ref: "Policy CSP - Defender/AllowIOAVProtection" }
+      - { kind: admx, ref: "WindowsDefender.admx:DisableRealtimeMonitoring" }
+      - { kind: admx, ref: "WindowsDefender.admx:RealtimeProtection_DisableBehaviorMonitoring" }
+      - { kind: admx, ref: "WindowsDefender.admx:RealtimeProtection_DisableOnAccessProtection" }
+      - { kind: admx, ref: "WindowsDefender.admx:RealtimeProtection_DisableIOAVProtection" }
+      - { kind: admx, ref: "WindowsDefender.admx:RealtimeProtection_DisableScanOnRealtimeEnable" }
+      - { kind: tool, ref: "privacysexy:defender-realtime" }
+      - { kind: tool, ref: "sophiapp:Defender" }
+    references:
+      - https://learn.microsoft.com/defender-endpoint/prevent-changes-to-security-settings-with-tamper-protection
+    tags: [defender, antivirus, seguranca, politica]
+    breaks: >
+      O PC fica sem antivírus em tempo real: arquivos maliciosos baixados ou abertos não são bloqueados. A
+      Segurança do Windows mostra alertas de "proteção desativada pela organização".
+    precondition:
+      powershell: |
+        $s = Get-MpComputerStatus -ErrorAction SilentlyContinue
+        [bool]($s -and $s.IsTamperProtected -eq $false)
+      reason: >
+        a Proteção contra Adulteração do Defender está ligada (ou o Defender não está ativo). Desligue-a você
+        mesmo em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar configurações e leia de novo
+        os estados; o programa não a desliga.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection
+        name: DisableRealtimeMonitoring
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection
+        name: DisableBehaviorMonitoring
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection
+        name: DisableOnAccessProtection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection
+        name: DisableIOAVProtection
+        kind: dword
+        value: 1
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection
+        name: DisableScanOnRealtimeEnable
+        kind: dword
+        value: 1
+
+  - id: security.defender.disable-cloud-reporting
+    name: Não enviar dados e amostras ao Microsoft MAPS (Defender)
+    description: >
+      Políticas do Defender "Ingressar no Microsoft MAPS" = Desabilitada e "Enviar amostras de arquivo" = Nunca
+      enviar: o Defender deixa de consultar a nuvem e de enviar arquivos suspeitos à Microsoft. Como no tweak de
+      tempo real, a Proteção contra Adulteração precisa ser desligada à mão antes; o programa não a desliga.
+    risk: high
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - Defender/AllowCloudProtection" }
+      - { kind: msdocs, ref: "Policy CSP - Defender/SubmitSamplesConsent" }
+      - { kind: admx, ref: "WindowsDefender.admx:SpynetReporting" }
+      - { kind: admx, ref: "WindowsDefender.admx:SubmitSamplesConsent" }
+      - { kind: tool, ref: "privacysexy:defender-maps" }
+    tags: [defender, privacidade, nuvem, politica]
+    breaks: >
+      A proteção baseada em nuvem (detecção de ameaças novas em segundos e "Bloquear à primeira vista") deixa de
+      funcionar; a detecção passa a depender só das definições locais.
+    precondition:
+      powershell: |
+        $s = Get-MpComputerStatus -ErrorAction SilentlyContinue
+        [bool]($s -and $s.IsTamperProtected -eq $false)
+      reason: >
+        a Proteção contra Adulteração do Defender está ligada (ou o Defender não está ativo). Desligue-a você
+        mesmo em Segurança do Windows > Proteção contra vírus e ameaças > Gerenciar configurações; o programa não
+        a desliga.
+    actions:
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet
+        name: SpynetReporting
+        kind: dword
+        value: 0
+      - type: registry
+        path: HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Spynet
+        name: SubmitSamplesConsent
+        kind: dword
+        value: 2

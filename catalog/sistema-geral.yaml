@@ -1,0 +1,56 @@
+# Ajustes gerais do sistema (comportamento, diagnóstico, inicialização).
+category: Sistema/Geral
+
+tweaks:
+  - id: system.long-paths.enable
+    name: Ativar caminhos longos do Win32
+    description: >
+      Liga "Habilitar caminhos longos do Win32": programas que declaram suporte podem usar caminhos com mais de
+      260 caracteres (útil para desenvolvimento, node_modules, repositórios git).
+    risk: low
+    confidence: official
+    sources:
+      - { kind: msdocs, ref: "Policy CSP - ADMX_FileSys/LongPathsEnabled" }
+      - { kind: admx, ref: "FileSys.admx:LongPathsEnabled" }
+      - { kind: tool, ref: "winutil:WPFToggleLongPaths" }
+    tags: [sistema, arquivos, desenvolvimento]
+    actions:
+      - type: registry
+        path: HKLM\SYSTEM\CurrentControlSet\Control\FileSystem
+        name: LongPathsEnabled
+        kind: dword
+        value: 1
+
+  - id: system.bsod.show-details
+    name: Mostrar os parâmetros do erro na tela azul
+    description: Mostra o código e os parâmetros técnicos na tela azul (BSOD), úteis para diagnosticar o travamento.
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winutil:WPFToggleDetailedBSoD" }
+      - { kind: tool, ref: "sophia:BSoDStopError" }
+    tags: [sistema, diagnostico]
+    actions:
+      - type: registry
+        path: HKLM\SYSTEM\CurrentControlSet\Control\CrashControl
+        name: DisplayParameters
+        kind: dword
+        value: 1
+
+  - id: system.startup.no-app-delay
+    name: Não atrasar os apps de inicialização
+    description: >
+      O Explorador espera alguns segundos antes de abrir os programas da inicialização. Com 0, eles abrem logo
+      após o logon (a área de trabalho pode ficar disputada nos primeiros segundos).
+    risk: low
+    confidence: community
+    sources:
+      - { kind: tool, ref: "winhance:startup-delay" }
+      - { kind: tool, ref: "optimizerduck:StartupDelay" }
+    tags: [inicializacao, desempenho]
+    actions:
+      - type: registry
+        path: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize
+        name: StartupDelayInMSec
+        kind: dword
+        value: 0
